@@ -59,9 +59,9 @@
                             $feature->torrent->category->movie_meta => App\Models\TmdbMovie::query()
                                 ->with('genres', 'companies')
                                 ->find($feature->torrent->tmdb_movie_id ?? 0),
-                            $feature->torrent->category->game_meta => App\Models\Game::query()
+                            $feature->torrent->category->game_meta => App\Models\IgdbGame::query()
                                 ->with('genres')
-                                ->find((int) $feature->torrent->igdb),
+                                ->find($feature->torrent->igdb ?? 0),
                             default => null,
                         };
                     @endphp
