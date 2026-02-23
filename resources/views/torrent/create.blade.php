@@ -72,7 +72,7 @@
             >
                 @csrf
                 <!-- REQUIRED SECTION: Core Torrent Information -->
-                <fieldset class="form__fieldset">
+                <fieldset class="form__fieldset" style="margin-bottom: 2em;">
                     <legend class="form__legend">
                         <i class="{{ config('other.font-awesome') }} fa-star" style="color: #ff9800;"></i>
                         Core Information
@@ -183,7 +183,7 @@
                 </fieldset>
 
                 <!-- OPTIONAL SECTION: Files & Artwork -->
-                <fieldset class="form__fieldset">
+                <fieldset class="form__fieldset" style="margin-top: 2em; margin-bottom: 2em;">
                     <legend class="form__legend">
                         <button
                             type="button"
@@ -197,7 +197,7 @@
                         <span class="form__legend-hint" style="font-size: 0.85em; font-weight: normal; margin-left: 0.5em;">Optional — Upload supplementary files and images</span>
                     </legend>
 
-                    <div x-show="showTechnical" style="display: none;">
+                    <div x-show="showTechnical" style="display: none; padding-top: 1em;">
                         <p class="form__group">
                             <label for="nfo" class="form__label">
                                 NFO {{ __('torrent.file') }} ({{ __('torrent.optional') }})
@@ -247,7 +247,7 @@
                     </div>
                 </fieldset>
                 <!-- OPTIONAL SECTION: Episode & Release Details -->
-                <fieldset class="form__fieldset" x-show="cats[cat].type === 'movie' || cats[cat].type === 'tv'" style="display: none;">
+                <fieldset class="form__fieldset" x-show="cats[cat].type === 'movie' || cats[cat].type === 'tv'" style="display: none; margin-top: 2em; margin-bottom: 2em;">
                     <legend class="form__legend">
                         <button
                             type="button"
@@ -260,9 +260,7 @@
                         </button>
                     </legend>
 
-                    <div x-show="showAdvanced" style="display: none;">
-                        <!-- TV Season/Episode -->
-                        <div x-show="cats[cat].type === 'tv'" style="display: none;">
+                    <div x-show="showAdvanced" style="display: none; padding-top: 1em;">
                             <h4 style="margin-top: 0; margin-bottom: 1em; font-size: 0.95em; font-weight: 600;">
                                 {{ __('torrent.season-number') }} & {{ __('torrent.episode-number') }}
                             </h4>
@@ -365,7 +363,7 @@
                     </div>
                 </fieldset>
                 <!-- OPTIONAL SECTION: Media Metadata -->
-                <fieldset class="form__fieldset" x-show="cats[cat].type === 'movie' || cats[cat].type === 'tv' || cats[cat].type === 'game'" style="display: none;">
+                <fieldset class="form__fieldset" x-show="cats[cat].type === 'movie' || cats[cat].type === 'tv' || cats[cat].type === 'game'" style="display: none; margin-top: 2em; margin-bottom: 2em;">
                     <legend class="form__legend">
                         <button
                             type="button"
@@ -379,7 +377,7 @@
                         <span class="form__legend-hint" style="font-size: 0.85em; font-weight: normal; margin-left: 0.5em;">Optional — For movies, TV shows, and games</span>
                     </legend>
 
-                    <div x-show="showMetadata" style="display: none;">
+                    <div x-show="showMetadata" style="display: none; padding-top: 1em;">
                         <!-- TMDB Movie -->
                         <div class="form__group--vertical" x-show="cats[cat].type === 'movie'">
                             <p class="form__group">
@@ -615,7 +613,7 @@
                 </fieldset>
 
                 <!-- OPTIONAL SECTION: Technical Details -->
-                <fieldset class="form__fieldset" x-show="cats[cat].type === 'movie' || cats[cat].type === 'tv'" style="display: none;">
+                <fieldset class="form__fieldset" x-show="cats[cat].type === 'movie' || cats[cat].type === 'tv'" style="display: none; margin-top: 2em; margin-bottom: 2em;">
                     <legend class="form__legend">
                         <button
                             type="button"
@@ -629,7 +627,7 @@
                         <span class="form__legend-hint" style="font-size: 0.85em; font-weight: normal; margin-left: 0.5em;">Optional — MediaInfo and BDInfo for video content</span>
                     </legend>
 
-                    <div x-show="showAdvanced" style="display: none;">
+                    <div x-show="showAdvanced" style="display: none; padding-top: 1em;">
                         <p class="form__group">
                             <textarea
                                 id="upload-form-mediainfo"
@@ -662,7 +660,7 @@
                     </div>
                 </fieldset>
                 <!-- OPTIONAL SECTION: Advanced Options -->
-                <fieldset class="form__fieldset">
+                <fieldset class="form__fieldset" style="margin-top: 2em; margin-bottom: 2em;">
                     <legend class="form__legend">
                         <button
                             type="button"
@@ -675,7 +673,7 @@
                         </button>
                     </legend>
 
-                    <div x-show="showMetadata" style="display: none;">
+                    <div x-show="showMetadata" style="display: none; padding-top: 1em;">
                         <p class="form__group">
                             <input type="hidden" name="anon" value="0" />
                             <input
