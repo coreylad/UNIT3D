@@ -152,6 +152,12 @@
                 </h2>
                 <div class="panel__body">
                     <p class="form__group form__group--horizontal">
+                        <a class="form__button form__button--text" href="{{ route('staff.users.create') }}">
+                            <i class="{{ config('other.font-awesome') }} fa-user-plus"></i>
+                            New user
+                        </a>
+                    </p>
+                    <p class="form__group form__group--horizontal">
                         <a class="form__button form__button--text" href="{{ route('staff.users.index') }}">
                             <i class="{{ config('other.font-awesome') }} fa-users"></i>
                             User manager
@@ -211,6 +217,28 @@
                             New wiki article
                         </a>
                     </p>
+                </div>
+            </section>
+        @endif
+        @if ($pendingUsers->isNotEmpty())
+            <section class="panelV2 panel--grid-item">
+                <h2 class="panel__heading">
+                    <i class="{{ config('other.font-awesome') }} fa-user-clock"></i>
+                    Users Pending Verification
+                </h2>
+                <div class="panel__body">
+                    @foreach ($pendingUsers as $pendingUser)
+                        <div class="form__group form__group--horizontal">
+                            <a href="{{ route('users.show', ['user' => $pendingUser]) }}">{{ $pendingUser->username }}</a>
+                            <form method="POST" action="{{ route('staff.users.verify', ['user' => $pendingUser]) }}" class="ml-auto">
+                                @csrf
+                                @method('PATCH')
+                                <button class="form__button form__button--text" type="submit">
+                                    Verify
+                                </button>
+                            </form>
+                        </div>
+                    @endforeach
                 </div>
             </section>
         @endif

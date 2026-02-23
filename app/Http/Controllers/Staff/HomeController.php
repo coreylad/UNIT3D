@@ -20,6 +20,7 @@ use App\Enums\ModerationStatus;
 use App\Helpers\SystemInformation;
 use App\Http\Controllers\Controller;
 use App\Models\Group;
+use App\Models\User;
 use App\Services\Unit3dAnnounce;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -75,6 +76,7 @@ class HomeController extends Controller
                 ->where(fn ($query) => $query->whereNull('assigned_to')->orWhere('assigned_to', '=', auth()->id()))
                 ->count(),
             'pendingApplicationsCount' => DB::table('applications')->where('status', '=', ModerationStatus::PENDING)->count(),
+            'pendingUsers'             => User::whereHas('group', fn ($query) => $query->where('slug', 'validating'))->latest()->take(10)->get(),
             'certificate'              => $certificate,
             'uptime'                   => $systemInformation->uptime(),
             'ram'                      => $systemInformation->memory(),

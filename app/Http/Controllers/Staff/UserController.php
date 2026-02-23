@@ -18,6 +18,7 @@ namespace App\Http\Controllers\Staff;
 
 use App\Enums\UserGroup;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Staff\StoreUserRequest;
 use App\Http\Requests\Staff\UpdateUserRequest;
 use App\Models\Comment;
 use App\Models\FailedLoginAttempt;
@@ -50,6 +51,31 @@ class UserController extends Controller
     public function index(): \Illuminate\Contracts\View\Factory|\Illuminate\View\View
     {
         return view('Staff.user.index');
+    }
+
+    /**
+     * Show the form for creating a new user.
+     */
+    public function create(): \Illuminate\Contracts\View\Factory|\Illuminate\View\View
+    {
+        $group = auth()->user()->group;
+
+        return view('Staff.user.create', [
+            'groups' => Group::when(! $group->is_owner, fn ($query) => $query->where('level', '<=', $group->level))->orderBy('position')->get(),
+        ]);
+    }
+
+    /**
+     * Store a newly created user in storage.
+     */
+    public function store(StoreUserRequest $request): \Illuminate\Http\RedirectResponse
+    {
+        $user = User::create($request->validated());
+
+        Unit3dAnnounce::addUser($user);
+
+        return to_route('users.show', ['user' => $user])
+            ->with('success', 'User created successfully!');
     }
 
     /**
@@ -108,6 +134,20 @@ class UserController extends Controller
 
         return to_route('users.show', ['user' => $user])
             ->with('success', 'Account permissions successfully edited');
+    }
+
+    /**
+     * Verify a user's account.
+     */
+    public function verify(Request $request, User $user): \Illuminate\Http\RedirectResponse
+    {
+        $user->update(['group_id' => UserGroup::MEMBER->value]);
+
+        cache()->forget('user:'.$user->passkey);
+
+        Unit3dAnnounce::addUser($user);
+
+        return back()->with('success', 'User has been successfully verified.');
     }
 
     /**
