@@ -30,7 +30,7 @@ use AllowDynamicProperties;
  * @property string|null $image
  * @property int         $position
  * @property string      $icon
- * @property int         $no_meta
+ * @property bool        $no_meta
  * @property bool        $music_meta
  * @property bool        $game_meta
  * @property bool        $tv_meta
@@ -54,11 +54,12 @@ final class Category extends Model
     /**
      * Get the attributes that should be cast.
      *
-     * @return array{music_meta: 'bool', game_meta: 'bool', tv_meta: 'bool', movie_meta: 'bool'}
+     * @return array{no_meta: 'bool', music_meta: 'bool', game_meta: 'bool', tv_meta: 'bool', movie_meta: 'bool'}
      */
     protected function casts(): array
     {
         return [
+            'no_meta'    => 'bool',
             'music_meta' => 'bool',
             'game_meta'  => 'bool',
             'tv_meta'    => 'bool',

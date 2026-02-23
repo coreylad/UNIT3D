@@ -65,6 +65,10 @@
                             src="https://images.igdb.com/igdb/image/upload/t_cover_big/{{ $torrent->meta->cover_image_id }}.jpg"
                     
                             @break
+                        @case($torrent->category->music_meta && Storage::disk('torrent-covers')->exists("torrent-cover_$torrent->id.jpg"))
+                            src="{{ route('authenticated_images.torrent_cover', ['id' => $torrent->id]) }}"
+                    
+                            @break
                         @case($torrent->category->music_meta)
                             src="https://via.placeholder.com/160x240"
                     

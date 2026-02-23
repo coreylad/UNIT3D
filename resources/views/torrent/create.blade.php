@@ -94,7 +94,7 @@
                         name="nfo"
                     />
                 </p>
-                <p class="form__group" x-show="cats[cat].type === 'no'">
+                <p class="form__group" x-show="cats[cat].type === 'no' || cats[cat].type === 'music'">
                     <label for="torrent-cover" class="form__label">
                         Cover {{ __('torrent.file') }} ({{ __('torrent.optional') }})
                     </label>
@@ -106,7 +106,7 @@
                         name="torrent-cover"
                     />
                 </p>
-                <p class="form__group" x-show="cats[cat].type === 'no'">
+                <p class="form__group" x-show="cats[cat].type === 'no' || cats[cat].type === 'music'">
                     <label for="torrent-banner" class="form__label">
                         Banner {{ __('torrent.file') }} ({{ __('torrent.optional') }})
                     </label>

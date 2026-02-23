@@ -45,7 +45,7 @@
             >
                 @csrf
                 @method('PATCH')
-                <p class="form__group" x-show="cats[cat].type === 'no'">
+                <p class="form__group" x-show="cats[cat].type === 'no' || cats[cat].type === 'music'">
                     <label class="form__label" for="torrent-cover">
                         Cover {{ __('torrent.file') }} ({{ __('torrent.optional') }})
                     </label>
@@ -57,7 +57,7 @@
                         type="file"
                     />
                 </p>
-                <p class="form__group" x-show="cats[cat].type === 'no'">
+                <p class="form__group" x-show="cats[cat].type === 'no' || cats[cat].type === 'music'">
                     <label class="form__label" for="torrent-banner">
                         Banner {{ __('torrent.file') }} ({{ __('torrent.optional') }})
                     </label>
