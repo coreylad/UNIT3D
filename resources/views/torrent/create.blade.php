@@ -40,6 +40,218 @@
 
 @section('page', 'page__torrent--create')
 
+@section('styles')
+    <style>
+        /* Form Fieldset Styling */
+        .form__fieldset {
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 1.5em;
+            background: rgba(0, 0, 0, 0.2);
+            transition: all 0.2s ease;
+        }
+
+        .form__fieldset:hover {
+            border-color: rgba(255, 255, 255, 0.15);
+            background: rgba(0, 0, 0, 0.25);
+        }
+
+        /* Legend Button */
+        .form__legend {
+            margin-bottom: 1.25em;
+            display: flex;
+            align-items: center;
+            gap: 0.75em;
+        }
+
+        .form__legend-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.5em;
+            transition: color 0.2s ease;
+            font-weight: 600;
+            font-size: 1.05em;
+        }
+
+        .form__legend-toggle:hover {
+            color: #4a9eff;
+        }
+
+        .form__legend-hint {
+            opacity: 0.7;
+        }
+
+        /* Input Styling */
+        .form__text,
+        .form__select,
+        .form__textarea,
+        .form__file {
+            border-radius: 6px !important;
+            border: 1px solid rgba(255, 255, 255, 0.15) !important;
+            padding: 0.75em 1em !important;
+            transition: all 0.2s ease;
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .form__text:focus,
+        .form__select:focus,
+        .form__textarea:focus {
+            border-color: rgba(74, 158, 255, 0.5) !important;
+            background: rgba(0, 0, 0, 0.4);
+            box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.1);
+            outline: none;
+        }
+
+        .form__text:hover,
+        .form__select:hover,
+        .form__textarea:hover {
+            border-color: rgba(255, 255, 255, 0.25);
+            background: rgba(0, 0, 0, 0.35);
+        }
+
+        /* Button Styling */
+        .form__button {
+            border-radius: 6px !important;
+            padding: 0.75em 1.5em !important;
+            transition: all 0.2s ease;
+            font-weight: 600;
+        }
+
+        .form__button--filled {
+            background: linear-gradient(135deg, #4a9eff, #357abd) !important;
+            border: none !important;
+            color: white;
+            box-shadow: 0 4px 12px rgba(74, 158, 255, 0.3);
+        }
+
+        .form__button--filled:hover {
+            box-shadow: 0 6px 16px rgba(74, 158, 255, 0.4);
+            transform: translateY(-1px);
+        }
+
+        .form__button--outlined {
+            border: 1px solid rgba(255, 255, 255, 0.25) !important;
+            border-radius: 6px !important;
+            background: transparent;
+            color: inherit;
+        }
+
+        .form__button--outlined:hover {
+            border-color: rgba(255, 255, 255, 0.4);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        /* Fieldset Group Spacing */
+        .form__group {
+            margin-bottom: 1.25em;
+        }
+
+        .form__group:last-child {
+            margin-bottom: 0;
+        }
+
+        .form__group--horizontal {
+            display: flex;
+            gap: 1.5em;
+            margin-bottom: 1.25em;
+        }
+
+        .form__group--horizontal > .form__group {
+            flex: 1;
+            margin-bottom: 0;
+        }
+
+        .form__group--vertical {
+            margin-bottom: 1.5em;
+        }
+
+        /* Checkbox/Radio Styling */
+        .form__checkbox {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            border-radius: 4px;
+            accent-color: #4a9eff;
+        }
+
+        .form__checkbox:focus {
+            box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.2);
+        }
+
+        /* File Input Styling */
+        .form__file {
+            padding: 1em !important;
+            border: 2px dashed rgba(255, 255, 255, 0.2) !important;
+            border-radius: 8px !important;
+            background: rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .form__file:hover {
+            border-color: rgba(255, 255, 255, 0.35);
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        /* Label Styling */
+        .form__label {
+            font-weight: 500;
+            display: block;
+            margin-bottom: 0.5em;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .form__label--floating {
+            transition: all 0.2s ease;
+            font-size: 0.95em;
+        }
+
+        /* Hint Text */
+        .form__hint {
+            display: block;
+            font-size: 0.85em;
+            color: rgba(255, 255, 255, 0.6);
+            margin-top: 0.35em;
+            line-height: 1.4;
+        }
+
+        .form__hint-inline {
+            display: inline;
+            margin-left: 0.5em;
+        }
+
+        /* Headings inside fieldsets */
+        h4 {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 0.75em;
+            color: rgba(255, 255, 255, 0.95);
+        }
+
+        /* Horizontal Rule */
+        hr {
+            border: none;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            margin: 1.5em 0;
+        }
+
+        /* Expandable Content */
+        [x-show] {
+            animation: slideDown 0.2s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+@endsection
+
 @section('main')
     <section
         class="upload panelV2"
@@ -72,10 +284,10 @@
             >
                 @csrf
                 <!-- REQUIRED SECTION: Core Torrent Information -->
-                <fieldset class="form__fieldset" style="margin-bottom: 2em;">
+                <fieldset class="form__fieldset" style="margin-bottom: 2em; border-left: 4px solid #ff9800;">
                     <legend class="form__legend">
-                        <i class="{{ config('other.font-awesome') }} fa-star" style="color: #ff9800;"></i>
-                        Core Information
+                        <i class="{{ config('other.font-awesome') }} fa-star" style="color: #ff9800; font-size: 1.2em;"></i>
+                        <span style="font-size: 1.1em; font-weight: 700; color: rgba(255, 255, 255, 0.95);">Core Information</span>
                     </legend>
                     
                     <p class="form__group">
@@ -183,7 +395,7 @@
                 </fieldset>
 
                 <!-- OPTIONAL SECTION: Files & Artwork -->
-                <fieldset class="form__fieldset" style="margin-top: 2em; margin-bottom: 2em;">
+                <fieldset class="form__fieldset" style="margin-top: 2em; margin-bottom: 2em; border-left: 4px solid #4a9eff;">
                     <legend class="form__legend">
                         <button
                             type="button"
@@ -191,8 +403,8 @@
                             @click="showTechnical = !showTechnical"
                             style="background: none; border: none; cursor: pointer; color: inherit; font: inherit; padding: 0;"
                         >
-                            <i class="{{ config('other.font-awesome') }}" :class="showTechnical ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
-                            Files & Artwork
+                            <i class="{{ config('other.font-awesome') }}" :class="showTechnical ? 'fa-chevron-down' : 'fa-chevron-right'" style="color: #4a9eff;"></i>
+                            <span style="font-size: 1.05em;">Files & Artwork</span>
                         </button>
                         <span class="form__legend-hint" style="font-size: 0.85em; font-weight: normal; margin-left: 0.5em;">Optional — Upload supplementary files and images</span>
                     </legend>
@@ -247,7 +459,7 @@
                     </div>
                 </fieldset>
                 <!-- OPTIONAL SECTION: Episode & Release Details -->
-                <fieldset class="form__fieldset" x-show="cats[cat].type === 'movie' || cats[cat].type === 'tv'" style="display: none; margin-top: 2em; margin-bottom: 2em;">
+                <fieldset class="form__fieldset" x-show="cats[cat].type === 'movie' || cats[cat].type === 'tv'" style="display: none; margin-top: 2em; margin-bottom: 2em; border-left: 4px solid #4a9eff;">
                     <legend class="form__legend">
                         <button
                             type="button"
@@ -255,8 +467,8 @@
                             @click="showAdvanced = !showAdvanced"
                             style="background: none; border: none; cursor: pointer; color: inherit; font: inherit; padding: 0;"
                         >
-                            <i class="{{ config('other.font-awesome') }}" :class="showAdvanced ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
-                            Episode & Release Details
+                            <i class="{{ config('other.font-awesome') }}" :class="showAdvanced ? 'fa-chevron-down' : 'fa-chevron-right'" style="color: #4a9eff;"></i>
+                            <span style="font-size: 1.05em;">Episode & Release Details</span>
                         </button>
                     </legend>
 
@@ -363,7 +575,7 @@
                     </div>
                 </fieldset>
                 <!-- OPTIONAL SECTION: Media Metadata -->
-                <fieldset class="form__fieldset" x-show="cats[cat].type === 'movie' || cats[cat].type === 'tv' || cats[cat].type === 'game'" style="display: none; margin-top: 2em; margin-bottom: 2em;">
+                <fieldset class="form__fieldset" x-show="cats[cat].type === 'movie' || cats[cat].type === 'tv' || cats[cat].type === 'game'" style="display: none; margin-top: 2em; margin-bottom: 2em; border-left: 4px solid #9c27b0;">
                     <legend class="form__legend">
                         <button
                             type="button"
@@ -371,8 +583,8 @@
                             @click="showMetadata = !showMetadata"
                             style="background: none; border: none; cursor: pointer; color: inherit; font: inherit; padding: 0;"
                         >
-                            <i class="{{ config('other.font-awesome') }}" :class="showMetadata ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
-                            Media Metadata
+                            <i class="{{ config('other.font-awesome') }}" :class="showMetadata ? 'fa-chevron-down' : 'fa-chevron-right'" style="color: #9c27b0;"></i>
+                            <span style="font-size: 1.05em;">Media Metadata</span>
                         </button>
                         <span class="form__legend-hint" style="font-size: 0.85em; font-weight: normal; margin-left: 0.5em;">Optional — For movies, TV shows, and games</span>
                     </legend>
@@ -613,7 +825,7 @@
                 </fieldset>
 
                 <!-- OPTIONAL SECTION: Technical Details -->
-                <fieldset class="form__fieldset" x-show="cats[cat].type === 'movie' || cats[cat].type === 'tv'" style="display: none; margin-top: 2em; margin-bottom: 2em;">
+                <fieldset class="form__fieldset" x-show="cats[cat].type === 'movie' || cats[cat].type === 'tv'" style="display: none; margin-top: 2em; margin-bottom: 2em; border-left: 4px solid #00bcd4;">
                     <legend class="form__legend">
                         <button
                             type="button"
@@ -621,8 +833,8 @@
                             @click="showAdvanced = !showAdvanced"
                             style="background: none; border: none; cursor: pointer; color: inherit; font: inherit; padding: 0;"
                         >
-                            <i class="{{ config('other.font-awesome') }}" :class="showAdvanced ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
-                            Technical Details
+                            <i class="{{ config('other.font-awesome') }}" :class="showAdvanced ? 'fa-chevron-down' : 'fa-chevron-right'" style="color: #00bcd4;"></i>
+                            <span style="font-size: 1.05em;">Technical Details</span>
                         </button>
                         <span class="form__legend-hint" style="font-size: 0.85em; font-weight: normal; margin-left: 0.5em;">Optional — MediaInfo and BDInfo for video content</span>
                     </legend>
@@ -660,7 +872,7 @@
                     </div>
                 </fieldset>
                 <!-- OPTIONAL SECTION: Advanced Options -->
-                <fieldset class="form__fieldset" style="margin-top: 2em; margin-bottom: 2em;">
+                <fieldset class="form__fieldset" style="margin-top: 2em; margin-bottom: 2em; border-left: 4px solid #ff6b6b;">
                     <legend class="form__legend">
                         <button
                             type="button"
@@ -668,8 +880,8 @@
                             @click="showMetadata = !showMetadata"
                             style="background: none; border: none; cursor: pointer; color: inherit; font: inherit; padding: 0;"
                         >
-                            <i class="{{ config('other.font-awesome') }}" :class="showMetadata ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
-                            Advanced Options
+                            <i class="{{ config('other.font-awesome') }}" :class="showMetadata ? 'fa-chevron-down' : 'fa-chevron-right'" style="color: #ff6b6b;"></i>
+                            <span style="font-size: 1.05em;">Advanced Options</span>
                         </button>
                     </legend>
 
