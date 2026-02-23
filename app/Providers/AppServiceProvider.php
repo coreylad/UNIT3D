@@ -19,6 +19,7 @@ namespace App\Providers;
 use App\Helpers\ByteUnits;
 use App\Helpers\HiddenCaptcha;
 use App\Interfaces\ByteUnitsInterface;
+use App\Models\IgdbGame;
 use App\Models\User;
 use App\Observers\UserObserver;
 use App\View\Composers\FooterComposer;
@@ -55,6 +56,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(Request $request): void
     {
+        if (!\class_exists(\App\Models\Game::class, false)) {
+            \class_alias(IgdbGame::class, \App\Models\Game::class);
+        }
+
         // User Observer For Cache
         User::observe(UserObserver::class);
 
