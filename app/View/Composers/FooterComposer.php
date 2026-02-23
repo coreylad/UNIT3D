@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\View\Composers;
 
 use App\Models\Page;
+use App\Models\SiteSetting;
 use Illuminate\View\View;
 
 class FooterComposer
@@ -15,7 +16,8 @@ class FooterComposer
     public function compose(View $view): void
     {
         $view->with([
-            'pages' => cache()->flexible('cached-pages', [3600, 3600 * 2], fn () => Page::select(['id', 'name', 'created_at'])->take(6)->get())
+            'pages' => cache()->flexible('cached-pages', [3600, 3600 * 2], fn () => Page::select(['id', 'name', 'created_at'])->take(6)->get()),
+            'siteSetting' => SiteSetting::instance(),
         ]);
     }
 }

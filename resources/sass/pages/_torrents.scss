@@ -1056,6 +1056,48 @@ th.similar-torrents__type {
     }
 }
 
+/* Category Bar
+---------------------------------------------------------------------------- */
+
+.torrent-search__category-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 4px 12px;
+}
+
+.torrent-search__category-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 500px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    background: var(--category-btn-bg, rgba(128, 128, 128, 0.15));
+    color: var(--category-btn-fg, inherit);
+    border: 1px solid var(--category-btn-border, rgba(128, 128, 128, 0.3));
+    transition:
+        background 0.15s,
+        border-color 0.15s;
+}
+
+.torrent-search__category-btn:hover {
+    background: var(--category-btn-hover-bg, rgba(128, 128, 128, 0.3));
+}
+
+.torrent-search__category-btn--active {
+    background: var(--category-btn-active-bg, #325d88);
+    color: var(--category-btn-active-fg, #fff);
+    border-color: var(--category-btn-active-border, #325d88);
+}
+
+.torrent-search__category-btn--active:hover {
+    background: var(--category-btn-active-bg, #325d88);
+    filter: brightness(1.1);
+}
+
 /* Torrent Moderation */
 .torrent--approved {
     color: green;

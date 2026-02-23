@@ -205,6 +205,15 @@
                             {{ __('staff.forums') }}
                         </a>
                     </p>
+                    <p class="form__group form__group--horizontal">
+                        <a
+                            class="form__button form__button--text"
+                            href="{{ route('staff.site_settings.edit') }}"
+                        >
+                            <i class="{{ config('other.font-awesome') }} fa-cog"></i>
+                            Site Settings
+                        </a>
+                    </p>
                 @endif
 
                 <p class="form__group form__group--horizontal">

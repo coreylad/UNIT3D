@@ -271,3 +271,14 @@ body {
 [x-cloak] {
     display: none !important;
 }
+
+.auth-form__login-message {
+    background-color: rgba(50, 93, 136, 0.15);
+    border-left: 3px solid #325d88;
+    border-radius: 4px;
+    color: inherit;
+    font-size: 14px;
+    margin-bottom: 16px;
+    padding: 10px 14px;
+    white-space: pre-wrap;
+}
