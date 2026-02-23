@@ -1,10 +1,10 @@
 @extends('layout.with-main-and-sidebar')
 
-@section('title', __('user.new-user'))
+@section('title', __('common.create').' '.__('common.user'))
 
 @section('content')
     <div class="panelV2">
-        <h2 class="panel__heading">{{ __('user.new-user') }}</h2>
+        <h2 class="panel__heading">{{ __('common.create').' '.__('common.user') }}</h2>
         <div class="panel__body">
             <form class="form" method="POST" action="{{ route('staff.users.store') }}">
                 @csrf
@@ -41,7 +41,7 @@
                         required
                         placeholder=" "
                     >
-                    <label class="form__label" for="password">{{ __('user.password') }}</label>
+                    <label class="form__label" for="password">{{ __('common.password') }}</label>
                 </p>
                 <p class="form__group">
                     <input
@@ -52,7 +52,7 @@
                         required
                         placeholder=" "
                     >
-                    <label class="form__label" for="password_confirmation">{{ __('user.confirm-password') }}</label>
+                    <label class="form__label" for="password_confirmation">{{ __('auth.confirm-password') }}</label>
                 </p>
                 <p class="form__group">
                     <select name="group_id" id="group_id" class="form__select">
@@ -60,11 +60,11 @@
                             <option value="{{ $group->id }}">{{ $group->name }}</option>
                         @endforeach
                     </select>
-                    <label class="form__label" for="group_id">{{ __('user.group') }}</label>
+                    <label class="form__label" for="group_id">{{ __('common.group') }}</label>
                 </p>
                 <p class="form__group">
                     <button type="submit" class="form__button form__button--filled">
-                        {{ __('user.add-user') }}
+                        {{ __('common.create').' '.__('common.user') }}
                     </button>
                 </p>
             </form>

@@ -1099,6 +1099,16 @@ Route::middleware('language')->group(function (): void {
                 Route::delete('/{user:username}', [App\Http\Controllers\Staff\UserController::class, 'destroy'])->name('destroy');
             });
 
+            // Theme Builder
+            Route::prefix('theme-builder')->name('theme_builder.')->middleware('admin')->group(function (): void {
+                Route::get('/', [App\Http\Controllers\Staff\ThemeBuilderController::class, 'index'])->name('index');
+                Route::get('/create', [App\Http\Controllers\Staff\ThemeBuilderController::class, 'create'])->name('create');
+                Route::post('/', [App\Http\Controllers\Staff\ThemeBuilderController::class, 'store'])->name('store');
+                Route::patch('/{theme}/apply', [App\Http\Controllers\Staff\ThemeBuilderController::class, 'apply'])->name('apply');
+                Route::delete('/{theme}', [App\Http\Controllers\Staff\ThemeBuilderController::class, 'destroy'])->name('destroy');
+                Route::get('/{theme}/css', [App\Http\Controllers\Staff\ThemeBuilderController::class, 'css'])->name('css');
+            });
+
             // Warnings Log
             Route::prefix('warnings')->name('warnings.')->group(function (): void {
                 Route::get('/', [App\Http\Controllers\Staff\WarningController::class, 'index'])->name('index');

@@ -176,6 +176,12 @@
                         </a>
                     </p>
                     <p class="form__group form__group--horizontal">
+                        <a class="form__button form__button--text" href="{{ route('staff.theme_builder.index') }}">
+                            <i class="{{ config('other.font-awesome') }} fa-palette"></i>
+                            Theme builder
+                        </a>
+                    </p>
+                    <p class="form__group form__group--horizontal">
                         <a class="form__button form__button--text" href="{{ route('staff.categories.create') }}">
                             <i class="{{ config('other.font-awesome') }} fa-plus-square"></i>
                             New torrent category

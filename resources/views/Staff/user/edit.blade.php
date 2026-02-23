@@ -180,7 +180,7 @@
         </div>
     </section>
     <section class="panelV2">
-        <h2 class="panel__heading">{{ __('user.password') }}</h2>
+        <h2 class="panel__heading">{{ __('common.password') }}</h2>
         <div class="panel__body">
             <form class="form" method="POST" action="{{ route('staff.users.password.update', ['user' => $user]) }}">
                 @csrf
@@ -194,7 +194,7 @@
                         required
                         placeholder=" "
                     >
-                    <label class="form__label" for="password">{{ __('user.new-password') }}</label>
+                    <label class="form__label" for="password">{{ __('auth.new-password') }}</label>
                 </p>
                 <p class="form__group">
                     <input
@@ -205,7 +205,7 @@
                         required
                         placeholder=" "
                     >
-                    <label class="form__label" for="password_confirmation">{{ __('user.confirm-password') }}</label>
+                    <label class="form__label" for="password_confirmation">{{ __('auth.confirm-password') }}</label>
                 </p>
                 <p class="form__group">
                     <button class="form__button form__button--filled">
