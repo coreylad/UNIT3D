@@ -46,8 +46,8 @@
         .page__torrent--create .upload-section {
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 8px;
-            padding: 1.25em 1.5em;
-            margin-bottom: 1.25em;
+            padding: 1.5em 1.75em;
+            margin-bottom: 1.5em;
             background: rgba(0, 0, 0, 0.15);
         }
 
@@ -60,12 +60,12 @@
         .page__torrent--create .upload-section__header {
             display: flex;
             align-items: center;
-            gap: 0.6em;
+            gap: 0.75em;
             margin-bottom: 0;
         }
 
         .page__torrent--create .upload-section__header--with-content {
-            margin-bottom: 1.25em;
+            margin-bottom: 1.5em;
         }
 
         .page__torrent--create .upload-section__toggle {
@@ -91,6 +91,7 @@
             font-size: 0.82em;
             opacity: 0.6;
             font-weight: normal;
+            margin-left: 0.4em;
         }
 
         .page__torrent--create .upload-section__body {
@@ -259,7 +260,7 @@
                             <i class="{{ config('other.font-awesome') }}" :class="showTechnical ? 'fa-chevron-down' : 'fa-chevron-right'" style="color: #4a9eff; width: 1em;"></i>
                             Files &amp; Artwork
                         </button>
-                        <span class="upload-section__hint">â€” NFO, cover image, banner</span>
+                        <span class="upload-section__hint">&mdash; NFO, cover image, banner</span>
                     </div>
 
                     <div x-show="showTechnical" x-cloak class="upload-section__body">
@@ -322,7 +323,7 @@
                             <i class="{{ config('other.font-awesome') }}" :class="showAdvanced ? 'fa-chevron-down' : 'fa-chevron-right'" style="color: #4a9eff; width: 1em;"></i>
                             Episode &amp; Release Details
                         </button>
-                        <span class="upload-section__hint">â€” season, episode, distributor, region</span>
+                        <span class="upload-section__hint">&mdash; season, episode, distributor, region</span>
                     </div>
 
                     <div x-show="showAdvanced" x-cloak class="upload-section__body">
@@ -433,7 +434,7 @@
                             <i class="{{ config('other.font-awesome') }}" :class="showMetadata ? 'fa-chevron-down' : 'fa-chevron-right'" style="color: #9c27b0; width: 1em;"></i>
                             Media Metadata
                         </button>
-                        <span class="upload-section__hint">â€” TMDB, IMDB, TVDB, MAL, IGDB IDs</span>
+                        <span class="upload-section__hint">&mdash; TMDB, IMDB, TVDB, MAL, IGDB IDs</span>
                     </div>
 
                     <div x-show="showMetadata" x-cloak class="upload-section__body">
@@ -549,7 +550,7 @@
                             <i class="{{ config('other.font-awesome') }}" :class="showAdvanced ? 'fa-chevron-down' : 'fa-chevron-right'" style="color: #00bcd4; width: 1em;"></i>
                             Technical Details
                         </button>
-                        <span class="upload-section__hint">â€” MediaInfo, BDInfo</span>
+                        <span class="upload-section__hint">&mdash; MediaInfo, BDInfo</span>
                     </div>
 
                     <div x-show="showAdvanced" x-cloak class="upload-section__body">
@@ -581,7 +582,7 @@
                             <i class="{{ config('other.font-awesome') }}" :class="showMetadata ? 'fa-chevron-down' : 'fa-chevron-right'" style="color: #ff6b6b; width: 1em;"></i>
                             Advanced Options
                         </button>
-                        <span class="upload-section__hint">â€” anonymous, internal, freeleech</span>
+                        <span class="upload-section__hint">&mdash; anonymous, internal, freeleech</span>
                     </div>
 
                     <div x-show="showMetadata" x-cloak class="upload-section__body">
