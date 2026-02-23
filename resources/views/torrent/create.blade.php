@@ -1,4 +1,4 @@
-@extends('layout.with-main-and-sidebar')
+﻿@extends('layout.with-main-and-sidebar')
 
 @section('title')
     <title>Upload - {{ config('other.title') }}</title>
@@ -42,212 +42,68 @@
 
 @section('styles')
     <style>
-        /* Form Fieldset Styling */
-        .form__fieldset {
+        /* Scoped ONLY to the upload page - do not touch theme globals */
+        .page__torrent--create .upload-section {
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 8px;
-            padding: 1.5em;
-            background: rgba(0, 0, 0, 0.2);
-            transition: all 0.2s ease;
-        }
-
-        .form__fieldset:hover {
-            border-color: rgba(255, 255, 255, 0.15);
-            background: rgba(0, 0, 0, 0.25);
-        }
-
-        /* Legend Button */
-        .form__legend {
+            padding: 1.25em 1.5em;
             margin-bottom: 1.25em;
+            background: rgba(0, 0, 0, 0.15);
+        }
+
+        .page__torrent--create .upload-section--orange { border-left: 4px solid #ff9800; }
+        .page__torrent--create .upload-section--blue   { border-left: 4px solid #4a9eff; }
+        .page__torrent--create .upload-section--purple { border-left: 4px solid #9c27b0; }
+        .page__torrent--create .upload-section--cyan   { border-left: 4px solid #00bcd4; }
+        .page__torrent--create .upload-section--red    { border-left: 4px solid #ff6b6b; }
+
+        .page__torrent--create .upload-section__header {
             display: flex;
             align-items: center;
-            gap: 0.75em;
+            gap: 0.6em;
+            margin-bottom: 0;
         }
 
-        .form__legend-toggle {
+        .page__torrent--create .upload-section__header--with-content {
+            margin-bottom: 1.25em;
+        }
+
+        .page__torrent--create .upload-section__toggle {
             display: flex;
             align-items: center;
             gap: 0.5em;
-            transition: color 0.2s ease;
-            font-weight: 600;
-            font-size: 1.05em;
-        }
-
-        .form__legend-toggle:hover {
-            color: #4a9eff;
-        }
-
-        .form__legend-hint {
-            opacity: 0.7;
-        }
-
-        /* Input Styling */
-        .form__text,
-        .form__select,
-        .form__textarea,
-        .form__file {
-            border-radius: 6px !important;
-            border: 1px solid rgba(255, 255, 255, 0.15) !important;
-            padding: 0.75em 1em !important;
-            transition: all 0.2s ease;
-            background: rgba(0, 0, 0, 0.3);
-        }
-
-        .form__text:focus,
-        .form__select:focus,
-        .form__textarea:focus {
-            border-color: rgba(74, 158, 255, 0.5) !important;
-            background: rgba(0, 0, 0, 0.4);
-            box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.1);
-            outline: none;
-        }
-
-        .form__text:hover,
-        .form__select:hover,
-        .form__textarea:hover {
-            border-color: rgba(255, 255, 255, 0.25);
-            background: rgba(0, 0, 0, 0.35);
-        }
-
-        /* Button Styling */
-        .form__button {
-            border-radius: 6px !important;
-            padding: 0.75em 1.5em !important;
-            transition: all 0.2s ease;
-            font-weight: 600;
-        }
-
-        .form__button--filled {
-            background: linear-gradient(135deg, #4a9eff, #357abd) !important;
-            border: none !important;
-            color: white;
-            box-shadow: 0 4px 12px rgba(74, 158, 255, 0.3);
-        }
-
-        .form__button--filled:hover {
-            box-shadow: 0 6px 16px rgba(74, 158, 255, 0.4);
-            transform: translateY(-1px);
-        }
-
-        .form__button--outlined {
-            border: 1px solid rgba(255, 255, 255, 0.25) !important;
-            border-radius: 6px !important;
-            background: transparent;
-            color: inherit;
-        }
-
-        .form__button--outlined:hover {
-            border-color: rgba(255, 255, 255, 0.4);
-            background: rgba(255, 255, 255, 0.05);
-        }
-
-        /* Fieldset Group Spacing */
-        .form__group {
-            margin-bottom: 1.25em;
-        }
-
-        .form__group:last-child {
-            margin-bottom: 0;
-        }
-
-        .form__group--horizontal {
-            display: flex;
-            gap: 1.5em;
-            margin-bottom: 1.25em;
-        }
-
-        .form__group--horizontal > .form__group {
-            flex: 1;
-            margin-bottom: 0;
-        }
-
-        .form__group--vertical {
-            margin-bottom: 1.5em;
-        }
-
-        /* Checkbox/Radio Styling */
-        .form__checkbox {
-            width: 18px;
-            height: 18px;
-            cursor: pointer;
-            border-radius: 4px;
-            accent-color: #4a9eff;
-        }
-
-        .form__checkbox:focus {
-            box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.2);
-        }
-
-        /* File Input Styling */
-        .form__file {
-            padding: 1em !important;
-            border: 2px dashed rgba(255, 255, 255, 0.2) !important;
-            border-radius: 8px !important;
-            background: rgba(0, 0, 0, 0.2);
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .form__file:hover {
-            border-color: rgba(255, 255, 255, 0.35);
-            background: rgba(0, 0, 0, 0.3);
-        }
-
-        /* Label Styling */
-        .form__label {
-            font-weight: 500;
-            display: block;
-            margin-bottom: 0.5em;
-            color: rgba(255, 255, 255, 0.9);
-        }
-
-        .form__label--floating {
-            transition: all 0.2s ease;
-            font-size: 0.95em;
-        }
-
-        /* Hint Text */
-        .form__hint {
-            display: block;
-            font-size: 0.85em;
-            color: rgba(255, 255, 255, 0.6);
-            margin-top: 0.35em;
-            line-height: 1.4;
-        }
-
-        .form__hint-inline {
-            display: inline;
-            margin-left: 0.5em;
-        }
-
-        /* Headings inside fieldsets */
-        h4 {
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            padding-bottom: 0.75em;
-            color: rgba(255, 255, 255, 0.95);
-        }
-
-        /* Horizontal Rule */
-        hr {
+            background: none;
             border: none;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            margin: 1.5em 0;
+            cursor: pointer;
+            color: inherit;
+            font: inherit;
+            padding: 0;
+            font-weight: 600;
+            font-size: 1em;
+            text-align: left;
         }
 
-        /* Expandable Content */
-        [x-show] {
-            animation: slideDown 0.2s ease-out;
+        .page__torrent--create .upload-section__toggle:hover {
+            opacity: 0.8;
         }
 
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        .page__torrent--create .upload-section__hint {
+            font-size: 0.82em;
+            opacity: 0.6;
+            font-weight: normal;
+        }
+
+        .page__torrent--create .upload-section__body {
+            padding-top: 1em;
+        }
+
+        .page__torrent--create .upload-section__subheading {
+            font-size: 0.9em;
+            font-weight: 600;
+            opacity: 0.85;
+            margin: 1em 0 0.75em;
+            padding-bottom: 0.4em;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
         }
     </style>
 @endsection
@@ -283,16 +139,16 @@
                 enctype="multipart/form-data"
             >
                 @csrf
-                <!-- REQUIRED SECTION: Core Torrent Information -->
-                <fieldset class="form__fieldset" style="margin-bottom: 2em; border-left: 4px solid #ff9800;">
-                    <legend class="form__legend">
-                        <i class="{{ config('other.font-awesome') }} fa-star" style="color: #ff9800; font-size: 1.2em;"></i>
-                        <span style="font-size: 1.1em; font-weight: 700; color: rgba(255, 255, 255, 0.95);">Core Information</span>
-                    </legend>
-                    
+                <!-- REQUIRED: Core Torrent Information -->
+                <div class="upload-section upload-section--orange">
+                    <div class="upload-section__header upload-section__header--with-content">
+                        <i class="{{ config('other.font-awesome') }} fa-star" style="color: #ff9800;"></i>
+                        <span style="font-weight: 700;">Core Information</span>
+                    </div>
+
                     <p class="form__group">
                         <label for="torrent" class="form__label">
-                            Torrent {{ __('torrent.file') }} <span style="color: red;">*</span>
+                            Torrent {{ __('torrent.file') }} <span style="color:#ff6b6b;">*</span>
                         </label>
                         <input
                             class="upload-form-file form__file"
@@ -315,7 +171,7 @@
                             required
                         />
                         <label class="form__label form__label--floating" for="title">
-                            {{ __('torrent.title') }} <span style="color: red;">*</span>
+                            {{ __('torrent.title') }}
                         </label>
                     </p>
 
@@ -337,7 +193,7 @@
                             @endforeach
                         </select>
                         <label class="form__label form__label--floating" for="autocat">
-                            {{ __('torrent.category') }} <span style="color: red;">*</span>
+                            {{ __('torrent.category') }}
                         </label>
                     </p>
 
@@ -354,7 +210,7 @@
                             @endforeach
                         </select>
                         <label class="form__label form__label--floating" for="autotype">
-                            {{ __('torrent.type') }} <span style="color: red;">*</span>
+                            {{ __('torrent.type') }}
                         </label>
                     </p>
 
@@ -387,29 +243,26 @@
                             placeholder=" "
                         />
                         <label class="form__label form__label--floating" for="autokeywords">
-                            {{ __('torrent.keywords') }} (
-                            <i>{{ __('torrent.keywords-example') }}</i>
-                            )
+                            {{ __('torrent.keywords') }} (<i>{{ __('torrent.keywords-example') }}</i>)
                         </label>
                     </p>
-                </fieldset>
+                </div>
 
-                <!-- OPTIONAL SECTION: Files & Artwork -->
-                <fieldset class="form__fieldset" style="margin-top: 2em; margin-bottom: 2em; border-left: 4px solid #4a9eff;">
-                    <legend class="form__legend">
+                <!-- OPTIONAL: Files & Artwork -->
+                <div class="upload-section upload-section--blue">
+                    <div class="upload-section__header">
                         <button
                             type="button"
-                            class="form__legend-toggle"
+                            class="upload-section__toggle"
                             @click="showTechnical = !showTechnical"
-                            style="background: none; border: none; cursor: pointer; color: inherit; font: inherit; padding: 0;"
                         >
-                            <i class="{{ config('other.font-awesome') }}" :class="showTechnical ? 'fa-chevron-down' : 'fa-chevron-right'" style="color: #4a9eff;"></i>
-                            <span style="font-size: 1.05em;">Files & Artwork</span>
+                            <i class="{{ config('other.font-awesome') }}" :class="showTechnical ? 'fa-chevron-down' : 'fa-chevron-right'" style="color: #4a9eff; width: 1em;"></i>
+                            Files &amp; Artwork
                         </button>
-                        <span class="form__legend-hint" style="font-size: 0.85em; font-weight: normal; margin-left: 0.5em;">Optional — Upload supplementary files and images</span>
-                    </legend>
+                        <span class="upload-section__hint">â€” NFO, cover image, banner</span>
+                    </div>
 
-                    <div x-show="showTechnical" style="display: none; padding-top: 1em;">
+                    <div x-show="showTechnical" x-cloak class="upload-section__body">
                         <p class="form__group">
                             <label for="nfo" class="form__label">
                                 NFO {{ __('torrent.file') }} ({{ __('torrent.optional') }})
@@ -421,13 +274,12 @@
                                 accept=".nfo"
                                 name="nfo"
                             />
-                            <span class="form__hint">Text file with release information</span>
                         </p>
 
-                        <h4 style="margin-top: 1.5em; margin-bottom: 0.5em; font-size: 0.95em; font-weight: 600;">
+                        <p class="form__label upload-section__subheading">
                             <i class="{{ config('other.font-awesome') }} fa-image"></i>
-                            Box Art & Artwork
-                        </h4>
+                            Box Art &amp; Artwork
+                        </p>
 
                         <p class="form__group">
                             <label for="torrent-cover" class="form__label">
@@ -440,7 +292,7 @@
                                 accept=".jpg, .jpeg, .png"
                                 name="torrent-cover"
                             />
-                            <span class="form__hint">Cover art, poster, or box art image (JPG/PNG). Recommended for all content types</span>
+                            <span class="form__hint">Cover art, poster, or box art â€” JPG/PNG, recommended for all content types</span>
                         </p>
 
                         <p class="form__group">
@@ -454,548 +306,326 @@
                                 accept=".jpg, .jpeg, .png"
                                 name="torrent-banner"
                             />
-                            <span class="form__hint">Wide banner or backdrop image (JPG/PNG). Great for featured displays</span>
+                            <span class="form__hint">Wide banner or backdrop image â€” JPG/PNG</span>
                         </p>
                     </div>
-                </fieldset>
-                <!-- OPTIONAL SECTION: Episode & Release Details -->
-                <fieldset class="form__fieldset" x-show="cats[cat].type === 'movie' || cats[cat].type === 'tv'" style="display: none; margin-top: 2em; margin-bottom: 2em; border-left: 4px solid #4a9eff;">
-                    <legend class="form__legend">
+                </div>
+
+                <!-- OPTIONAL: Episode & Release Details (movie/tv only) -->
+                <div class="upload-section upload-section--blue" x-show="cats[cat].type === 'movie' || cats[cat].type === 'tv'" x-cloak>
+                    <div class="upload-section__header">
                         <button
                             type="button"
-                            class="form__legend-toggle"
+                            class="upload-section__toggle"
                             @click="showAdvanced = !showAdvanced"
-                            style="background: none; border: none; cursor: pointer; color: inherit; font: inherit; padding: 0;"
                         >
-                            <i class="{{ config('other.font-awesome') }}" :class="showAdvanced ? 'fa-chevron-down' : 'fa-chevron-right'" style="color: #4a9eff;"></i>
-                            <span style="font-size: 1.05em;">Episode & Release Details</span>
+                            <i class="{{ config('other.font-awesome') }}" :class="showAdvanced ? 'fa-chevron-down' : 'fa-chevron-right'" style="color: #4a9eff; width: 1em;"></i>
+                            Episode &amp; Release Details
                         </button>
-                    </legend>
-
-                    <div x-show="showAdvanced" style="display: none; padding-top: 1em;">
-                            <h4 style="margin-top: 0; margin-bottom: 1em; font-size: 0.95em; font-weight: 600;">
-                                {{ __('torrent.season-number') }} & {{ __('torrent.episode-number') }}
-                            </h4>
-                            <div class="form__group--horizontal">
-                                <p class="form__group">
-                                    <input
-                                        type="text"
-                                        name="season_number"
-                                        id="season_number"
-                                        class="form__text"
-                                        inputmode="numeric"
-                                        pattern="[0-9]*"
-                                        value="{{ old('season_number') }}"
-                                        x-bind:required="cats[cat].type === 'tv'"
-                                    />
-                                    <label class="form__label form__label--floating" for="season_number">
-                                        {{ __('torrent.season-number') }}
-                                    </label>
-                                    <span class="form__hint">
-                                        Numeric digits only. Use 0 for specials and complete packs.
-                                    </span>
-                                </p>
-                                <p class="form__group">
-                                    <input
-                                        type="text"
-                                        name="episode_number"
-                                        id="episode_number"
-                                        class="form__text"
-                                        inputmode="numeric"
-                                        pattern="[0-9]*"
-                                        value="{{ old('episode_number') }}"
-                                        x-bind:required="cats[cat].type === 'tv'"
-                                    />
-                                    <label class="form__label form__label--floating" for="episode_number">
-                                        {{ __('torrent.episode-number') }}
-                                    </label>
-                                    <span class="form__hint">
-                                        Numeric digits only. Use 0 for season/complete packs.
-                                    </span>
-                                </p>
-                            </div>
-                        </div>
-
-                        <!-- Distributor & Region -->
-                        <div>
-                            <h4 style="margin-top: 1em; margin-bottom: 1em; font-size: 0.95em; font-weight: 600;">
-                                {{ __('torrent.distributor') }} & {{ __('torrent.region') }}
-                            </h4>
-                            <div class="form__group--horizontal">
-                                <p class="form__group">
-                                    <select
-                                        name="distributor_id"
-                                        id="autodis"
-                                        class="form__select"
-                                        x-data="{ distributor: '' }"
-                                        x-model="distributor"
-                                        x-bind:class="distributor === '' ? 'form__select--default' : ''"
-                                    >
-                                        <option value="">{{ __('common.other') }}</option>
-                                        <option selected disabled hidden value=""></option>
-                                        @foreach ($distributors as $distributor)
-                                            <option
-                                                value="{{ $distributor->id }}"
-                                                @selected(old('distributor_id') == $distributor->id)
-                                            >
-                                                {{ $distributor->name }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    <label class="form__label form__label--floating" for="autodis">
-                                        {{ __('torrent.distributor') }} <span style="font-size: 0.85em;">(full disc only)</span>
-                                    </label>
-                                </p>
-                                <p class="form__group">
-                                    <select
-                                        name="region_id"
-                                        id="autoreg"
-                                        class="form__select"
-                                        x-data="{ region: '' }"
-                                        x-model="region"
-                                        x-bind:class="region === '' ? 'form__select--default' : ''"
-                                    >
-                                        <option value="">{{ __('common.other') }}</option>
-                                        <option selected disabled hidden value=""></option>
-                                        @foreach ($regions as $region)
-                                            <option
-                                                value="{{ $region->id }}"
-                                                @selected(old('region_id') == $region->id)
-                                            >
-                                                {{ $region->name }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    <label class="form__label form__label--floating" for="autoreg">
-                                        {{ __('torrent.region') }} <span style="font-size: 0.85em;">(full disc only)</span>
-                                    </label>
-                                </p>
-                            </div>
-                        </div>
+                        <span class="upload-section__hint">â€” season, episode, distributor, region</span>
                     </div>
-                </fieldset>
-                <!-- OPTIONAL SECTION: Media Metadata -->
-                <fieldset class="form__fieldset" x-show="cats[cat].type === 'movie' || cats[cat].type === 'tv' || cats[cat].type === 'game'" style="display: none; margin-top: 2em; margin-bottom: 2em; border-left: 4px solid #9c27b0;">
-                    <legend class="form__legend">
-                        <button
-                            type="button"
-                            class="form__legend-toggle"
-                            @click="showMetadata = !showMetadata"
-                            style="background: none; border: none; cursor: pointer; color: inherit; font: inherit; padding: 0;"
-                        >
-                            <i class="{{ config('other.font-awesome') }}" :class="showMetadata ? 'fa-chevron-down' : 'fa-chevron-right'" style="color: #9c27b0;"></i>
-                            <span style="font-size: 1.05em;">Media Metadata</span>
-                        </button>
-                        <span class="form__legend-hint" style="font-size: 0.85em; font-weight: normal; margin-left: 0.5em;">Optional — For movies, TV shows, and games</span>
-                    </legend>
 
-                    <div x-show="showMetadata" style="display: none; padding-top: 1em;">
-                        <!-- TMDB Movie -->
-                        <div class="form__group--vertical" x-show="cats[cat].type === 'movie'">
+                    <div x-show="showAdvanced" x-cloak class="upload-section__body">
+                        <p class="upload-section__subheading" x-show="cats[cat].type === 'tv'">
+                            {{ __('torrent.season-number') }} &amp; {{ __('torrent.episode-number') }}
+                        </p>
+                        <div class="form__group--horizontal" x-show="cats[cat].type === 'tv'">
                             <p class="form__group">
                                 <input
-                                    type="checkbox"
-                                    class="form__checkbox"
-                                    id="movie_exists_on_tmdb"
-                                    name="movie_exists_on_tmdb"
-                                    value="1"
-                                    @checked(old('movie_exists_on_tmdb', true))
-                                    x-model="tmdb_movie_exists"
+                                    type="text"
+                                    name="season_number"
+                                    id="season_number"
+                                    class="form__text"
+                                    inputmode="numeric"
+                                    pattern="[0-9]*"
+                                    value="{{ old('season_number') }}"
+                                    x-bind:required="cats[cat].type === 'tv'"
                                 />
-                                <label class="form__label" for="movie_exists_on_tmdb">
-                                    This movie exists on TMDB
+                                <label class="form__label form__label--floating" for="season_number">
+                                    {{ __('torrent.season-number') }}
                                 </label>
+                                <span class="form__hint">Use 0 for specials and complete packs.</span>
+                            </p>
+                            <p class="form__group">
+                                <input
+                                    type="text"
+                                    name="episode_number"
+                                    id="episode_number"
+                                    class="form__text"
+                                    inputmode="numeric"
+                                    pattern="[0-9]*"
+                                    value="{{ old('episode_number') }}"
+                                    x-bind:required="cats[cat].type === 'tv'"
+                                />
+                                <label class="form__label form__label--floating" for="episode_number">
+                                    {{ __('torrent.episode-number') }}
+                                </label>
+                                <span class="form__hint">Use 0 for season/complete packs.</span>
+                            </p>
+                        </div>
+
+                        <p class="upload-section__subheading">
+                            {{ __('torrent.distributor') }} &amp; {{ __('torrent.region') }}
+                        </p>
+                        <div class="form__group--horizontal">
+                            <p class="form__group">
+                                <select
+                                    name="distributor_id"
+                                    id="autodis"
+                                    class="form__select"
+                                    x-data="{ distributor: '' }"
+                                    x-model="distributor"
+                                    x-bind:class="distributor === '' ? 'form__select--default' : ''"
+                                >
+                                    <option value="">{{ __('common.other') }}</option>
+                                    <option selected disabled hidden value=""></option>
+                                    @foreach ($distributors as $distributor)
+                                        <option
+                                            value="{{ $distributor->id }}"
+                                            @selected(old('distributor_id') == $distributor->id)
+                                        >
+                                            {{ $distributor->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <label class="form__label form__label--floating" for="autodis">
+                                    {{ __('torrent.distributor') }}
+                                </label>
+                                <span class="form__hint">Full disc releases only</span>
+                            </p>
+                            <p class="form__group">
+                                <select
+                                    name="region_id"
+                                    id="autoreg"
+                                    class="form__select"
+                                    x-data="{ region: '' }"
+                                    x-model="region"
+                                    x-bind:class="region === '' ? 'form__select--default' : ''"
+                                >
+                                    <option value="">{{ __('common.other') }}</option>
+                                    <option selected disabled hidden value=""></option>
+                                    @foreach ($regions as $region)
+                                        <option
+                                            value="{{ $region->id }}"
+                                            @selected(old('region_id') == $region->id)
+                                        >
+                                            {{ $region->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <label class="form__label form__label--floating" for="autoreg">
+                                    {{ __('torrent.region') }}
+                                </label>
+                                <span class="form__hint">Full disc releases only</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- OPTIONAL: Media Metadata (movie/tv/game only) -->
+                <div class="upload-section upload-section--purple" x-show="cats[cat].type === 'movie' || cats[cat].type === 'tv' || cats[cat].type === 'game'" x-cloak>
+                    <div class="upload-section__header">
+                        <button
+                            type="button"
+                            class="upload-section__toggle"
+                            @click="showMetadata = !showMetadata"
+                        >
+                            <i class="{{ config('other.font-awesome') }}" :class="showMetadata ? 'fa-chevron-down' : 'fa-chevron-right'" style="color: #9c27b0; width: 1em;"></i>
+                            Media Metadata
+                        </button>
+                        <span class="upload-section__hint">â€” TMDB, IMDB, TVDB, MAL, IGDB IDs</span>
+                    </div>
+
+                    <div x-show="showMetadata" x-cloak class="upload-section__body">
+                        <!-- TMDB Movie -->
+                        <div x-show="cats[cat].type === 'movie'">
+                            <p class="form__group">
+                                <input type="checkbox" class="form__checkbox" id="movie_exists_on_tmdb" name="movie_exists_on_tmdb" value="1" @checked(old('movie_exists_on_tmdb', true)) x-model="tmdb_movie_exists" />
+                                <label class="form__label" for="movie_exists_on_tmdb">This movie exists on TMDB</label>
                                 <output name="apimatch" id="apimatch" for="torrent"></output>
                             </p>
                             <p class="form__group" x-show="tmdb_movie_exists">
                                 <input type="hidden" name="tmdb_movie_id" value="0" />
-                                <input
-                                    type="text"
-                                    name="tmdb_movie_id"
-                                    id="auto_tmdb_movie"
-                                    class="form__text"
-                                    inputmode="numeric"
-                                    pattern="[0-9]*"
-                                    placeholder=" "
+                                <input type="text" name="tmdb_movie_id" id="auto_tmdb_movie" class="form__text" inputmode="numeric" pattern="[0-9]*" placeholder=" "
                                     x-bind:value="cats[cat].type === 'movie' && tmdb_movie_exists ? '{{ old('tmdb_movie_id', $movieId) }}' : ''"
-                                    x-bind:required="cats[cat].type === 'movie' && tmdb_movie_exists"
-                                />
-                                <label class="form__label form__label--floating" for="auto_tmdb_movie">
-                                    TMDB Movie ID
-                                </label>
+                                    x-bind:required="cats[cat].type === 'movie' && tmdb_movie_exists" />
+                                <label class="form__label form__label--floating" for="auto_tmdb_movie">TMDB Movie ID</label>
                                 <span class="form__hint">Numeric digits only.</span>
                             </p>
                         </div>
 
                         <!-- TMDB TV -->
-                        <div class="form__group--vertical" x-show="cats[cat].type === 'tv'">
+                        <div x-show="cats[cat].type === 'tv'">
                             <p class="form__group">
-                                <input
-                                    type="checkbox"
-                                    class="form__checkbox"
-                                    id="tv_exists_on_tmdb"
-                                    name="tv_exists_on_tmdb"
-                                    value="1"
-                                    @checked(old('tv_exists_on_tmdb', true))
-                                    x-model="tmdb_tv_exists"
-                                />
-                                <label class="form__label" for="tv_exists_on_tmdb">
-                                    This TV show exists on TMDB
-                                </label>
-                                <output name="apimatch" id="apimatch" for="torrent"></output>
+                                <input type="checkbox" class="form__checkbox" id="tv_exists_on_tmdb" name="tv_exists_on_tmdb" value="1" @checked(old('tv_exists_on_tmdb', true)) x-model="tmdb_tv_exists" />
+                                <label class="form__label" for="tv_exists_on_tmdb">This TV show exists on TMDB</label>
+                                <output name="apimatch" for="torrent"></output>
                             </p>
                             <p class="form__group" x-show="tmdb_tv_exists">
                                 <input type="hidden" name="tmdb_tv_id" value="0" />
-                                <input
-                                    type="text"
-                                    name="tmdb_tv_id"
-                                    id="auto_tmdb_tv"
-                                    class="form__text"
-                                    inputmode="numeric"
-                                    pattern="[0-9]*"
-                                    placeholder=" "
+                                <input type="text" name="tmdb_tv_id" id="auto_tmdb_tv" class="form__text" inputmode="numeric" pattern="[0-9]*" placeholder=" "
                                     x-bind:value="cats[cat].type === 'tv' && tmdb_tv_exists ? '{{ old('tmdb_tv_id', $tvId) }}' : ''"
-                                    x-bind:required="cats[cat].type === 'tv' && tmdb_tv_exists"
-                                />
-                                <label class="form__label form__label--floating" for="auto_tmdb_tv">
-                                    TMDB TV ID
-                                </label>
+                                    x-bind:required="cats[cat].type === 'tv' && tmdb_tv_exists" />
+                                <label class="form__label form__label--floating" for="auto_tmdb_tv">TMDB TV ID</label>
                                 <span class="form__hint">Numeric digits only.</span>
                             </p>
                         </div>
 
                         <!-- IMDB -->
-                        <div class="form__group--vertical" x-show="cats[cat].type === 'movie' || cats[cat].type === 'tv'">
+                        <div x-show="cats[cat].type === 'movie' || cats[cat].type === 'tv'">
                             <p class="form__group">
-                                <input
-                                    type="checkbox"
-                                    class="form__checkbox"
-                                    id="title_exists_on_imdb"
-                                    name="title_exists_on_imdb"
-                                    value="1"
-                                    @checked(old('title_exists_on_imdb', true))
-                                    x-model="imdb_title_exists"
-                                />
-                                <label class="form__label" for="title_exists_on_imdb">
-                                    This title exists on IMDB
-                                </label>
+                                <input type="checkbox" class="form__checkbox" id="title_exists_on_imdb" name="title_exists_on_imdb" value="1" @checked(old('title_exists_on_imdb', true)) x-model="imdb_title_exists" />
+                                <label class="form__label" for="title_exists_on_imdb">This title exists on IMDB</label>
                             </p>
                             <p class="form__group" x-show="imdb_title_exists">
                                 <input type="hidden" name="imdb" value="0" />
-                                <input
-                                    type="text"
-                                    name="imdb"
-                                    id="autoimdb"
-                                    class="form__text"
-                                    inputmode="numeric"
-                                    pattern="[0-9]*"
-                                    placeholder=" "
-                                    x-bind:value="
-                                        (cats[cat].type === 'movie' || cats[cat].type === 'tv') && imdb_title_exists
-                                            ? '{{ old('imdb', $imdb) }}'
-                                            : ''
-                                    "
+                                <input type="text" name="imdb" id="autoimdb" class="form__text" inputmode="numeric" pattern="[0-9]*" placeholder=" "
+                                    x-bind:value="(cats[cat].type === 'movie' || cats[cat].type === 'tv') && imdb_title_exists ? '{{ old('imdb', $imdb) }}' : ''"
                                     x-bind:required="(cats[cat].type === 'movie' || cats[cat].type === 'tv') && imdb_title_exists"
-                                    x-on:paste="
-                                        matches = $event.clipboardData.getData('text').match(/tt0*(\d{7,})/);
-
-                                        if (matches !== null) {
-                                            $el.value = Number(matches[1]);
-                                            $event.preventDefault();
-                                        }
-                                    "
-                                />
-                                <label class="form__label form__label--floating" for="autoimdb">
-                                    IMDB ID
-                                </label>
-                                <span class="form__hint">Numeric digits only. Paste IMDb links to auto-extract ID.</span>
+                                    x-on:paste="matches = $event.clipboardData.getData('text').match(/tt0*(\d{7,})/); if (matches !== null) { $el.value = Number(matches[1]); $event.preventDefault(); }" />
+                                <label class="form__label form__label--floating" for="autoimdb">IMDB ID</label>
+                                <span class="form__hint">Numeric digits only. You can paste an IMDb URL to auto-extract the ID.</span>
                             </p>
                         </div>
 
                         <!-- TVDB -->
-                        <div class="form__group--vertical" x-show="cats[cat].type === 'tv'">
+                        <div x-show="cats[cat].type === 'tv'">
                             <p class="form__group">
-                                <input
-                                    type="checkbox"
-                                    class="form__checkbox"
-                                    id="tv_exists_on_tvdb"
-                                    name="tv_exists_on_tvdb"
-                                    value="1"
-                                    @checked(old('tv_exists_on_tvdb', true))
-                                    x-model="tvdb_tv_exists"
-                                />
-                                <label class="form__label" for="tv_exists_on_tvdb">
-                                    This TV show exists on TVDB
-                                </label>
+                                <input type="checkbox" class="form__checkbox" id="tv_exists_on_tvdb" name="tv_exists_on_tvdb" value="1" @checked(old('tv_exists_on_tvdb', true)) x-model="tvdb_tv_exists" />
+                                <label class="form__label" for="tv_exists_on_tvdb">This TV show exists on TVDB</label>
                             </p>
                             <p class="form__group" x-show="tvdb_tv_exists">
                                 <input type="hidden" name="tvdb" value="0" />
-                                <input
-                                    type="text"
-                                    name="tvdb"
-                                    id="autotvdb"
-                                    inputmode="numeric"
-                                    pattern="[0-9]*"
-                                    placeholder=" "
+                                <input type="text" name="tvdb" id="autotvdb" class="form__text" inputmode="numeric" pattern="[0-9]*" placeholder=" "
                                     x-bind:value="cats[cat].type === 'tv' && tvdb_tv_exists ? '{{ old('tvdb', $tvdb) }}' : ''"
-                                    class="form__text"
-                                    x-bind:required="cats[cat].type === 'tv' && tvdb_tv_exists"
-                                />
-                                <label class="form__label form__label--floating" for="autotvdb">
-                                    TVDB ID
-                                </label>
+                                    x-bind:required="cats[cat].type === 'tv' && tvdb_tv_exists" />
+                                <label class="form__label form__label--floating" for="autotvdb">TVDB ID</label>
                                 <span class="form__hint">Numeric digits only.</span>
                             </p>
                         </div>
 
                         <!-- MAL -->
-                        <div class="form__group--vertical" x-show="cats[cat].type === 'movie' || cats[cat].type === 'tv'">
+                        <div x-show="cats[cat].type === 'movie' || cats[cat].type === 'tv'">
                             <p class="form__group">
-                                <input
-                                    type="checkbox"
-                                    class="form__checkbox"
-                                    id="anime_exists_on_mal"
-                                    name="anime_exists_on_mal"
-                                    value="1"
-                                    @checked(old('anime_exists_on_mal', true))
-                                    x-model="mal_anime_exists"
-                                />
-                                <label class="form__label" for="anime_exists_on_mal">
-                                    This anime exists on MyAnimeList
-                                </label>
+                                <input type="checkbox" class="form__checkbox" id="anime_exists_on_mal" name="anime_exists_on_mal" value="1" @checked(old('anime_exists_on_mal', true)) x-model="mal_anime_exists" />
+                                <label class="form__label" for="anime_exists_on_mal">This anime exists on MyAnimeList</label>
                             </p>
                             <p class="form__group" x-show="mal_anime_exists">
                                 <input type="hidden" name="mal" value="0" />
-                                <input
-                                    type="text"
-                                    name="mal"
-                                    id="automal"
-                                    inputmode="numeric"
-                                    pattern="[0-9]*"
-                                    x-bind:value="
-                                        (cats[cat].type === 'movie' || cats[cat].type === 'tv') && mal_anime_exists
-                                            ? '{{ old('mal', $mal) }}'
-                                            : ''
-                                    "
-                                    x-bind:required="(cats[cat].type === 'movie' || cats[cat].type === 'tv') && mal_anime_exists"
-                                    class="form__text"
-                                    placeholder=" "
-                                />
-                                <label class="form__label form__label--floating" for="automal">
-                                    MAL ID
-                                </label>
+                                <input type="text" name="mal" id="automal" class="form__text" inputmode="numeric" pattern="[0-9]*" placeholder=" "
+                                    x-bind:value="(cats[cat].type === 'movie' || cats[cat].type === 'tv') && mal_anime_exists ? '{{ old('mal', $mal) }}' : ''"
+                                    x-bind:required="(cats[cat].type === 'movie' || cats[cat].type === 'tv') && mal_anime_exists" />
+                                <label class="form__label form__label--floating" for="automal">MAL ID</label>
                                 <span class="form__hint">Numeric digits only.</span>
                             </p>
                         </div>
 
                         <!-- IGDB -->
-                        <div class="form__group--vertical" x-show="cats[cat].type === 'game'">
+                        <div x-show="cats[cat].type === 'game'">
                             <p class="form__group">
-                                <input
-                                    type="checkbox"
-                                    class="form__checkbox"
-                                    id="game_exists_on_igdb"
-                                    name="game_exists_on_igdb"
-                                    value="1"
-                                    @checked(old('game_exists_on_igdb', true))
-                                    x-model="igdb_game_exists"
-                                />
-                                <label class="form__label" for="game_exists_on_igdb">
-                                    This game exists on IGDB
-                                </label>
+                                <input type="checkbox" class="form__checkbox" id="game_exists_on_igdb" name="game_exists_on_igdb" value="1" @checked(old('game_exists_on_igdb', true)) x-model="igdb_game_exists" />
+                                <label class="form__label" for="game_exists_on_igdb">This game exists on IGDB</label>
                             </p>
                             <p class="form__group" x-show="igdb_game_exists">
-                                <input
-                                    type="text"
-                                    name="igdb"
-                                    id="autoigdb"
-                                    inputmode="numeric"
-                                    pattern="[0-9]*"
+                                <input type="text" name="igdb" id="autoigdb" class="form__text" inputmode="numeric" pattern="[0-9]*"
                                     x-bind:value="cats[cat].type === 'game' && igdb_game_exists ? '{{ old('igdb', $igdb) }}' : ''"
-                                    class="form__text"
-                                    x-bind:required="cats[cat].type === 'game' && igdb_game_exists"
-                                />
+                                    x-bind:required="cats[cat].type === 'game' && igdb_game_exists" />
                                 <label class="form__label form__label--floating" for="autoigdb">
-                                    IGDB ID
-                                    <b>({{ __('torrent.required-games') }})</b>
+                                    IGDB ID <b>({{ __('torrent.required-games') }})</b>
                                 </label>
                             </p>
                         </div>
                     </div>
-                </fieldset>
+                </div>
 
-                <!-- OPTIONAL SECTION: Technical Details -->
-                <fieldset class="form__fieldset" x-show="cats[cat].type === 'movie' || cats[cat].type === 'tv'" style="display: none; margin-top: 2em; margin-bottom: 2em; border-left: 4px solid #00bcd4;">
-                    <legend class="form__legend">
+                <!-- OPTIONAL: Technical Details (movie/tv only) -->
+                <div class="upload-section upload-section--cyan" x-show="cats[cat].type === 'movie' || cats[cat].type === 'tv'" x-cloak>
+                    <div class="upload-section__header">
                         <button
                             type="button"
-                            class="form__legend-toggle"
+                            class="upload-section__toggle"
                             @click="showAdvanced = !showAdvanced"
-                            style="background: none; border: none; cursor: pointer; color: inherit; font: inherit; padding: 0;"
                         >
-                            <i class="{{ config('other.font-awesome') }}" :class="showAdvanced ? 'fa-chevron-down' : 'fa-chevron-right'" style="color: #00bcd4;"></i>
-                            <span style="font-size: 1.05em;">Technical Details</span>
+                            <i class="{{ config('other.font-awesome') }}" :class="showAdvanced ? 'fa-chevron-down' : 'fa-chevron-right'" style="color: #00bcd4; width: 1em;"></i>
+                            Technical Details
                         </button>
-                        <span class="form__legend-hint" style="font-size: 0.85em; font-weight: normal; margin-left: 0.5em;">Optional — MediaInfo and BDInfo for video content</span>
-                    </legend>
+                        <span class="upload-section__hint">â€” MediaInfo, BDInfo</span>
+                    </div>
 
-                    <div x-show="showAdvanced" style="display: none; padding-top: 1em;">
+                    <div x-show="showAdvanced" x-cloak class="upload-section__body">
                         <p class="form__group">
-                            <textarea
-                                id="upload-form-mediainfo"
-                                name="mediainfo"
-                                class="form__textarea"
-                                placeholder=" "
-                            >
-{{ old('mediainfo') }}</textarea
-                            >
+                            <textarea id="upload-form-mediainfo" name="mediainfo" class="form__textarea" placeholder=" ">
+{{ old('mediainfo') }}</textarea>
                             <label class="form__label form__label--floating" for="upload-form-mediainfo">
                                 {{ __('torrent.media-info-parser') }}
                             </label>
-                            <span class="form__hint">Paste MediaInfo output for video/audio codec details</span>
                         </p>
-
                         <p class="form__group">
-                            <textarea
-                                id="upload-form-bdinfo"
-                                name="bdinfo"
-                                class="form__textarea"
-                                placeholder=" "
-                            >
-{{ old('bdinfo') }}</textarea
-                            >
+                            <textarea id="upload-form-bdinfo" name="bdinfo" class="form__textarea" placeholder=" ">
+{{ old('bdinfo') }}</textarea>
                             <label class="form__label form__label--floating" for="upload-form-bdinfo">
                                 BDInfo (quick summary)
                             </label>
-                            <span class="form__hint">For Blu-ray disc content analysis</span>
                         </p>
                     </div>
-                </fieldset>
-                <!-- OPTIONAL SECTION: Advanced Options -->
-                <fieldset class="form__fieldset" style="margin-top: 2em; margin-bottom: 2em; border-left: 4px solid #ff6b6b;">
-                    <legend class="form__legend">
+                </div>
+
+                <!-- OPTIONAL: Advanced Options -->
+                <div class="upload-section upload-section--red">
+                    <div class="upload-section__header">
                         <button
                             type="button"
-                            class="form__legend-toggle"
+                            class="upload-section__toggle"
                             @click="showMetadata = !showMetadata"
-                            style="background: none; border: none; cursor: pointer; color: inherit; font: inherit; padding: 0;"
                         >
-                            <i class="{{ config('other.font-awesome') }}" :class="showMetadata ? 'fa-chevron-down' : 'fa-chevron-right'" style="color: #ff6b6b;"></i>
-                            <span style="font-size: 1.05em;">Advanced Options</span>
+                            <i class="{{ config('other.font-awesome') }}" :class="showMetadata ? 'fa-chevron-down' : 'fa-chevron-right'" style="color: #ff6b6b; width: 1em;"></i>
+                            Advanced Options
                         </button>
-                    </legend>
+                        <span class="upload-section__hint">â€” anonymous, internal, freeleech</span>
+                    </div>
 
-                    <div x-show="showMetadata" style="display: none; padding-top: 1em;">
+                    <div x-show="showMetadata" x-cloak class="upload-section__body">
                         <p class="form__group">
                             <input type="hidden" name="anon" value="0" />
-                            <input
-                                type="checkbox"
-                                class="form__checkbox"
-                                id="anon"
-                                name="anon"
-                                value="1"
-                                @checked(old('anon'))
-                            />
-                            <label class="form__label" for="anon">
-                                <i class="{{ config('other.font-awesome') }} fa-mask"></i>
-                                {{ __('common.anonymous') }}
-                                <span class="form__hint-inline">Upload anonymously without revealing your username</span>
-                            </label>
+                            <input type="checkbox" class="form__checkbox" id="anon" name="anon" value="1" @checked(old('anon')) />
+                            <label class="form__label" for="anon">{{ __('common.anonymous') }}</label>
                         </p>
-
                         <p class="form__group">
                             <input type="hidden" name="personal_release" value="0" />
-                            <input
-                                type="checkbox"
-                                class="form__checkbox"
-                                id="personal_release"
-                                name="personal_release"
-                                value="1"
-                                @checked(old('personal_release'))
-                            />
-                            <label class="form__label" for="personal_release">
-                                <i class="{{ config('other.font-awesome') }} fa-user"></i>
-                                Personal release
-                                <span class="form__hint-inline">Mark as your own personal project or remix</span>
-                            </label>
+                            <input type="checkbox" class="form__checkbox" id="personal_release" name="personal_release" value="1" @checked(old('personal_release')) />
+                            <label class="form__label" for="personal_release">Personal release</label>
                         </p>
-
-                        @if (auth()->user()->group->is_trusted)
+                        @if ($user->group->is_trusted)
                             <p class="form__group">
                                 <input type="hidden" name="mod_queue_opt_in" value="0" />
-                                <input
-                                    type="checkbox"
-                                    class="form__checkbox"
-                                    id="mod_queue_opt_in"
-                                    name="mod_queue_opt_in"
-                                    value="1"
-                                    @checked(old('mod_queue_opt_in'))
-                                />
-                                <label class="form__label" for="mod_queue_opt_in">
-                                    <i class="{{ config('other.font-awesome') }} fa-list-check"></i>
-                                    Opt in to moderation queue
-                                    <span class="form__hint-inline">This will require moderator approval before being visible</span>
-                                </label>
+                                <input type="checkbox" class="form__checkbox" id="mod_queue_opt_in" name="mod_queue_opt_in" value="1" @checked(old('mod_queue_opt_in')) />
+                                <label class="form__label" for="mod_queue_opt_in">Opt in to moderation queue</label>
                             </p>
                         @endif
-
                         @if (auth()->user()->group->is_modo || auth()->user()->internals()->exists())
-                            <hr style="margin: 1.5em 0; opacity: 0.2;">
-                            <h4 style="margin-top: 1em; margin-bottom: 1em; font-size: 0.95em; font-weight: 600;">
-                                <i class="{{ config('other.font-awesome') }} fa-gavel"></i>
-                                Moderator Options
-                            </h4>
-
                             <p class="form__group">
                                 <input type="hidden" name="internal" value="0" />
-                                <input
-                                    type="checkbox"
-                                    class="form__checkbox"
-                                    id="internal"
-                                    name="internal"
-                                    value="1"
-                                    @checked(old('internal'))
-                                />
-                                <label class="form__label" for="internal">
-                                    {{ __('torrent.internal') }} release
-                                </label>
+                                <input type="checkbox" class="form__checkbox" id="internal" name="internal" value="1" @checked(old('internal')) />
+                                <label class="form__label" for="internal">{{ __('torrent.internal') }}</label>
                             </p>
-
                             <p class="form__group">
                                 <input type="hidden" name="refundable" value="0" />
-                                <input
-                                    type="checkbox"
-                                    class="form__checkbox"
-                                    id="refundable"
-                                    name="refundable"
-                                    value="1"
-                                    @checked(old('refundable'))
-                                />
-                                <label class="form__label" for="refundable">
-                                    {{ __('torrent.refundable') }}
-                                </label>
+                                <input type="checkbox" class="form__checkbox" id="refundable" name="refundable" value="1" @checked(old('refundable')) />
+                                <label class="form__label" for="refundable">{{ __('torrent.refundable') }}</label>
                             </p>
-
                             <p class="form__group">
                                 <select name="free" id="free" class="form__select">
-                                    <option
-                                        value="0"
-                                        @selected(old('free') === '0' || old('free') === null)
-                                    >
-                                        {{ __('common.no') }} freeleech
-                                    </option>
+                                    <option value="0" @selected(old('free') === '0' || old('free') === null)>{{ __('common.no') }} {{ __('torrent.freeleech') }}</option>
                                     <option value="25" @selected(old('free') === '25')>25% {{ __('torrent.freeleech') }}</option>
                                     <option value="50" @selected(old('free') === '50')>50% {{ __('torrent.freeleech') }}</option>
                                     <option value="75" @selected(old('free') === '75')>75% {{ __('torrent.freeleech') }}</option>
                                     <option value="100" @selected(old('free') === '100')>100% {{ __('torrent.freeleech') }}</option>
                                 </select>
-                                <label class="form__label form__label--floating" for="free">
-                                    {{ __('torrent.freeleech') }}
-                                </label>
+                                <label class="form__label form__label--floating" for="free">{{ __('torrent.freeleech') }}</label>
                             </p>
                         @endif
                     </div>
-                </fieldset>
+                </div>
 
                 <p class="form__group">
                     <button
