@@ -1,4 +1,4 @@
-﻿@extends('layout.with-main-and-sidebar')
+@extends('layout.with-main-and-sidebar')
 
 @section('title')
     <title>Upload - {{ config('other.title') }}</title>
@@ -293,7 +293,7 @@
                                 accept=".jpg, .jpeg, .png"
                                 name="torrent-cover"
                             />
-                            <span class="form__hint">Cover art, poster, or box art â€” JPG/PNG, recommended for all content types</span>
+                            <span class="form__hint">Cover art, poster, or box art &mdash; JPG/PNG, recommended for all content types</span>
                         </p>
 
                         <p class="form__group">
@@ -307,7 +307,7 @@
                                 accept=".jpg, .jpeg, .png"
                                 name="torrent-banner"
                             />
-                            <span class="form__hint">Wide banner or backdrop image â€” JPG/PNG</span>
+                            <span class="form__hint">Wide banner or backdrop image &mdash; JPG/PNG</span>
                         </p>
                     </div>
                 </div>
