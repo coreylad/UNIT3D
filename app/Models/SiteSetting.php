@@ -21,11 +21,27 @@ use Illuminate\Database\Eloquent\Model;
 /**
  * App\Models\SiteSetting.
  *
- * @property int         $id
- * @property string      $title
- * @property string      $sub_title
- * @property string      $meta_description
- * @property string|null $login_message
+ * @property int          $id
+ * @property string       $title
+ * @property string       $sub_title
+ * @property string       $meta_description
+ * @property string|null  $login_message
+ * @property string|null  $header_image
+ * @property string|null  $smtp_host
+ * @property int          $smtp_port
+ * @property string|null  $smtp_encryption
+ * @property string|null  $smtp_username
+ * @property string|null  $smtp_password
+ * @property string|null  $smtp_from_address
+ * @property string|null  $smtp_from_name
+ * @property bool         $registration_open
+ * @property bool         $invite_only
+ * @property int          $default_download_slots
+ * @property int          $announce_interval
+ * @property bool         $category_filter_enabled
+ * @property string|null  $discord_url
+ * @property string|null  $twitter_url
+ * @property string|null  $github_url
  */
 final class SiteSetting extends Model
 {
@@ -35,6 +51,15 @@ final class SiteSetting extends Model
      * @var string[]
      */
     protected $guarded = ['id'];
+
+    protected $casts = [
+        'registration_open'       => 'boolean',
+        'invite_only'             => 'boolean',
+        'category_filter_enabled' => 'boolean',
+        'smtp_port'               => 'integer',
+        'default_download_slots'  => 'integer',
+        'announce_interval'       => 'integer',
+    ];
 
     /**
      * Retrieve the singleton site settings record, creating it if needed.
@@ -51,10 +76,26 @@ final class SiteSetting extends Model
             ]));
         } catch (\Throwable) {
             $fallback = new self();
-            $fallback->title            = (string) config('other.title');
-            $fallback->sub_title        = (string) config('other.subTitle');
-            $fallback->meta_description = (string) config('other.meta_description');
-            $fallback->login_message    = null;
+            $fallback->title                   = (string) config('other.title');
+            $fallback->sub_title               = (string) config('other.subTitle');
+            $fallback->meta_description        = (string) config('other.meta_description');
+            $fallback->login_message           = null;
+            $fallback->header_image            = null;
+            $fallback->smtp_host               = null;
+            $fallback->smtp_port               = 587;
+            $fallback->smtp_encryption         = null;
+            $fallback->smtp_username           = null;
+            $fallback->smtp_password           = null;
+            $fallback->smtp_from_address       = null;
+            $fallback->smtp_from_name          = null;
+            $fallback->registration_open       = true;
+            $fallback->invite_only             = false;
+            $fallback->default_download_slots  = 8;
+            $fallback->announce_interval       = 1800;
+            $fallback->category_filter_enabled = true;
+            $fallback->discord_url             = null;
+            $fallback->twitter_url             = null;
+            $fallback->github_url              = null;
 
             return $fallback;
         }

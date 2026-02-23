@@ -60,6 +60,30 @@ class AppServiceProvider extends ServiceProvider
             \class_alias(IgdbGame::class, \App\Models\Game::class);
         }
 
+        // Override mail config from DB site settings if SMTP host is set
+        try {
+            $siteSetting = \App\Models\SiteSetting::instance();
+
+            if (!empty($siteSetting->smtp_host)) {
+                config([
+                    'mail.mailers.smtp.host'       => $siteSetting->smtp_host,
+                    'mail.mailers.smtp.port'        => $siteSetting->smtp_port ?? 587,
+                    'mail.mailers.smtp.encryption'  => $siteSetting->smtp_encryption ?: null,
+                    'mail.mailers.smtp.username'    => $siteSetting->smtp_username,
+                    'mail.mailers.smtp.password'    => $siteSetting->smtp_password,
+                ]);
+            }
+
+            if (!empty($siteSetting->smtp_from_address)) {
+                config([
+                    'mail.from.address' => $siteSetting->smtp_from_address,
+                    'mail.from.name'    => $siteSetting->smtp_from_name ?? config('other.title'),
+                ]);
+            }
+        } catch (\Throwable) {
+            // DB not ready (e.g. first migrate) — keep env defaults
+        }
+
         // User Observer For Cache
         User::observe(UserObserver::class);
 

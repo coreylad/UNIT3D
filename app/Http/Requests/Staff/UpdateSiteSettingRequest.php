@@ -36,26 +36,36 @@ class UpdateSiteSettingRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'title' => [
-                'required',
-                'string',
-                'max:100',
-            ],
-            'sub_title' => [
-                'required',
-                'string',
-                'max:200',
-            ],
-            'meta_description' => [
-                'required',
-                'string',
-                'max:500',
-            ],
-            'login_message' => [
-                'nullable',
-                'string',
-                'max:1000',
-            ],
+            // Branding
+            'title' => ['required', 'string', 'max:100'],
+            'sub_title' => ['required', 'string', 'max:200'],
+            'meta_description' => ['required', 'string', 'max:500'],
+            'login_message' => ['nullable', 'string', 'max:1000'],
+            'header_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,gif,webp', 'max:2048'],
+            'remove_header_image' => ['nullable', 'boolean'],
+
+            // Mail
+            'smtp_host' => ['nullable', 'string', 'max:255'],
+            'smtp_port' => ['nullable', 'integer', 'between:1,65535'],
+            'smtp_encryption' => ['nullable', 'string', 'in:tls,ssl,'],
+            'smtp_username' => ['nullable', 'string', 'max:255'],
+            'smtp_password' => ['nullable', 'string', 'max:255'],
+            'smtp_from_address' => ['nullable', 'email', 'max:255'],
+            'smtp_from_name' => ['nullable', 'string', 'max:255'],
+
+            // Registration
+            'registration_open' => ['nullable', 'boolean'],
+            'invite_only' => ['nullable', 'boolean'],
+            'default_download_slots' => ['nullable', 'integer', 'between:1,999'],
+
+            // Tracker
+            'announce_interval' => ['nullable', 'integer', 'between:60,86400'],
+            'category_filter_enabled' => ['nullable', 'boolean'],
+
+            // Social
+            'discord_url' => ['nullable', 'url', 'max:500'],
+            'twitter_url' => ['nullable', 'url', 'max:500'],
+            'github_url' => ['nullable', 'url', 'max:500'],
         ];
     }
 }

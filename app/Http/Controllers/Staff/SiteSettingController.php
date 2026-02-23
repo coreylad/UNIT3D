@@ -39,9 +39,41 @@ class SiteSettingController extends Controller
     public function update(UpdateSiteSettingRequest $request): \Illuminate\Http\RedirectResponse
     {
         $setting = SiteSetting::firstOrNew([]);
-        $setting->fill($request->validated());
-        $setting->save();
+        $scalar  = $request->safe()->except(['header_image', 'remove_header_image']);
 
+        // Coerce checkboxes (unchecked = absent from POST)
+        $scalar['registration_open']       = $request->boolean('registration_open');
+        $scalar['invite_only']             = $request->boolean('invite_only');
+        $scalar['category_filter_enabled'] = $request->boolean('category_filter_enabled');
+
+        $setting->fill($scalar);
+
+        // Header image removal
+        if ($request->boolean('remove_header_image') && $setting->header_image) {
+            $oldPath = public_path('img/' . $setting->header_image);
+            if (file_exists($oldPath)) {
+                unlink($oldPath);
+            }
+
+            $setting->header_image = null;
+        }
+
+        // Header image upload
+        if ($request->hasFile('header_image')) {
+            if ($setting->header_image) {
+                $oldPath = public_path('img/' . $setting->header_image);
+                if (file_exists($oldPath)) {
+                    unlink($oldPath);
+                }
+            }
+
+            $ext      = $request->file('header_image')->getClientOriginalExtension();
+            $filename = 'header_banner.' . strtolower($ext);
+            $request->file('header_image')->move(public_path('img'), $filename);
+            $setting->header_image = $filename;
+        }
+
+        $setting->save();
         Cache::forget('site_settings');
 
         return to_route('staff.site_settings.edit')
