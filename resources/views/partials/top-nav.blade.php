@@ -2,7 +2,7 @@
     <div class="top-nav__left">
         <a class="top-nav__branding" href="{{ route('home.index') }}">
             <img src="{{ url('/favicon.ico') }}" style="height: 35px" />
-            <span class="top-nav__site-logo">{{ \config('other.title') }}</span>
+            <span class="top-nav__site-logo">{{ $siteSetting->title }}</span>
         </a>
         @include('partials.quick-search-dropdown')
     </div>
@@ -240,7 +240,7 @@
                     <li>
                         <a href="{{ route('donations.index') }}">
                             <i class="fas fa-display-chart-up-circle-dollar"></i>
-                            Support {{ config('other.title') }} ({{ $donationPercentage }}%)
+                            Support {{ $siteSetting->title }} ({{ $donationPercentage }}%)
                         </a>
                     </li>
                     <li>

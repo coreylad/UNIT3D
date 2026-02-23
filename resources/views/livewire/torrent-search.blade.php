@@ -1,4 +1,23 @@
 <div class="page__torrents torrent-search__component">
+    <nav class="torrent-search__category-bar">
+        <button
+            class="torrent-search__category-btn {{ empty($categoryIds) ? 'torrent-search__category-btn--active' : '' }}"
+            wire:click="$set('categoryIds', [])"
+        >
+            {{ __('common.all') }}
+        </button>
+        @foreach ($categories as $category)
+            <button
+                class="torrent-search__category-btn {{ in_array($category->id, $categoryIds) ? 'torrent-search__category-btn--active' : '' }}"
+                wire:click="$set('categoryIds', [{{ $category->id }}])"
+            >
+                @if ($category->icon)
+                    <i class="{{ config('other.font-awesome') }} {{ $category->icon }}"></i>
+                @endif
+                {{ $category->name }}
+            </button>
+        @endforeach
+    </nav>
     <search class="compact-search torrent-search__filters" x-data="toggle">
         <div class="compact-search__visible-default">
             <p class="form__group">

@@ -1,9 +1,10 @@
 <meta charset="UTF-8" />
+@php($siteSetting = \App\Models\SiteSetting::instance())
 @section('title')
-<title>{{ config('other.title') }} - {{ config('other.subTitle') }}</title>
+<title>{{ $siteSetting->title }} - {{ $siteSetting->sub_title }}</title>
 @show
 
-<meta name="description" content="{{ config('other.meta_description') }}" />
+<meta name="description" content="{{ $siteSetting->meta_description }}" />
 <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="_base_url" content="{{ route('home.index') }}" />

@@ -3,9 +3,9 @@
         <section class="footer__section">
             <h2 class="footer__section-title">
                 <img src="{{ url('/favicon.ico') }}" style="height: 30px; vertical-align: sub" />
-                <span class="top-nav__site-logo">{{ \config('other.title') }}</span>
+                <span class="top-nav__site-logo">{{ $siteSetting->title }}</span>
             </h2>
-            <p>{{ config('other.meta_description') }}</p>
+            <p>{{ $siteSetting->meta_description }}</p>
             <p class="footer__icons">
                 @if (! empty(config('unit3d.chat-link-url')))
                     <a href="{{ config('unit3d.chat-link-url') }}">
@@ -255,7 +255,7 @@
         <p class="footer__copyright">
             Site and design &copy;
             {{ date('Y', strtotime(config('other.birthdate'))) }}-{{ date('Y') }}
-            {{ config('other.title') }} |
+            {{ $siteSetting->title }} |
             <a href="https://github.com/HDInnovations/UNIT3D">
                 UNIT3D {{ config('unit3d.version') }}
             </a>

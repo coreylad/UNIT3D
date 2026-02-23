@@ -10,6 +10,7 @@ use App\Models\Event;
 use App\Models\Page;
 use App\Models\Report;
 use App\Models\Scopes\ApprovedScope;
+use App\Models\SiteSetting;
 use App\Models\Ticket;
 use App\Models\Torrent;
 use Illuminate\View\View;
@@ -96,6 +97,7 @@ class TopNavComposer
                 fn () => $user->history()->withoutGlobalScopes()->where('actual_downloaded', '>', 0)->count(),
             ),
             'user' => $user,
+            'siteSetting' => SiteSetting::instance(),
         ]);
     }
 }

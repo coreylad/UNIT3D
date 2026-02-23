@@ -1,16 +1,17 @@
 <!DOCTYPE html>
 <html lang="{{ config('app.locale') }}">
+    @php($siteSetting = \App\Models\SiteSetting::instance())
     <head>
         <meta charset="UTF-8" />
-        <title>{{ __('auth.login') }} - {{ config('other.title') }}</title>
+        <title>{{ __('auth.login') }} - {{ $siteSetting->title }}</title>
         @section('meta')
         <meta
             name="description"
-            content="{{ __('auth.login-now-on') }} {{ config('other.title') }} . {{ __('auth.not-a-member') }}"
+            content="{{ __('auth.login-now-on') }} {{ $siteSetting->title }} . {{ __('auth.not-a-member') }}"
         />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta property="og:title" content="{{ __('auth.login') }}" />
-        <meta property="og:site_name" content="{{ config('other.title') }}" />
+        <meta property="og:site_name" content="{{ $siteSetting->title }}" />
         <meta property="og:type" content="website" />
         <meta property="og:image" content="{{ url('/img/og.png') }}" />
         <meta property="og:description" content="{{ config('unit3d.powered-by') }}" />
@@ -32,8 +33,11 @@
                     @csrf
                     <a class="auth-form__branding" href="{{ route('home.index') }}">
                         <i class="fal fa-tv-retro"></i>
-                        <span class="auth-form__site-logo">{{ \config('other.title') }}</span>
+                        <span class="auth-form__site-logo">{{ $siteSetting->title }}</span>
                     </a>
+                    @if ($siteSetting->login_message)
+                        <p class="auth-form__login-message">{{ $siteSetting->login_message }}</p>
+                    @endif
                     @if (Session::has('warning') || Session::has('success') || Session::has('info'))
                         <ul class="auth-form__important-infos">
                             @if (Session::has('warning'))

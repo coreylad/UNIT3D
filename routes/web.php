@@ -752,6 +752,12 @@ Route::middleware('language')->group(function (): void {
                 Route::delete('/{category}', [App\Http\Controllers\Staff\CategoryController::class, 'destroy'])->name('destroy');
             });
 
+            // Site Settings
+            Route::prefix('site-settings')->name('site_settings.')->middleware('admin')->group(function (): void {
+                Route::get('/edit', [App\Http\Controllers\Staff\SiteSettingController::class, 'edit'])->name('edit');
+                Route::patch('/', [App\Http\Controllers\Staff\SiteSettingController::class, 'update'])->name('update');
+            });
+
             // Chat Bots System
             Route::prefix('bots')->name('bots.')->group(function (): void {
                 Route::get('/', [App\Http\Controllers\Staff\ChatBotController::class, 'index'])->name('index');
