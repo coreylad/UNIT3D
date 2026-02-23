@@ -5,9 +5,9 @@
             wire:click="$set('categoryIds', [])"
         >
             <span class="torrent-search__category-box-icon">
-                <i class="{{ config('other.font-awesome') }} fa-th-large" aria-hidden="true"></i>
+                <i class="{{ config('other.font-awesome') }} fa-globe" aria-hidden="true"></i>
             </span>
-            <span class="torrent-search__category-box-name">{{ __('common.all') }}</span>
+            <span class="torrent-search__category-box-name">ALL TORRENTS</span>
         </button>
         @foreach ($categories as $category)
             <button
