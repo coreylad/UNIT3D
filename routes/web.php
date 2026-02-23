@@ -1093,6 +1093,7 @@ Route::middleware('language')->group(function (): void {
                 Route::post('/', [App\Http\Controllers\Staff\UserController::class, 'store'])->name('store');
                 Route::patch('/{user:username}', [App\Http\Controllers\Staff\UserController::class, 'update'])->name('update')->withTrashed();
                 Route::get('/{user:username}/edit', [App\Http\Controllers\Staff\UserController::class, 'edit'])->name('edit');
+                Route::patch('/{user:username}/password', [App\Http\Controllers\Staff\UserController::class, 'updatePassword'])->name('password.update');
                 Route::patch('/{user:username}/permissions', [App\Http\Controllers\Staff\UserController::class, 'permissions'])->name('update_permissions');
                 Route::patch('/{user:username}/verify', [App\Http\Controllers\Staff\UserController::class, 'verify'])->name('verify');
                 Route::delete('/{user:username}', [App\Http\Controllers\Staff\UserController::class, 'destroy'])->name('destroy');

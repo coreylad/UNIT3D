@@ -19,6 +19,7 @@ namespace App\Http\Controllers\Staff;
 use App\Enums\UserGroup;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Staff\StoreUserRequest;
+use App\Http\Requests\Staff\UpdateUserPasswordRequest;
 use App\Http\Requests\Staff\UpdateUserRequest;
 use App\Models\Comment;
 use App\Models\FailedLoginAttempt;
@@ -39,6 +40,7 @@ use App\Models\Torrent;
 use App\Models\User;
 use App\Services\Unit3dAnnounce;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 
 /**
  * @see \Tests\Todo\Feature\Http\Controllers\UserControllerTest
@@ -70,7 +72,10 @@ class UserController extends Controller
      */
     public function store(StoreUserRequest $request): \Illuminate\Http\RedirectResponse
     {
-        $user = User::create($request->validated());
+        $validated = $request->validated();
+        $validated['password'] = Hash::make($validated['password']);
+
+        $user = User::create($validated);
 
         Unit3dAnnounce::addUser($user);
 
@@ -134,6 +139,18 @@ class UserController extends Controller
 
         return to_route('users.show', ['user' => $user])
             ->with('success', 'Account permissions successfully edited');
+    }
+
+    /**
+     * Update the user's password.
+     */
+    public function updatePassword(UpdateUserPasswordRequest $request, User $user): \Illuminate\Http\RedirectResponse
+    {
+        $user->update([
+            'password' => Hash::make($request->password),
+        ]);
+
+        return back()->with('success', 'Password updated successfully!');
     }
 
     /**
