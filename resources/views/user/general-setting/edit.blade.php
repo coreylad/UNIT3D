@@ -167,6 +167,13 @@
                             >
                                 Material design 3 amoled
                             </option>
+                            <option
+                                class="form__option"
+                                value="16"
+                                @selected($user->settings->style === 16)
+                            >
+                                Betaups (Desktop only)
+                            </option>
                         </select>
                         <label class="form__label form__label--floating" for="style">Theme</label>
                     </p>

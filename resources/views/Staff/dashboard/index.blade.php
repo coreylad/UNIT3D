@@ -144,6 +144,76 @@
                 </div>
             </div>
         </section>
+        @if (auth()->user()->group->is_admin)
+            <section class="panelV2 panel--grid-item">
+                <h2 class="panel__heading">
+                    <i class="{{ config('other.font-awesome') }} fa-bolt"></i>
+                    Admin quick actions
+                </h2>
+                <div class="panel__body">
+                    <p class="form__group form__group--horizontal">
+                        <a class="form__button form__button--text" href="{{ route('staff.users.index') }}">
+                            <i class="{{ config('other.font-awesome') }} fa-users"></i>
+                            User manager
+                        </a>
+                    </p>
+                    <p class="form__group form__group--horizontal">
+                        <a class="form__button form__button--text" href="{{ route('staff.groups.index') }}">
+                            <i class="{{ config('other.font-awesome') }} fa-user-shield"></i>
+                            Group permissions
+                        </a>
+                    </p>
+                    <p class="form__group form__group--horizontal">
+                        <a class="form__button form__button--text" href="{{ route('staff.site_settings.edit') }}">
+                            <i class="{{ config('other.font-awesome') }} fa-sliders-h"></i>
+                            Site settings
+                        </a>
+                    </p>
+                    <p class="form__group form__group--horizontal">
+                        <a class="form__button form__button--text" href="{{ route('staff.categories.create') }}">
+                            <i class="{{ config('other.font-awesome') }} fa-plus-square"></i>
+                            New torrent category
+                        </a>
+                    </p>
+                    <p class="form__group form__group--horizontal">
+                        <a class="form__button form__button--text" href="{{ route('staff.types.create') }}">
+                            <i class="{{ config('other.font-awesome') }} fa-plus-square"></i>
+                            New torrent type
+                        </a>
+                    </p>
+                    <p class="form__group form__group--horizontal">
+                        <a class="form__button form__button--text" href="{{ route('staff.resolutions.create') }}">
+                            <i class="{{ config('other.font-awesome') }} fa-plus-square"></i>
+                            New resolution
+                        </a>
+                    </p>
+                    <p class="form__group form__group--horizontal">
+                        <a class="form__button form__button--text" href="{{ route('staff.regions.create') }}">
+                            <i class="{{ config('other.font-awesome') }} fa-map-marker-alt"></i>
+                            New region
+                        </a>
+                    </p>
+                    <p class="form__group form__group--horizontal">
+                        <a class="form__button form__button--text" href="{{ route('staff.distributors.create') }}">
+                            <i class="{{ config('other.font-awesome') }} fa-industry"></i>
+                            New distributor
+                        </a>
+                    </p>
+                    <p class="form__group form__group--horizontal">
+                        <a class="form__button form__button--text" href="{{ route('staff.forums.create') }}">
+                            <i class="{{ config('other.font-awesome') }} fa-comments"></i>
+                            New forum
+                        </a>
+                    </p>
+                    <p class="form__group form__group--horizontal">
+                        <a class="form__button form__button--text" href="{{ route('staff.wikis.create') }}">
+                            <i class="{{ config('other.font-awesome') }} fa-book"></i>
+                            New wiki article
+                        </a>
+                    </p>
+                </div>
+            </section>
+        @endif
         <section class="panelV2 panel--grid-item">
             <h2 class="panel__heading">
                 <i class="{{ config('other.font-awesome') }} fa-wrench"></i>

@@ -1060,42 +1060,71 @@ th.similar-torrents__type {
 ---------------------------------------------------------------------------- */
 
 .torrent-search__category-bar {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 8px;
-    padding: 4px 12px;
+    padding: 8px 10px;
 }
 
-.torrent-search__category-btn {
-    display: inline-flex;
+.torrent-search__category-box {
+    display: grid;
+    grid-template-columns: 60px minmax(0, 1fr);
     align-items: center;
-    gap: 6px;
-    padding: 6px 14px;
-    border-radius: 500px;
+    justify-items: start;
+    gap: 8px;
+    min-height: 74px;
+    padding: 8px 10px;
+    border-radius: 8px;
     font-size: 13px;
-    font-weight: 500;
+    font-weight: 700;
+    text-align: left;
     cursor: pointer;
     background: var(--category-btn-bg, rgba(128, 128, 128, 0.15));
     color: var(--category-btn-fg, inherit);
     border: 1px solid var(--category-btn-border, rgba(128, 128, 128, 0.3));
     transition:
         background 0.15s,
-        border-color 0.15s;
+        border-color 0.15s,
+        transform 0.15s;
 }
 
-.torrent-search__category-btn:hover {
+.torrent-search__category-box:hover {
     background: var(--category-btn-hover-bg, rgba(128, 128, 128, 0.3));
+    transform: translateY(-1px);
 }
 
-.torrent-search__category-btn--active {
+.torrent-search__category-box--active {
     background: var(--category-btn-active-bg, #325d88);
     color: var(--category-btn-active-fg, #fff);
     border-color: var(--category-btn-active-border, #325d88);
 }
 
-.torrent-search__category-btn--active:hover {
+.torrent-search__category-box--active:hover {
     background: var(--category-btn-active-bg, #325d88);
     filter: brightness(1.1);
+}
+
+.torrent-search__category-box-icon {
+    width: 56px;
+    height: 40px;
+    display: inline-grid;
+    place-items: center;
+}
+
+.torrent-search__category-box-icon img {
+    max-width: 56px;
+    max-height: 40px;
+    object-fit: contain;
+}
+
+.torrent-search__category-box-icon i {
+    font-size: 26px;
+}
+
+.torrent-search__category-box-name {
+    text-align: left;
+    line-height: 1.2;
+    word-break: break-word;
 }
 
 /* Torrent Moderation */

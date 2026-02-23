@@ -45,8 +45,9 @@ class StoreCategoryRequest extends FormRequest
                 'numeric',
             ],
             'icon' => [
-                'required',
+                'nullable',
                 'string',
+                'required_without:image',
             ],
             'meta' => [
                 'required',
@@ -55,6 +56,8 @@ class StoreCategoryRequest extends FormRequest
                 'exclude',
             ],
             'image' => [
+                'nullable',
+                'image',
                 'max:10240',
             ],
         ];

@@ -90,6 +90,13 @@ class CategoryController extends Controller
      */
     public function update(UpdateCategoryRequest $request, Category $category): \Illuminate\Http\RedirectResponse
     {
+        $filename = $category->image;
+
+        if ($request->boolean('remove_image') && $category->image !== null) {
+            Storage::disk('category-images')->delete($category->image);
+            $filename = null;
+        }
+
         if ($request->hasFile('image')) {
             $image = $request->file('image');
 
@@ -99,7 +106,7 @@ class CategoryController extends Controller
             $path = Storage::disk('category-images')->path($filename);
             Image::make($image->getRealPath())->fit(50, 50)->encode('png', 100)->save($path);
 
-            if ($category->image !== null) {
+            if ($category->image !== null && $category->image !== $filename) {
                 Storage::disk('category-images')->delete($category->image);
             }
         }

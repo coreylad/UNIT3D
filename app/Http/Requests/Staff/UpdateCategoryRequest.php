@@ -45,8 +45,9 @@ class UpdateCategoryRequest extends FormRequest
                 'numeric',
             ],
             'icon' => [
-                'required',
+                'nullable',
                 'string',
+                'required_without:image',
             ],
             'meta' => [
                 'required',
@@ -55,7 +56,13 @@ class UpdateCategoryRequest extends FormRequest
                 'exclude',
             ],
             'image' => [
+                'nullable',
+                'image',
                 'max:10240',
+            ],
+            'remove_image' => [
+                'nullable',
+                'boolean',
             ],
         ];
     }

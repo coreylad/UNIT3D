@@ -1,20 +1,34 @@
 <div class="page__torrents torrent-search__component">
     <nav class="torrent-search__category-bar">
         <button
-            class="torrent-search__category-btn {{ empty($categoryIds) ? 'torrent-search__category-btn--active' : '' }}"
+            class="torrent-search__category-box {{ empty($categoryIds) ? 'torrent-search__category-box--active' : '' }}"
             wire:click="$set('categoryIds', [])"
         >
-            {{ __('common.all') }}
+            <span class="torrent-search__category-box-icon">
+                <i class="{{ config('other.font-awesome') }} fa-th-large" aria-hidden="true"></i>
+            </span>
+            <span class="torrent-search__category-box-name">{{ __('common.all') }}</span>
         </button>
         @foreach ($categories as $category)
             <button
-                class="torrent-search__category-btn {{ in_array($category->id, $categoryIds) ? 'torrent-search__category-btn--active' : '' }}"
+                class="torrent-search__category-box {{ in_array($category->id, $categoryIds) ? 'torrent-search__category-box--active' : '' }}"
                 wire:click="$set('categoryIds', [{{ $category->id }}])"
+                title="{{ $category->name }}"
             >
-                @if ($category->icon)
-                    <i class="{{ config('other.font-awesome') }} {{ $category->icon }}"></i>
-                @endif
-                {{ $category->name }}
+                <span class="torrent-search__category-box-icon">
+                    @if ($category->image)
+                        <img
+                            src="{{ route('authenticated_images.category_image', ['category' => $category]) }}"
+                            alt="{{ $category->name }}"
+                            loading="lazy"
+                        />
+                    @elseif ($category->icon)
+                        <i class="{{ config('other.font-awesome') }} {{ $category->icon }}" aria-hidden="true"></i>
+                    @else
+                        <i class="{{ config('other.font-awesome') }} fa-folder" aria-hidden="true"></i>
+                    @endif
+                </span>
+                <span class="torrent-search__category-box-name">{{ $category->name }}</span>
             </button>
         @endforeach
     </nav>

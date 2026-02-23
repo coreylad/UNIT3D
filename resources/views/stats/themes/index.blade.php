@@ -89,6 +89,10 @@
                                     Material design 3 navy theme
 
                                     @break
+                                @case('16')
+                                    Betaups theme
+
+                                    @break
                             @endswitch
                         </td>
                         <td>Used by {{ $siteTheme->value }} users</td>

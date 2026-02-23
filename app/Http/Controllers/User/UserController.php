@@ -29,7 +29,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Validator;
 use Intervention\Image\Facades\Image;
 
 /**
@@ -149,7 +148,9 @@ class UserController extends Controller
 
             abort_unless($image->getError() === UPLOAD_ERR_OK, 500);
 
-            if (!\in_array($image->getClientOriginalExtension(), ['jpg', 'JPG', 'jpeg', 'bmp', 'png', 'PNG', 'tiff', 'gif'])) {
+            $extension = \strtolower($image->getClientOriginalExtension());
+
+            if (!\in_array($extension, ['jpg', 'jpeg', 'bmp', 'png', 'tiff', 'gif'], true)) {
                 return to_route('users.show', ['user' => $user])
                     ->withErrors('Only .jpg, .bmp, .png, .tiff, and .gif are allowed.');
             }
@@ -164,22 +165,15 @@ class UserController extends Controller
                     ->withErrors('Your avatar is too large, max file size: '.(config('image.max_upload_size') / 1_000_000).' MB');
             }
 
-            $filename = $user->username.'.'.$image->getClientOriginalExtension();
+            $filename = $user->username.'.'.($extension === 'gif' ? 'gif' : 'png');
             $path = Storage::disk('user-avatars')->path($filename);
 
-            if ($image->getClientOriginalExtension() !== 'gif') {
-                Image::make($image->getRealPath())->fit(150, 150)->encode('png', 100)->save($path);
-            } else {
-                Validator::make($request->all(), [
-                    'image' => 'required|dimensions:ratio=1/1',
-                ], [
-                    'image.dimensions' => 'Only square avatars are accepted.',
-                ])->validate();
+            Image::make($image->getRealPath())
+                ->fit(150, 150)
+                ->encode($extension === 'gif' ? 'gif' : 'png', 100)
+                ->save($path);
 
-                $image->storeAs('', $filename, 'user-avatars');
-            }
-
-            $avatar = $user->username.'.'.$image->getClientOriginalExtension();
+            $avatar = $filename;
 
             if ($user->image !== $avatar) {
                 $oldAvatar = $user->image;
@@ -194,7 +188,9 @@ class UserController extends Controller
 
             abort_unless($image->getError() === UPLOAD_ERR_OK, 500);
 
-            if (!\in_array($image->getClientOriginalExtension(), ['jpg', 'JPG', 'jpeg', 'bmp', 'png', 'PNG', 'tiff', 'gif'])) {
+            $extension = \strtolower($image->getClientOriginalExtension());
+
+            if (!\in_array($extension, ['jpg', 'jpeg', 'bmp', 'png', 'tiff', 'gif'], true)) {
                 return to_route('users.show', ['user' => $user])
                     ->withErrors('Only .jpg, .bmp, .png, .tiff, and .gif are allowed.');
             }
@@ -209,18 +205,13 @@ class UserController extends Controller
                     ->withErrors('Your icon is too large, max file size: '.(config('image.max_upload_size') / 1_000_000).' MB');
             }
 
-            $filename = uniqid('', true).'_icon.'.$image->getClientOriginalExtension();
+            $filename = uniqid('', true).'_icon.'.($extension === 'gif' ? 'gif' : 'png');
             $path = Storage::disk('user-icons')->path($filename);
 
-            if ($image->getClientOriginalExtension() !== 'gif') {
-                Image::make($image->getRealPath())->fit(30, 30)->encode('png', 100)->save($path);
-            } else {
-                $request->validate([
-                    'image' => 'dimensions:ratio=1/1',
-                ]);
-
-                $image->storeAs('', $filename, 'user-icons');
-            }
+            Image::make($image->getRealPath())
+                ->fit(30, 30)
+                ->encode($extension === 'gif' ? 'gif' : 'png', 100)
+                ->save($path);
 
             if ($user->icon !== $filename) {
                 $oldIcon = $user->icon;

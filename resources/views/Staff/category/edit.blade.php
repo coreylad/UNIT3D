@@ -61,16 +61,32 @@
                 </p>
                 <p class="form__group">
                     <input
-                        id="position"
+                        id="icon"
                         class="form__text"
                         type="text"
                         name="icon"
                         value="{{ $category->icon }}"
                     />
                     <label class="form__label form__label--floating" for="icon">
-                        {{ __('common.icon') }} (FontAwesome)
+                        {{ __('common.icon') }} (FontAwesome, optional if using image)
                     </label>
                 </p>
+                @if ($category->image !== null)
+                    <p class="form__group">
+                        <img
+                            src="{{ route('authenticated_images.category_image', ['category' => $category]) }}"
+                            alt="{{ $category->name }}"
+                            width="50"
+                            height="50"
+                        />
+                    </p>
+                    <p class="form__group">
+                        <label for="remove_image">
+                            <input id="remove_image" type="checkbox" name="remove_image" value="1" />
+                            Remove current category image
+                        </label>
+                    </p>
+                @endif
                 <p class="form__group">
                     <label for="image">
                         {{ __('common.select') }}
