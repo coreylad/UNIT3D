@@ -24,7 +24,7 @@ return [
     |
     */
 
-    'powered-by' => 'Powered By UNIT3D v9.2.0',
+    'powered-by' => 'Powered By BAS3D v9.2.0',
 
     /*
     |--------------------------------------------------------------------------
@@ -35,7 +35,7 @@ return [
     |
     */
 
-    'codebase' => 'UNIT3D',
+    'codebase' => 'BAS3D',
 
     /*
     |--------------------------------------------------------------------------
@@ -57,9 +57,9 @@ return [
     |
     */
 
-    'owner-username'         => env('DEFAULT_OWNER_NAME', 'UNIT3D'),
+    'owner-username'         => env('DEFAULT_OWNER_NAME', 'BAS3D'),
     'default-owner-email'    => env('DEFAULT_OWNER_EMAIL', 'none@none.com'),
-    'default-owner-password' => env('DEFAULT_OWNER_PASSWORD', 'UNIT3D'),
+    'default-owner-password' => env('DEFAULT_OWNER_PASSWORD', 'BAS3D'),
 
     // If using a Reverse Proxy for HTTPS set the 'PROXY_SCHEME' value in your .env file to `https` or adjust the below value
     'proxy_scheme'      => env('PROXY_SCHEME', false),

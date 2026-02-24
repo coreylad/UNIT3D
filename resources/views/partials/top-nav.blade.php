@@ -255,7 +255,7 @@
                     <li>
                         <a href="https://square.link/u/VjB1CNfm" target="_blank">
                             <i class="fas fa-handshake"></i>
-                            Support UNIT3D
+                            Support BAS3D
                         </a>
                     </li>
                 </ul>

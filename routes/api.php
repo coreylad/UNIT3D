@@ -56,6 +56,13 @@ Route::middleware(['auth:'.AuthGuard::API->value, 'banned'])->group(function ():
     Route::get('/user', [App\Http\Controllers\API\UserController::class, 'show']);
 });
 
+// Donation webhook – called by external payment processors to automatically
+// process and approve donations without requiring manual staff review.
+// Authentication is performed via a shared secret (DONATION_WEBHOOK_SECRET).
+Route::post('/donation/webhook', [App\Http\Controllers\API\DonationWebhookController::class, 'store'])
+    ->name('api.donation.webhook')
+    ->middleware('throttle:'.GlobalRateLimit::API->value);
+
 // Internal front-end web API routes
 Route::name('api.')->middleware([MiddlewareGroup::WEB->value, 'auth', 'banned', 'verified'])->group(function (): void {
     Route::prefix('bookmarks')->name('bookmarks.')->group(function (): void {

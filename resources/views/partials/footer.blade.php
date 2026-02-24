@@ -81,7 +81,7 @@
                 </li>
                 <li>
                     <a
-                        href="https://github.com/HDInnovations/UNIT3D/wiki/Torrent-API-(UNIT3D-v8.x.x)"
+                        href="https://github.com/coreylad/UNIT3D/wiki/Torrent-API"
                     >
                         API documentation
                     </a>
@@ -256,12 +256,12 @@
             Site and design &copy;
             {{ date('Y', strtotime(config('other.birthdate'))) }}-{{ date('Y') }}
             {{ $siteSetting->title }} |
-            <a href="https://github.com/HDInnovations/UNIT3D">
-                UNIT3D {{ config('unit3d.version') }}
+            <a href="https://github.com/coreylad/UNIT3D">
+                BAS3D {{ config('unit3d.version') }}
             </a>
             @if (config('announce.external_tracker.is_enabled'))
                 +
-                <a href="https://github.com/HDInnovations/UNIT3D-Announce">UNIT3D-Announce</a>
+                <a href="https://github.com/coreylad/UNIT3D">BAS3D-Announce</a>
             @endif
         </p>
     </div>
