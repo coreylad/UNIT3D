@@ -26,4 +26,17 @@ return [
     'monthly_goal' => 100,
     'currency'     => 'USD',
     'description'  => 'Help keep the site alive by donating to our monthly goal.',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Donation Webhook Secret
+    |--------------------------------------------------------------------------
+    |
+    | A secret token shared with your external payment processor. Set this
+    | in your .env file as DONATION_WEBHOOK_SECRET. When set, the automatic
+    | donation webhook endpoint will verify incoming requests against this
+    | value before processing any upgrades.
+    |
+    */
+    'webhook_secret' => env('DONATION_WEBHOOK_SECRET', ''),
 ];

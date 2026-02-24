@@ -1,7 +1,7 @@
 <div style="display: flex; flex-direction: column; gap: 1rem">
     <section class="panelV2" x-data>
         <header class="panel__header">
-            <h2 class="panel__heading">UNIT3D backup manager</h2>
+            <h2 class="panel__heading">BAS3D backup manager</h2>
             <div class="panel__actions">
                 <button
                     id="create-backup"
