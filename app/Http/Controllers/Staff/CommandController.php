@@ -17,6 +17,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Staff;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 
 /**
@@ -131,5 +132,39 @@ class CommandController extends Controller
 
         return to_route('staff.commands.index')
             ->with('info', trim(str_replace(["\r", "\n", '*'], '', Artisan::output())));
+    }
+
+    /**
+     * Import legacy SQL dump into UNIT3D through artisan command.
+     */
+    public function importLegacySql(Request $request): \Illuminate\Contracts\View\Factory|\Illuminate\Http\RedirectResponse
+    {
+        $validated = $request->validate([
+            'dump_path' => ['required', 'string'],
+            'fresh' => ['nullable', 'boolean'],
+            'skip_migrate' => ['nullable', 'boolean'],
+            'truncate' => ['nullable', 'boolean'],
+            'allow_unknown_tables' => ['nullable', 'boolean'],
+        ]);
+
+        $arguments = [
+            'path' => $validated['dump_path'],
+            '--fresh' => $request->boolean('fresh'),
+            '--skip-migrate' => $request->boolean('skip_migrate'),
+            '--truncate' => $request->boolean('truncate'),
+            '--allow-unknown-tables' => $request->boolean('allow_unknown_tables', true),
+        ];
+
+        $exitCode = Artisan::call('db:import-legacy', $arguments);
+        $output = trim(Artisan::output());
+        $output = mb_strlen($output) > 10000 ? mb_substr($output, -10000) : $output;
+
+        if (0 !== $exitCode) {
+            return to_route('staff.commands.index')
+                ->with('error', $output !== '' ? $output : 'Legacy database import failed.');
+        }
+
+        return to_route('staff.commands.index')
+            ->with('success', $output !== '' ? $output : 'Legacy database import finished successfully.');
     }
 }

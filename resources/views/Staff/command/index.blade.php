@@ -155,5 +155,49 @@
                 </div>
             </div>
         </section>
+        <section class="panelV2">
+            <h2 class="panel__heading">Legacy database import</h2>
+            <div class="panel__body">
+                <form method="POST" action="{{ url('/dashboard/commands/import-legacy-sql') }}">
+                    @csrf
+                    <div class="form__group">
+                        <label class="form__label" for="dump_path">SQL dump absolute path</label>
+                        <input
+                            id="dump_path"
+                            name="dump_path"
+                            type="text"
+                            class="form__text"
+                            required
+                            placeholder="D:\\Database\\admin_TSSE8_2026-02-08_15-30-47.sql"
+                        />
+                    </div>
+
+                    <div class="form__group">
+                        <p style="margin: 0 0 0.5rem;">Schema strategy</p>
+                        <label style="display: block; margin-bottom: 0.35rem;">
+                            <input type="checkbox" name="fresh" value="1" /> Run migrate:fresh before import
+                        </label>
+                        <label style="display: block; margin-bottom: 0.35rem;">
+                            <input type="checkbox" name="skip_migrate" value="1" /> Skip migrate before import
+                        </label>
+                        <label style="display: block; margin-bottom: 0.35rem;">
+                            <input type="checkbox" name="truncate" value="1" /> Truncate imported tables before first insert
+                        </label>
+                        <label style="display: block; margin-bottom: 0.35rem;">
+                            <input type="checkbox" name="allow_unknown_tables" value="1" checked /> Skip unknown legacy tables
+                        </label>
+                    </div>
+
+                    <div class="form__group form__group--horizontal">
+                        <button
+                            class="form__button form__button--text"
+                            title="Runs artisan db:import-legacy with selected options and shows command output in flash messages."
+                        >
+                            Import legacy SQL dump
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </section>
     </div>
 @endsection
