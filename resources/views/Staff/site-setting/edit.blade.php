@@ -103,11 +103,7 @@
         .ss-toggle:last-child {
             margin-bottom: 0 !important;
         }
-    </style>
-@endsection
-
-@section('styles')
-    <style>
+    
         /* ── Hero banner ── */
         .ss-hero {
             background: linear-gradient(135deg, rgba(74, 158, 255, 0.12) 0%, rgba(156, 39, 176, 0.08) 100%);
@@ -381,87 +377,6 @@
         .form__hint {
             margin-top: 0.75rem;
             display: block;
-        }
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 1rem 1.25rem;
-            border-radius: 10px;
-            background: rgba(255, 255, 255, 0.035);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            margin-bottom: 1rem;
-            cursor: pointer;
-            transition: background 0.15s, border-color 0.15s;
-        }
-        .ss-toggle:last-child { margin-bottom: 0; }
-        .ss-toggle:hover {
-            background: rgba(255, 255, 255, 0.06);
-            border-color: rgba(255, 255, 255, 0.1);
-        }
-        .ss-toggle__info { display: flex; flex-direction: column; gap: 0.3rem; }
-        .ss-toggle__title { font-weight: 600; font-size: 0.92rem; }
-        .ss-toggle__desc { font-size: 0.8rem; opacity: 0.45; line-height: 1.4; }
-
-        /* ── Toggle switch ── */
-        .ss-switch { position: relative; width: 46px; height: 24px; flex-shrink: 0; }
-        .ss-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
-        .ss-switch__track {
-            position: absolute;
-            inset: 0;
-            border-radius: 24px;
-            background: rgba(255, 255, 255, 0.15);
-            transition: background 0.25s;
-            cursor: pointer;
-        }
-        .ss-switch__track::before {
-            content: '';
-            position: absolute;
-            width: 18px;
-            height: 18px;
-            left: 3px;
-            top: 3px;
-            border-radius: 50%;
-            background: #fff;
-            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-        }
-        .ss-switch input:checked + .ss-switch__track { background: #4caf50; }
-        .ss-switch input:checked + .ss-switch__track::before { transform: translateX(22px); }
-
-        /* ── Upload preview ── */
-        .ss-upload-preview {
-            display: flex;
-            align-items: center;
-            gap: 1.25rem;
-            margin-bottom: 1rem;
-            padding: 1rem 1.25rem;
-            border-radius: 10px;
-            background: rgba(255, 255, 255, 0.035);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-        }
-        .ss-upload-preview img {
-            max-height: 50px;
-            max-width: 200px;
-            border-radius: 6px;
-            object-fit: contain;
-        }
-        .ss-upload-preview__meta { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.4rem; }
-        .ss-upload-preview__remove {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.4rem;
-            font-size: 0.82rem;
-            cursor: pointer;
-            color: #ff6b6b;
-        }
-
-        /* ── Submit area ── */
-        .ss-submit {
-            margin-top: 2rem;
-            padding-top: 1.5rem;
-            border-top: 1px solid rgba(255, 255, 255, 0.06);
-            display: flex;
-            justify-content: flex-end;
         }
     </style>
 @endsection
