@@ -56,18 +56,6 @@
                         <span>{{ __('staff.chat-tools') }}</span>
                     </button>
                 </li>
-                @if (auth()->user()->group->is_admin)
-                    <li>
-                        <button
-                            class="staff-dashboard__nav-item"
-                            :class="{ 'staff-dashboard__nav-item--active': activePanel === 'admin' }"
-                            x-on:click="activePanel = 'admin'"
-                        >
-                            <i class="{{ config('other.font-awesome') }} fa-bolt"></i>
-                            <span>Quick Actions</span>
-                        </button>
-                    </li>
-                @endif
                 <li>
                     <button
                         class="staff-dashboard__nav-item"
@@ -465,33 +453,42 @@
                 </div>
             </div>
 
-            {{-- Admin Quick Actions Panel --}}
-            @if (auth()->user()->group->is_admin)
-                <div x-show="activePanel === 'admin'" x-cloak>
-                    <h2 class="staff-dashboard__panel-title">
-                        <i class="{{ config('other.font-awesome') }} fa-bolt"></i>
-                        Admin Quick Actions
-                    </h2>
-                    <div class="staff-dashboard__links-grid">
-                        <a class="staff-dashboard__link-card" href="{{ route('staff.users.create') }}">
-                            <i class="{{ config('other.font-awesome') }} fa-user-plus"></i>
-                            <span>New User</span>
-                        </a>
-                        <a class="staff-dashboard__link-card" href="{{ route('staff.users.index') }}">
-                            <i class="{{ config('other.font-awesome') }} fa-users"></i>
-                            <span>User Manager</span>
-                        </a>
-                        <a class="staff-dashboard__link-card" href="{{ route('staff.groups.index') }}">
-                            <i class="{{ config('other.font-awesome') }} fa-user-shield"></i>
-                            <span>Group Permissions</span>
-                        </a>
+
+            {{-- General Tools Panel --}}
+            <div x-show="activePanel === 'general'" x-cloak>
+                <h2 class="staff-dashboard__panel-title">
+                    <i class="{{ config('other.font-awesome') }} fa-wrench"></i>
+                    {{ __('staff.general-tools') }}
+                </h2>
+                <div class="staff-dashboard__links-grid">
+                    @if (auth()->user()->group->is_admin)
                         <a class="staff-dashboard__link-card" href="{{ route('staff.site_settings.edit') }}">
-                            <i class="{{ config('other.font-awesome') }} fa-sliders-h"></i>
+                            <i class="{{ config('other.font-awesome') }} fa-cog"></i>
                             <span>Site Settings</span>
                         </a>
                         <a class="staff-dashboard__link-card" href="{{ route('staff.theme_builder.index') }}">
                             <i class="{{ config('other.font-awesome') }} fa-palette"></i>
                             <span>Theme Builder</span>
+                        </a>
+                        <a class="staff-dashboard__link-card" href="{{ route('staff.groups.index') }}">
+                            <i class="{{ config('other.font-awesome') }} fa-user-shield"></i>
+                            <span>Group Permissions</span>
+                        </a>
+                        <a class="staff-dashboard__link-card" href="{{ route('staff.users.create') }}">
+                            <i class="{{ config('other.font-awesome') }} fa-user-plus"></i>
+                            <span>New User</span>
+                        </a>
+                        <a class="staff-dashboard__link-card" href="{{ route('staff.forum_categories.index') }}">
+                            <i class="{{ config('other.font-awesome') }} fa-list-ul"></i>
+                            <span>{{ __('staff.forums') }}</span>
+                        </a>
+                        <a class="staff-dashboard__link-card" href="{{ route('staff.forums.create') }}">
+                            <i class="{{ config('other.font-awesome') }} fa-comments"></i>
+                            <span>New Forum</span>
+                        </a>
+                        <a class="staff-dashboard__link-card" href="{{ route('staff.wikis.create') }}">
+                            <i class="{{ config('other.font-awesome') }} fa-book"></i>
+                            <span>New Wiki Article</span>
                         </a>
                         <a class="staff-dashboard__link-card" href="{{ route('staff.categories.create') }}">
                             <i class="{{ config('other.font-awesome') }} fa-plus-square"></i>
@@ -513,25 +510,13 @@
                             <i class="{{ config('other.font-awesome') }} fa-industry"></i>
                             <span>New Distributor</span>
                         </a>
-                        <a class="staff-dashboard__link-card" href="{{ route('staff.forums.create') }}">
-                            <i class="{{ config('other.font-awesome') }} fa-comments"></i>
-                            <span>New Forum</span>
+                    @endif
+                    @if (auth()->user()->group->is_owner)
+                        <a class="staff-dashboard__link-card" href="{{ route('staff.migrations.index') }}">
+                            <i class="{{ config('other.font-awesome') }} fa-database"></i>
+                            <span>Database Migration</span>
                         </a>
-                        <a class="staff-dashboard__link-card" href="{{ route('staff.wikis.create') }}">
-                            <i class="{{ config('other.font-awesome') }} fa-book"></i>
-                            <span>New Wiki Article</span>
-                        </a>
-                    </div>
-                </div>
-            @endif
-
-            {{-- General Tools Panel --}}
-            <div x-show="activePanel === 'general'" x-cloak>
-                <h2 class="staff-dashboard__panel-title">
-                    <i class="{{ config('other.font-awesome') }} fa-wrench"></i>
-                    {{ __('staff.general-tools') }}
-                </h2>
-                <div class="staff-dashboard__links-grid">
+                    @endif
                     <a class="staff-dashboard__link-card" href="{{ route('staff.articles.index') }}">
                         <i class="{{ config('other.font-awesome') }} fa-newspaper"></i>
                         <span>{{ __('staff.articles') }}</span>
@@ -539,6 +524,26 @@
                     <a class="staff-dashboard__link-card" href="{{ route('staff.events.index') }}">
                         <i class="{{ config('other.font-awesome') }} fa-calendar-star"></i>
                         <span>{{ __('event.events') }}</span>
+                    </a>
+                    <a class="staff-dashboard__link-card" href="{{ route('staff.pages.index') }}">
+                        <i class="{{ config('other.font-awesome') }} fa-file"></i>
+                        <span>{{ __('staff.pages') }}</span>
+                    </a>
+                    <a class="staff-dashboard__link-card" href="{{ route('staff.polls.index') }}">
+                        <i class="{{ config('other.font-awesome') }} fa-chart-pie"></i>
+                        <span>{{ __('staff.polls') }}</span>
+                    </a>
+                    <a class="staff-dashboard__link-card" href="{{ route('staff.wiki_categories.index') }}">
+                        <i class="{{ config('other.font-awesome') }} fa-book"></i>
+                        <span>Wikis</span>
+                    </a>
+                    <a class="staff-dashboard__link-card" href="{{ route('staff.ticket_categories.index') }}">
+                        <i class="{{ config('other.font-awesome') }} fa-tags"></i>
+                        <span>{{ __('staff.ticket-categories') }}</span>
+                    </a>
+                    <a class="staff-dashboard__link-card" href="{{ route('staff.ticket_priorities.index') }}">
+                        <i class="{{ config('other.font-awesome') }} fa-exclamation-triangle"></i>
+                        <span>{{ __('staff.ticket-priorities') }}</span>
                     </a>
                     <a class="staff-dashboard__link-card" href="{{ route('staff.bon_exchanges.index') }}">
                         <i class="{{ config('other.font-awesome') }} fa-coins"></i>
@@ -552,39 +557,9 @@
                         <i class="{{ config('other.font-awesome') }} fa-ban"></i>
                         <span>{{ __('common.blacklist') }}</span>
                     </a>
-                    @if (auth()->user()->group->is_admin)
-                        <a class="staff-dashboard__link-card" href="{{ route('staff.forum_categories.index') }}">
-                            <i class="fab fa-wpforms"></i>
-                            <span>{{ __('staff.forums') }}</span>
-                        </a>
-                        <a class="staff-dashboard__link-card" href="{{ route('staff.site_settings.edit') }}">
-                            <i class="{{ config('other.font-awesome') }} fa-cog"></i>
-                            <span>Site Settings</span>
-                        </a>
-                    @endif
-                    <a class="staff-dashboard__link-card" href="{{ route('staff.pages.index') }}">
-                        <i class="{{ config('other.font-awesome') }} fa-file"></i>
-                        <span>{{ __('staff.pages') }}</span>
-                    </a>
-                    <a class="staff-dashboard__link-card" href="{{ route('staff.polls.index') }}">
-                        <i class="{{ config('other.font-awesome') }} fa-chart-pie"></i>
-                        <span>{{ __('staff.polls') }}</span>
-                    </a>
-                    <a class="staff-dashboard__link-card" href="{{ route('staff.ticket_categories.index') }}">
-                        <i class="{{ config('other.font-awesome') }} fa-tags"></i>
-                        <span>{{ __('staff.ticket-categories') }}</span>
-                    </a>
-                    <a class="staff-dashboard__link-card" href="{{ route('staff.ticket_priorities.index') }}">
-                        <i class="{{ config('other.font-awesome') }} fa-exclamation-triangle"></i>
-                        <span>{{ __('staff.ticket-priorities') }}</span>
-                    </a>
                     <a class="staff-dashboard__link-card" href="{{ route('staff.whitelisted_image_urls.index') }}">
                         <i class="{{ config('other.font-awesome') }} fa-globe"></i>
                         <span>Whitelisted Image URLs</span>
-                    </a>
-                    <a class="staff-dashboard__link-card" href="{{ route('staff.wiki_categories.index') }}">
-                        <i class="fab fa-wikipedia-w"></i>
-                        <span>Wikis</span>
                     </a>
                     <a class="staff-dashboard__link-card" href="{{ route('staff.blocked_ips.index') }}">
                         <i class="{{ config('other.font-awesome') }} fa-ban"></i>
@@ -711,6 +686,20 @@
                         <i class="{{ config('other.font-awesome') }} fa-search"></i>
                         <span>{{ __('staff.user-search') }}</span>
                     </a>
+                    @if (auth()->user()->group->is_admin)
+                        <a class="staff-dashboard__link-card" href="{{ route('staff.groups.index') }}">
+                            <i class="{{ config('other.font-awesome') }} fa-users-cog"></i>
+                            <span>{{ __('staff.groups') }}</span>
+                        </a>
+                    @endif
+                    <a class="staff-dashboard__link-card" href="{{ route('staff.mass_private_message.create') }}">
+                        <i class="{{ config('other.font-awesome') }} fa-envelope-square"></i>
+                        <span>{{ __('staff.mass-pm') }}</span>
+                    </a>
+                    <a class="staff-dashboard__link-card" href="{{ route('staff.mass_email.create') }}">
+                        <i class="{{ config('other.font-awesome') }} fa-paper-plane"></i>
+                        <span>{{ __('staff.mass-email') }}</span>
+                    </a>
                     <a class="staff-dashboard__link-card" href="{{ route('staff.apikeys.index') }}">
                         <i class="{{ config('other.font-awesome') }} fa-key"></i>
                         <span>{{ __('user.apikeys') }}</span>
@@ -735,14 +724,6 @@
                         <i class="{{ config('other.font-awesome') }} fa-eye"></i>
                         <span>Watchlist</span>
                     </a>
-                    <a class="staff-dashboard__link-card" href="{{ route('staff.mass_private_message.create') }}">
-                        <i class="{{ config('other.font-awesome') }} fa-envelope-square"></i>
-                        <span>{{ __('staff.mass-pm') }}</span>
-                    </a>
-                    <a class="staff-dashboard__link-card" href="{{ route('staff.mass_email.create') }}">
-                        <i class="{{ config('other.font-awesome') }} fa-paper-plane"></i>
-                        <span>{{ __('staff.mass-email') }}</span>
-                    </a>
                     <a class="staff-dashboard__link-card" href="{{ route('staff.cheaters.index') }}">
                         <i class="{{ config('other.font-awesome') }} fa-exclamation-triangle"></i>
                         <span>{{ __('staff.possible-leech-cheaters') }}</span>
@@ -763,12 +744,6 @@
                         <i class="{{ config('other.font-awesome') }} fa-magic"></i>
                         <span>Internals</span>
                     </a>
-                    @if (auth()->user()->group->is_admin)
-                        <a class="staff-dashboard__link-card" href="{{ route('staff.groups.index') }}">
-                            <i class="{{ config('other.font-awesome') }} fa-users-cog"></i>
-                            <span>{{ __('staff.groups') }}</span>
-                        </a>
-                    @endif
                 </div>
                 <div class="staff-dashboard__actions-section">
                     <h3 class="staff-dashboard__section-subtitle">Actions</h3>
@@ -801,6 +776,17 @@
                         <i class="{{ config('other.font-awesome') }} fa-clipboard-list"></i>
                         <span>{{ __('staff.audit-log') }}</span>
                     </a>
+                    <a class="staff-dashboard__link-card" href="{{ route('staff.reports.index') }}">
+                        <i class="{{ config('other.font-awesome') }} fa-flag"></i>
+                        <span>{{ __('staff.reports-log') }}</span>
+                        @if ($unsolvedReportsCount > 0)
+                            <span class="staff-dashboard__badge">{{ $unsolvedReportsCount }}</span>
+                        @endif
+                    </a>
+                    <a class="staff-dashboard__link-card" href="{{ route('staff.warnings.index') }}">
+                        <i class="{{ config('other.font-awesome') }} fa-exclamation-circle"></i>
+                        <span>{{ __('staff.warnings-log') }}</span>
+                    </a>
                     <a class="staff-dashboard__link-card" href="{{ route('staff.bans.index') }}">
                         <i class="{{ config('other.font-awesome') }} fa-ban"></i>
                         <span>{{ __('staff.bans-log') }}</span>
@@ -827,17 +813,6 @@
                             <span>{{ __('staff.laravel-log') }}</span>
                         </a>
                     @endif
-                    <a class="staff-dashboard__link-card" href="{{ route('staff.reports.index') }}">
-                        <i class="{{ config('other.font-awesome') }} fa-flag"></i>
-                        <span>{{ __('staff.reports-log') }}</span>
-                        @if ($unsolvedReportsCount > 0)
-                            <span class="staff-dashboard__badge">{{ $unsolvedReportsCount }}</span>
-                        @endif
-                    </a>
-                    <a class="staff-dashboard__link-card" href="{{ route('staff.warnings.index') }}">
-                        <i class="{{ config('other.font-awesome') }} fa-exclamation-circle"></i>
-                        <span>{{ __('staff.warnings-log') }}</span>
-                    </a>
                 </div>
             </div>
         </div>
