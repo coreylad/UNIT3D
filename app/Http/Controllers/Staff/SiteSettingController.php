@@ -34,6 +34,46 @@ class SiteSettingController extends Controller
     }
 
     /**
+     * Show the branding edit form.
+     */
+    public function editBranding(): \Illuminate\Contracts\View\Factory|\Illuminate\View\View
+    {
+        return view('Staff.site-setting.branding', [
+            'siteSetting' => SiteSetting::instance(),
+        ]);
+    }
+
+    /**
+     * Show the registration edit form.
+     */
+    public function editRegistration(): \Illuminate\Contracts\View\Factory|\Illuminate\View\View
+    {
+        return view('Staff.site-setting.registration', [
+            'siteSetting' => SiteSetting::instance(),
+        ]);
+    }
+
+    /**
+     * Show the tracker settings edit form.
+     */
+    public function editTracker(): \Illuminate\Contracts\View\Factory|\Illuminate\View\View
+    {
+        return view('Staff.site-setting.tracker', [
+            'siteSetting' => SiteSetting::instance(),
+        ]);
+    }
+
+    /**
+     * Show the social links edit form.
+     */
+    public function editSocial(): \Illuminate\Contracts\View\Factory|\Illuminate\View\View
+    {
+        return view('Staff.site-setting.social', [
+            'siteSetting' => SiteSetting::instance(),
+        ]);
+    }
+
+    /**
      * Update the site settings.
      */
     public function update(UpdateSiteSettingRequest $request): \Illuminate\Http\RedirectResponse

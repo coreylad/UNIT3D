@@ -462,9 +462,25 @@
                 </h2>
                 <div class="staff-dashboard__links-grid">
                     @if (auth()->user()->group->is_admin)
-                        <a class="staff-dashboard__link-card" href="{{ route('staff.site_settings.edit') }}">
-                            <i class="{{ config('other.font-awesome') }} fa-cog"></i>
-                            <span>Site Settings</span>
+                        <a class="staff-dashboard__link-card" href="{{ route('staff.site_settings.branding') }}">
+                            <i class="{{ config('other.font-awesome') }} fa-paintbrush"></i>
+                            <span>Branding & Identity</span>
+                        </a>
+                        <a class="staff-dashboard__link-card" href="{{ route('staff.site_settings.registration') }}">
+                            <i class="{{ config('other.font-awesome') }} fa-user-plus"></i>
+                            <span>Registration & Access</span>
+                        </a>
+                        <a class="staff-dashboard__link-card" href="{{ route('staff.site_settings.tracker') }}">
+                            <i class="{{ config('other.font-awesome') }} fa-server"></i>
+                            <span>Tracker Settings</span>
+                        </a>
+                        <a class="staff-dashboard__link-card" href="{{ route('staff.site_settings.social') }}">
+                            <i class="{{ config('other.font-awesome') }} fa-share-nodes"></i>
+                            <span>Social Links</span>
+                        </a>
+                        <a class="staff-dashboard__link-card" href="{{ route('staff.email_settings.edit') }}">
+                            <i class="{{ config('other.font-awesome') }} fa-envelope"></i>
+                            <span>Email Configuration</span>
                         </a>
                         <a class="staff-dashboard__link-card" href="{{ route('staff.theme_builder.index') }}">
                             <i class="{{ config('other.font-awesome') }} fa-palette"></i>

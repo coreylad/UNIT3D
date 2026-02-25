@@ -769,6 +769,10 @@ Route::middleware('language')->group(function (): void {
             // Site Settings
             Route::prefix('site-settings')->name('site_settings.')->middleware('admin')->group(function (): void {
                 Route::get('/edit', [App\Http\Controllers\Staff\SiteSettingController::class, 'edit'])->name('edit');
+                Route::get('/branding', [App\Http\Controllers\Staff\SiteSettingController::class, 'editBranding'])->name('branding');
+                Route::get('/registration', [App\Http\Controllers\Staff\SiteSettingController::class, 'editRegistration'])->name('registration');
+                Route::get('/tracker', [App\Http\Controllers\Staff\SiteSettingController::class, 'editTracker'])->name('tracker');
+                Route::get('/social', [App\Http\Controllers\Staff\SiteSettingController::class, 'editSocial'])->name('social');
                 Route::patch('/', [App\Http\Controllers\Staff\SiteSettingController::class, 'update'])->name('update');
             });
 
