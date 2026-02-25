@@ -119,6 +119,23 @@
             font-size: 0.82rem;
             cursor: pointer;
             color: #ff6b6b;
+            padding: 0.4rem 0.8rem;
+            border: 1px solid rgba(255, 107, 107, 0.3);
+            border-radius: 6px;
+            background: rgba(255, 107, 107, 0.08);
+            transition: all 0.2s ease;
+        }
+        .ss-upload-preview__remove:hover {
+            background: rgba(255, 107, 107, 0.15);
+            border-color: rgba(255, 107, 107, 0.5);
+        }
+        .ss-upload-preview__remove input[type="checkbox"] {
+            display: none;
+        }
+        .ss-upload-preview__remove--checked {
+            background: rgba(255, 107, 107, 0.2);
+            border-color: #ff6b6b;
+            font-weight: 600;
         }
         .ss-alert {
             padding: 1.25rem 1.5rem;
@@ -260,14 +277,19 @@
         </p>
 
         @if ($siteSetting->header_image && file_exists(public_path('img/' . $siteSetting->header_image)))
-            <div class="ss-upload-preview">
-                <img src="{{ url('img/' . $siteSetting->header_image) }}?v={{ filemtime(public_path('img/' . $siteSetting->header_image)) }}" alt="Current header banner" />
+            <div class="ss-upload-preview" x-data="{ markedForRemoval: false }">
+                <img src="{{ url('img/' . $siteSetting->header_image) }}?v={{ filemtime(public_path('img/' . $siteSetting->header_image)) }}" alt="Current header logo" :style="markedForRemoval && 'opacity: 0.3; filter: grayscale(1);'" />
                 <div>
                     <div class="ss-upload-preview__meta">{{ $siteSetting->header_image }}</div>
-                    <label class="ss-upload-preview__remove">
-                        <input type="checkbox" name="remove_header_image" value="1" class="form__checkbox" />
-                        <i class="{{ config('other.font-awesome') }} fa-trash-can"></i> Remove
+                    <label class="ss-upload-preview__remove" :class="markedForRemoval && 'ss-upload-preview__remove--checked'" @click="markedForRemoval = !markedForRemoval">
+                        <input type="checkbox" name="remove_header_image" value="1" x-model="markedForRemoval" />
+                        <i class="{{ config('other.font-awesome') }}" :class="markedForRemoval ? 'fa-rotate-left' : 'fa-trash-can'"></i>
+                        <span x-text="markedForRemoval ? 'Undo removal' : 'Remove logo'"></span>
                     </label>
+                    <p x-show="markedForRemoval" x-cloak style="margin-top: 0.5rem; font-size: 0.78rem; color: #ff6b6b;">
+                        <i class="{{ config('other.font-awesome') }} fa-circle-info" style="margin-right: 0.25em;"></i>
+                        Logo will be removed when you save changes.
+                    </p>
                 </div>
             </div>
         @endif

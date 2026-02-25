@@ -116,7 +116,7 @@ class SiteSettingController extends Controller
         $setting->save();
         Cache::forget('site_settings');
 
-        return to_route('staff.site_settings.edit')
+        return redirect()->back()
             ->with('success', 'Site settings have been updated successfully.');
     }
 }
