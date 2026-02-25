@@ -44,15 +44,6 @@ class UpdateSiteSettingRequest extends FormRequest
             'header_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,gif,webp', 'max:2048'],
             'remove_header_image' => ['nullable', 'boolean'],
 
-            // Mail
-            'smtp_host' => ['nullable', 'string', 'max:255'],
-            'smtp_port' => ['nullable', 'integer', 'between:1,65535'],
-            'smtp_encryption' => ['nullable', 'string', 'in:tls,ssl,'],
-            'smtp_username' => ['nullable', 'string', 'max:255'],
-            'smtp_password' => ['nullable', 'string', 'max:255'],
-            'smtp_from_address' => ['nullable', 'email', 'max:255'],
-            'smtp_from_name' => ['nullable', 'string', 'max:255'],
-
             // Registration
             'registration_open' => ['nullable', 'boolean'],
             'invite_only' => ['nullable', 'boolean'],

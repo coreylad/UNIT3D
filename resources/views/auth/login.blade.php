@@ -126,6 +126,9 @@
                     <a class="auth-form__footer-item" href="{{ route('password.request') }}">
                         {{ __('auth.lost-password') }}
                     </a>
+                    <a class="auth-form__footer-item" href="{{ route('passkey.request') }}">
+                        {{ __('auth.lost-passkey') }}
+                    </a>
                 </footer>
             </section>
         </main>

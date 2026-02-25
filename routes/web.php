@@ -75,6 +75,12 @@ Route::middleware('language')->group(function (): void {
         Route::get('/reset-password/{token}', [App\Http\Controllers\Auth\NewPasswordController::class, 'create'])->middleware('throttle:'.GlobalRateLimit::RESET_PASSWORD->value)->name('password.reset');
         Route::post('/reset-password', [App\Http\Controllers\Auth\NewPasswordController::class, 'store'])->middleware('throttle:'.GlobalRateLimit::RESET_PASSWORD->value)->name('password.update');
 
+        // Passkey resets
+        Route::get('/forgot-passkey', [App\Http\Controllers\Auth\PasskeyResetLinkController::class, 'create'])->middleware('throttle:'.GlobalRateLimit::FORGOT_PASSWORD->value)->name('passkey.request');
+        Route::post('/forgot-passkey', [App\Http\Controllers\Auth\PasskeyResetLinkController::class, 'store'])->middleware(['throttle:'.GlobalRateLimit::FORGOT_PASSWORD->value])->name('passkey.email');
+        Route::get('/reset-passkey/{token}', [App\Http\Controllers\Auth\ConfirmPasskeyResetController::class, 'show'])->middleware('throttle:'.GlobalRateLimit::RESET_PASSWORD->value)->name('passkey.show');
+        Route::post('/reset-passkey/{token}', [App\Http\Controllers\Auth\ConfirmPasskeyResetController::class, 'update'])->middleware('throttle:'.GlobalRateLimit::RESET_PASSWORD->value)->name('passkey.reset');
+
         // This redirect must be kept until all invite emails that use the old syntax have expired
         // Hack so that Fortify can be used (allows query parameters but not route parameters)
         Route::get('/register/{code?}', fn (string $code) => to_route('register', ['code' => $code]));
@@ -695,6 +701,14 @@ Route::middleware('language')->group(function (): void {
                 Route::get('/', [App\Http\Controllers\Staff\BackupController::class, 'index'])->name('index');
             });
 
+            // Database Migration System
+            Route::prefix('migrations')->name('migrations.')->middleware('owner')->group(function (): void {
+                Route::get('/', [App\Http\Controllers\Staff\MigrationController::class, 'index'])->name('index');
+                Route::post('/test-connection', [App\Http\Controllers\Staff\MigrationController::class, 'testConnection'])->name('test-connection');
+                Route::post('/get-summary', [App\Http\Controllers\Staff\MigrationController::class, 'getSummary'])->name('get-summary');
+                Route::post('/start', [App\Http\Controllers\Staff\MigrationController::class, 'start'])->name('start');
+            });
+
             // Ban System
             Route::prefix('bans')->name('bans.')->group(function (): void {
                 Route::get('/', [App\Http\Controllers\Staff\BanController::class, 'index'])->name('index');
@@ -756,6 +770,12 @@ Route::middleware('language')->group(function (): void {
             Route::prefix('site-settings')->name('site_settings.')->middleware('admin')->group(function (): void {
                 Route::get('/edit', [App\Http\Controllers\Staff\SiteSettingController::class, 'edit'])->name('edit');
                 Route::patch('/', [App\Http\Controllers\Staff\SiteSettingController::class, 'update'])->name('update');
+            });
+
+            // Email Settings
+            Route::prefix('email-settings')->name('email_settings.')->middleware('admin')->group(function (): void {
+                Route::get('/edit', [App\Http\Controllers\Staff\EmailSettingController::class, 'edit'])->name('edit');
+                Route::patch('/', [App\Http\Controllers\Staff\EmailSettingController::class, 'update'])->name('update');
             });
 
             // Chat Bots System

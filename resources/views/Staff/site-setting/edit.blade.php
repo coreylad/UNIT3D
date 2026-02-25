@@ -23,52 +23,137 @@
 
 @section('styles')
     <style>
+        /* ── Layout improvements ── */
+        .page__staff-site-setting--edit {
+            padding-bottom: 3rem;
+        }
+
+        /* ── Hero improvements ── */
+        .ss-hero {
+            margin-bottom: 4rem !important;
+        }
+
+        /* ── Card improvements ── */
+        .ss-card {
+            margin-bottom: 3rem !important;
+        }
+
+        /* ── Body spacing ── */
+        .ss-card__body {
+            padding: 2.5rem !important;
+        }
+
+        /* ── Grid improvements ── */
+        .ss-grid {
+            gap: 3rem 2.5rem !important;
+            margin-bottom: 2.5rem !important;
+        }
+
+        /* ── Field spacing ── */
+        .ss-field {
+            margin-bottom: 2.5rem !important;
+        }
+
+        .ss-field:last-child {
+            margin-bottom: 0 !important;
+        }
+
+        /* ── Section dividers ── */
+        .ss-divider {
+            margin: 3rem 0 !important;
+        }
+
+        /* ── Subheading spacing ── */
+        .ss-subheading {
+            margin-bottom: 2rem !important;
+        }
+
+        /* ── Submit area spacing ── */
+        .ss-submit {
+            margin-top: 4rem !important;
+            padding-top: 2.5rem !important;
+        }
+
+        /* ── Alerts spacing ── */
+        .ss-alert {
+            margin-bottom: 2.5rem !important;
+        }
+
+        /* ── Callout spacing ── */
+        .ss-callout {
+            margin-bottom: 2.5rem !important;
+        }
+
+        /* ── Form group fixes ── */
+        .form__group {
+            margin-bottom: 0 !important;
+        }
+
+        /* ── Hint text spacing ── */
+        .form__hint {
+            margin-top: 0.75rem !important;
+            display: block !important;
+        }
+
+        /* ── Toggle list spacing ── */
+        .ss-toggle {
+            margin-bottom: 1.5rem !important;
+        }
+
+        .ss-toggle:last-child {
+            margin-bottom: 0 !important;
+        }
+    </style>
+@endsection
+
+@section('styles')
+    <style>
         /* ── Hero banner ── */
         .ss-hero {
             background: linear-gradient(135deg, rgba(74, 158, 255, 0.12) 0%, rgba(156, 39, 176, 0.08) 100%);
             border: 1px solid rgba(255, 255, 255, 0.06);
             border-radius: 12px;
-            padding: 2rem 2.5rem;
-            margin-bottom: 2rem;
+            padding: 2.5rem;
+            margin-bottom: 4rem;
             display: flex;
             align-items: center;
             gap: 1.5rem;
         }
         .ss-hero__icon {
-            width: 56px;
-            height: 56px;
+            width: 64px;
+            height: 64px;
             border-radius: 14px;
             background: linear-gradient(135deg, #4a9eff, #9c27b0);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.4rem;
+            font-size: 1.5rem;
             color: #fff;
             flex-shrink: 0;
         }
         .ss-hero__text h1 {
-            font-size: 1.35rem;
+            font-size: 1.5rem;
             font-weight: 800;
-            margin: 0 0 0.3rem;
+            margin: 0 0 0.4rem;
             letter-spacing: -0.01em;
         }
         .ss-hero__text p {
-            font-size: 0.88rem;
-            opacity: 0.55;
+            font-size: 0.9rem;
+            opacity: 0.6;
             margin: 0;
-            line-height: 1.4;
+            line-height: 1.5;
         }
 
         /* ── Alerts ── */
         .ss-alert {
-            padding: 1rem 1.25rem;
+            padding: 1.25rem 1.5rem;
             border-radius: 10px;
-            margin-bottom: 1.75rem;
+            margin-bottom: 2.5rem;
             display: flex;
             align-items: flex-start;
             gap: 0.75rem;
-            font-size: 0.88rem;
-            line-height: 1.5;
+            font-size: 0.9rem;
+            line-height: 1.6;
         }
         .ss-alert--success {
             background: rgba(76, 175, 80, 0.1);
@@ -80,21 +165,25 @@
             border: 1px solid rgba(255, 107, 107, 0.2);
             color: #ff6b6b;
         }
-        .ss-alert__icon { font-size: 1.1rem; margin-top: 0.1em; flex-shrink: 0; }
+        .ss-alert__icon { font-size: 1.2rem; margin-top: 0.1em; flex-shrink: 0; }
         .ss-alert__body { flex: 1; }
-        .ss-alert__title { font-weight: 700; margin-bottom: 0.3rem; }
-        .ss-alert ul { margin: 0.4rem 0 0; padding-left: 1.25em; }
-        .ss-alert li { margin-bottom: 0.15rem; }
+        .ss-alert__title { font-weight: 700; margin-bottom: 0.4rem; }
+        .ss-alert ul { margin: 0.5rem 0 0; padding-left: 1.25em; }
+        .ss-alert li { margin-bottom: 0.25rem; }
 
         /* ── Section cards ── */
         .ss-card {
             border: 1px solid rgba(255, 255, 255, 0.07);
             border-radius: 12px;
-            margin-bottom: 1.5rem;
+            margin-bottom: 3rem;
             overflow: hidden;
             transition: border-color 0.2s;
+            background: rgba(255, 255, 255, 0.02);
         }
-        .ss-card:hover { border-color: rgba(255, 255, 255, 0.12); }
+        .ss-card:hover { 
+            border-color: rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.03);
+        }
         .ss-card--orange  { border-left: 4px solid #ff9800; }
         .ss-card--cyan    { border-left: 4px solid #00bcd4; }
         .ss-card--green   { border-left: 4px solid #4caf50; }
@@ -106,21 +195,22 @@
             display: flex;
             align-items: center;
             gap: 1rem;
-            padding: 1.1rem 1.5rem;
+            padding: 1.5rem 2rem;
             cursor: pointer;
             user-select: none;
             background: rgba(255, 255, 255, 0.025);
             transition: background 0.15s;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
         }
         .ss-card__header:hover { background: rgba(255, 255, 255, 0.055); }
         .ss-card__icon {
-            width: 36px;
-            height: 36px;
-            border-radius: 9px;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.95rem;
+            font-size: 1rem;
             flex-shrink: 0;
         }
         .ss-card--orange  .ss-card__icon { background: rgba(255, 152, 0, 0.15); color: #ff9800; }
@@ -145,7 +235,7 @@
 
         /* ── Section body ── */
         .ss-card__body {
-            padding: 1.75rem 2rem 2rem;
+            padding: 2.5rem;
             border-top: 1px solid rgba(255, 255, 255, 0.06);
         }
 
@@ -153,25 +243,26 @@
         .ss-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 1.5rem 2rem;
+            gap: 3rem 2.5rem;
+            margin-bottom: 2.5rem;
         }
         .ss-grid--single { grid-template-columns: 1fr; }
         @media (max-width: 767px) { .ss-grid { grid-template-columns: 1fr; } }
 
         /* ── Field spacing within the body ── */
-        .ss-field { margin-bottom: 1.5rem; }
+        .ss-field { margin-bottom: 2.5rem; }
         .ss-field:last-child { margin-bottom: 0; }
 
         /* ── Info callout ── */
         .ss-callout {
-            padding: 0.85rem 1.1rem;
-            border-radius: 8px;
-            font-size: 0.85rem;
-            line-height: 1.55;
-            margin-bottom: 1.75rem;
+            padding: 1.25rem 1.5rem;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            margin-bottom: 2.5rem;
             display: flex;
             align-items: flex-start;
-            gap: 0.65rem;
+            gap: 0.75rem;
         }
         .ss-callout--info {
             background: rgba(0, 188, 212, 0.07);
@@ -183,7 +274,7 @@
         .ss-divider {
             height: 1px;
             background: rgba(255, 255, 255, 0.06);
-            margin: 1.75rem 0;
+            margin: 3rem 0;
         }
 
         /* ── Sub-heading inside body ── */
@@ -193,11 +284,106 @@
             opacity: 0.5;
             text-transform: uppercase;
             letter-spacing: 0.06em;
-            margin-bottom: 1.25rem;
+            margin-bottom: 2rem;
+            margin-top: 0;
         }
 
         /* ── Toggle row ── */
         .ss-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.25rem 1.5rem;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.035);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            margin-bottom: 1.5rem;
+            cursor: pointer;
+            transition: background 0.15s, border-color 0.15s;
+        }
+        .ss-toggle:last-child { margin-bottom: 0; }
+        .ss-toggle:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+        .ss-toggle__info { display: flex; flex-direction: column; gap: 0.4rem; }
+        .ss-toggle__title { font-weight: 600; font-size: 0.95rem; }
+        .ss-toggle__desc { font-size: 0.82rem; opacity: 0.5; line-height: 1.4; }
+
+        /* ── Toggle switch ── */
+        .ss-switch { position: relative; width: 48px; height: 26px; flex-shrink: 0; }
+        .ss-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+        .ss-switch__track {
+            position: absolute;
+            inset: 0;
+            border-radius: 24px;
+            background: rgba(255, 255, 255, 0.15);
+            transition: background 0.25s;
+            cursor: pointer;
+        }
+        .ss-switch__track::before {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            left: 3px;
+            top: 3px;
+            border-radius: 50%;
+            background: #fff;
+            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+        }
+        .ss-switch input:checked + .ss-switch__track { background: #4caf50; }
+        .ss-switch input:checked + .ss-switch__track::before { transform: translateX(22px); }
+
+        /* ── Upload preview ── */
+        .ss-upload-preview {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+            padding: 1.25rem 1.5rem;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.035);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .ss-upload-preview img {
+            max-height: 60px;
+            max-width: 250px;
+            border-radius: 6px;
+            object-fit: contain;
+        }
+        .ss-upload-preview__meta { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; }
+        .ss-upload-preview__remove {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.82rem;
+            cursor: pointer;
+            color: #ff6b6b;
+        }
+
+        /* ── Submit area ── */
+        .ss-submit {
+            margin-top: 4rem;
+            padding-top: 2.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+        }
+
+        /* ── Form fields ── */
+        .form__group {
+            margin-bottom: 0;
+        }
+
+        .form__hint {
+            margin-top: 0.75rem;
+            display: block;
+        }
+    </style>
+@endsection
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -380,68 +566,19 @@
 
             {{-- ═══ MAIL / SMTP ═══ --}}
             <div class="ss-card ss-card--cyan">
-                <div class="ss-card__header" @click="toggle('mail')">
+                <div class="ss-card__header">
                     <span class="ss-card__icon"><i class="{{ config('other.font-awesome') }} fa-envelope"></i></span>
-                    <span class="ss-card__title">Mail / SMTP</span>
-                    <span class="ss-card__badge">7 fields</span>
-                    <i class="{{ config('other.font-awesome') }} fa-chevron-right ss-card__chevron" :class="open === 'mail' && 'ss-card__chevron--open'"></i>
+                    <span class="ss-card__title">Email & SMTP Configuration</span>
+                    <i class="{{ config('other.font-awesome') }} fa-arrow-up-right ss-card__chevron" style="opacity: 0.6;"></i>
                 </div>
-                <div class="ss-card__body" x-show="open === 'mail'" x-cloak>
-                    <div class="ss-callout ss-callout--info">
-                        <span class="ss-callout__icon"><i class="{{ config('other.font-awesome') }} fa-circle-info"></i></span>
-                        <span>Settings here <strong>override</strong> the MAIL_* values in your <code>.env</code>. Leave all fields blank to use .env defaults.</span>
-                    </div>
-                    <div class="ss-grid">
-                        <p class="form__group">
-                            <input id="smtp_host" class="form__text" name="smtp_host" type="text" maxlength="255" value="{{ old('smtp_host', $siteSetting->smtp_host) }}" placeholder=" " autocomplete="off" />
-                            <label class="form__label form__label--floating" for="smtp_host">SMTP Host</label>
-                            <span class="form__hint">e.g. smtp.gmail.com, smtp.sendgrid.net</span>
-                        </p>
-                        <p class="form__group">
-                            <input id="smtp_port" class="form__text" name="smtp_port" type="number" min="1" max="65535" value="{{ old('smtp_port', $siteSetting->smtp_port ?? 587) }}" placeholder=" " />
-                            <label class="form__label form__label--floating" for="smtp_port">SMTP Port</label>
-                            <span class="form__hint">Common: 587 (TLS) &mdash; 465 (SSL) &mdash; 25</span>
-                        </p>
-                    </div>
-                    <div class="ss-grid" style="margin-top: 1.5rem;">
-                        <p class="form__group">
-                            <select id="smtp_encryption" name="smtp_encryption" class="form__select">
-                                <option value="" @selected(old('smtp_encryption', $siteSetting->smtp_encryption ?? '') === '')>None</option>
-                                <option value="tls" @selected(old('smtp_encryption', $siteSetting->smtp_encryption ?? '') === 'tls')>TLS (STARTTLS)</option>
-                                <option value="ssl" @selected(old('smtp_encryption', $siteSetting->smtp_encryption ?? '') === 'ssl')>SSL</option>
-                            </select>
-                            <label class="form__label form__label--floating" for="smtp_encryption">Encryption</label>
-                        </p>
-                        <p class="form__group">
-                            <input id="smtp_username" class="form__text" name="smtp_username" type="text" maxlength="255" value="{{ old('smtp_username', $siteSetting->smtp_username) }}" placeholder=" " autocomplete="off" />
-                            <label class="form__label form__label--floating" for="smtp_username">SMTP Username</label>
-                        </p>
-                    </div>
-                    <div class="ss-grid ss-grid--single" style="margin-top: 1.5rem;">
-                        <p class="form__group">
-                            <input id="smtp_password" class="form__text" name="smtp_password" type="password" maxlength="255" value="{{ old('smtp_password', $siteSetting->smtp_password) }}" placeholder=" " autocomplete="new-password" />
-                            <label class="form__label form__label--floating" for="smtp_password">SMTP Password</label>
-                            <span class="form__hint">Leave blank to keep existing saved password.</span>
-                        </p>
-                    </div>
-
-                    <div class="ss-divider"></div>
-
-                    <p class="ss-subheading">
-                        <i class="{{ config('other.font-awesome') }} fa-at" style="margin-right: 0.35em;"></i>
-                        Sender Identity
+                <div class="ss-card__body">
+                    <p style="margin: 0 0 1.5rem; opacity: 0.7;">
+                        Email settings have been moved to their own dedicated configuration page for better organization.
                     </p>
-                    <div class="ss-grid">
-                        <p class="form__group">
-                            <input id="smtp_from_address" class="form__text" name="smtp_from_address" type="email" maxlength="255" value="{{ old('smtp_from_address', $siteSetting->smtp_from_address) }}" placeholder=" " />
-                            <label class="form__label form__label--floating" for="smtp_from_address">From Email Address</label>
-                            <span class="form__hint">e.g. noreply@yourtracker.com</span>
-                        </p>
-                        <p class="form__group">
-                            <input id="smtp_from_name" class="form__text" name="smtp_from_name" type="text" maxlength="255" value="{{ old('smtp_from_name', $siteSetting->smtp_from_name) }}" placeholder=" " />
-                            <label class="form__label form__label--floating" for="smtp_from_name">From Display Name</label>
-                        </p>
-                    </div>
+                    <a href="{{ route('staff.email_settings.edit') }}" class="form__button form__button--filled" style="display: inline-flex; align-items: center; gap: 0.5rem;">
+                        <i class="{{ config('other.font-awesome') }} fa-envelope"></i>
+                        Go to Email Settings
+                    </a>
                 </div>
             </div>
 
