@@ -382,8 +382,6 @@
             margin-top: 0.75rem;
             display: block;
         }
-    </style>
-@endsection
             display: flex;
             align-items: center;
             justify-content: space-between;
