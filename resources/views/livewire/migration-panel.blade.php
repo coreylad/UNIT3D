@@ -187,9 +187,8 @@
             </section>
         </div>
     </section>
-</div>
 
-<script>
+    <script>
 function migrationPanel() {
     return {
         form: {
@@ -424,3 +423,4 @@ function migrationPanel() {
         grid-column: span 2;
     }
 </style>
+</div>
