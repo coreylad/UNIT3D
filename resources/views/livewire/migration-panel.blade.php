@@ -1,4 +1,4 @@
-<div style="display: flex; flex-direction: column; gap: 1rem">
+<div style="display: flex; flex-direction: column; gap: 1rem" x-data="migrationPanel()">
     <section class="panelV2">
         <header class="panel__header">
             <h2 class="panel__heading">{{ __('migration.database-migration') }}</h2>
@@ -15,13 +15,13 @@
             <section>
                 <h3 style="margin-bottom: 1rem;">{{ __('migration.configuration') }}</h3>
 
-                <form id="migration-config-form" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+                <form @submit.prevent id="migration-config-form" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
                     <div>
                         <label for="host" class="form__label">{{ __('migration.source-host') }}</label>
                         <input
                             type="text"
                             id="host"
-                            name="host"
+                            x-model="form.host"
                             class="form__input"
                             placeholder="localhost"
                             required
@@ -33,7 +33,7 @@
                         <input
                             type="number"
                             id="port"
-                            name="port"
+                            x-model.number="form.port"
                             class="form__input"
                             placeholder="3306"
                             value="3306"
@@ -46,7 +46,7 @@
                         <input
                             type="text"
                             id="username"
-                            name="username"
+                            x-model="form.username"
                             class="form__input"
                             required
                         />
@@ -57,7 +57,7 @@
                         <input
                             type="password"
                             id="password"
-                            name="password"
+                            x-model="form.password"
                             class="form__input"
                             required
                         />
@@ -68,7 +68,7 @@
                         <input
                             type="text"
                             id="database"
-                            name="database"
+                            x-model="form.database"
                             class="form__input"
                             placeholder="admin_TSSE8"
                             required
@@ -78,20 +78,25 @@
 
                 <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
                     <button
-                        id="test-connection-btn"
                         class="form__button form__button--primary"
-                        onclick="testConnection()"
+                        :disabled="testingConnection"
+                        @click="testConnection()"
                     >
                         {{ __('migration.test-connection') }}
                     </button>
                 </div>
 
-                <div id="connection-status" style="padding: 1rem; border-radius: 0.5rem; display: none;">
+                <div x-show="connectionStatus" style="padding: 1rem; border-radius: 0.5rem;" :style="connectionStatus && {
+                    backgroundColor: connectionSuccess ? '#d4edda' : '#f8d7da',
+                    borderColor: connectionSuccess ? '#c3e6cb' : '#f5c6cb',
+                    color: connectionSuccess ? '#155724' : '#721c24',
+                }">
+                    <p x-html="connectionMessage"></p>
                 </div>
             </section>
 
             <!-- Migration Summary Section -->
-            <section id="summary-section" style="display: none;">
+            <section x-show="showSummary" x-cloak>
                 <h3 style="margin-bottom: 1rem;">{{ __('migration.migration-status') }}</h3>
 
                 <div class="data-table-wrapper">
@@ -103,25 +108,38 @@
                                 <th scope="col">{{ __('common.action') }}</th>
                             </tr>
                         </thead>
-                        <tbody id="summary-table">
+                        <tbody>
+                            <template x-for="(rowCount, tableName) in summaryData" :key="tableName">
+                                <tr>
+                                    <td x-text="getTableLabel(tableName)"></td>
+                                    <td x-text="rowCount.toLocaleString()"></td>
+                                    <td>
+                                        <input
+                                            type="checkbox"
+                                            :id="'table-' + tableName"
+                                            :value="tableName"
+                                            @change="handleTableToggle(tableName, $el.checked)"
+                                            style="cursor: pointer;"
+                                        />
+                                    </td>
+                                </tr>
+                            </template>
                         </tbody>
                     </table>
                 </div>
 
                 <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
                     <button
-                        id="start-migration-btn"
                         class="form__button form__button--primary"
-                        onclick="startMigration()"
-                        style="display: none;"
+                        @click="startMigration()"
+                        x-show="selectedTables.length > 0"
                     >
                         {{ __('migration.start-migration') }}
                     </button>
                     <button
-                        id="clear-selection-btn"
                         class="form__button form__button--secondary"
-                        onclick="clearSelection()"
-                        style="display: none;"
+                        @click="clearSelection()"
+                        x-show="selectedTables.length > 0"
                     >
                         {{ __('common.clear') }}
                     </button>
@@ -129,35 +147,39 @@
             </section>
 
             <!-- Progress Section -->
-            <section id="progress-section" style="display: none;">
+            <section x-show="showProgress" x-cloak>
                 <h3 style="margin-bottom: 1rem;">{{ __('migration.migration-progress') }}</h3>
 
                 <div id="migration-progress" style="margin-bottom: 1.5rem;">
                     <div style="background: #f0f0f0; border-radius: 0.25rem; overflow: hidden;">
                         <div
-                            id="progress-bar"
-                            style="width: 0%; height: 2rem; background: linear-gradient(90deg, #4CAF50, #45a049); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; transition: width 0.3s ease;"
+                            style="height: 2rem; background: linear-gradient(90deg, #4CAF50, #45a049); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; transition: width 0.3s ease;"
+                            :style="{ width: progress + '%' }"
+                            x-text="progress + '%'"
                         >
-                            0%
                         </div>
                     </div>
                 </div>
 
-                <div id="migration-logs" style="background: #f5f5f5; border: 1px solid #ddd; border-radius: 0.5rem; padding: 1rem; max-height: 300px; overflow-y: auto; font-family: monospace; font-size: 0.875rem;">
+                <div style="background: #f5f5f5; border: 1px solid #ddd; border-radius: 0.5rem; padding: 1rem; max-height: 300px; overflow-y: auto; font-family: monospace; font-size: 0.875rem;" x-html="migrationLogs">
                 </div>
             </section>
 
             <!-- Completed Section -->
-            <section id="completed-section" style="display: none;">
+            <section x-show="showCompleted" x-cloak>
                 <div style="background: #d4edda; border: 1px solid #c3e6cb; border-radius: 0.5rem; padding: 1rem; color: #155724;">
                     <h4>✅ {{ __('migration.migration-completed') }}</h4>
-                    <div id="completion-summary"></div>
+                    <ul style="margin: 0.5rem 0 0;">
+                        <template x-for="(result, table) in completionSummary" :key="table">
+                            <li x-html="result.success ? `✅ ${table}: ${result.count} records migrated` : `❌ ${table}: ${result.error}`"></li>
+                        </template>
+                    </ul>
                 </div>
 
                 <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
                     <button
                         class="form__button form__button--primary"
-                        onclick="resetMigration()"
+                        @click="resetMigration()"
                     >
                         {{ __('common.back') }}
                     </button>
@@ -168,244 +190,175 @@
 </div>
 
 <script>
-    let selectedTables = [];
+function migrationPanel() {
+    return {
+        form: {
+            host: 'localhost',
+            port: 3306,
+            username: '',
+            password: '',
+            database: '',
+        },
+        testingConnection: false,
+        connectionStatus: false,
+        connectionSuccess: false,
+        connectionMessage: '',
+        showSummary: false,
+        showProgress: false,
+        showCompleted: false,
+        summaryData: {},
+        selectedTables: [],
+        progress: 0,
+        migrationLogs: '',
+        completionSummary: {},
 
-    function getFormData() {
-        return {
-            host: document.getElementById('host').value,
-            port: parseInt(document.getElementById('port').value),
-            username: document.getElementById('username').value,
-            password: document.getElementById('password').value,
-            database: document.getElementById('database').value,
-        };
-    }
+        getTableLabel(tableName) {
+            const labels = {
+                users: '{{ __('migration.users') }}',
+                torrents: '{{ __('migration.torrents') }}',
+                peers: '{{ __('migration.peers') }}',
+                snatched: '{{ __('migration.snatched') }}'
+            };
+            return labels[tableName] || tableName;
+        },
 
-    function testConnection() {
-        const button = document.getElementById('test-connection-btn');
-        const statusDiv = document.getElementById('connection-status');
-        const formData = getFormData();
+        async testConnection() {
+            this.testingConnection = true;
+            this.connectionStatus = true;
+            this.connectionMessage = '⏳ {{ __('common.loading') }}...';
 
-        button.disabled = true;
-        statusDiv.style.display = 'block';
-        statusDiv.innerHTML = '<p style="color: #ff9800;">⏳ {{ __('common.loading') }}...</p>';
+            try {
+                const response = await fetch('{{ route('staff.migrations.test-connection') }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    },
+                    body: JSON.stringify(this.form),
+                });
 
-        fetch('{{ route('staff.migrations.test-connection') }}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-            },
-            body: JSON.stringify(formData),
-        })
-            .then(response => response.json())
-            .then(data => {
-                button.disabled = false;
+                const data = await response.json();
+                this.testingConnection = false;
 
                 if (data.success) {
-                    statusDiv.style.backgroundColor = '#d4edda';
-                    statusDiv.style.borderColor = '#c3e6cb';
-                    statusDiv.style.color = '#155724';
-                    statusDiv.innerHTML = '<p>✅ ' + data.message + '</p>';
-
-                    // Get migration summary
-                    getSummary(formData);
+                    this.connectionSuccess = true;
+                    this.connectionMessage = '✅ ' + data.message;
+                    await this.getSummary();
                 } else {
-                    statusDiv.style.backgroundColor = '#f8d7da';
-                    statusDiv.style.borderColor = '#f5c6cb';
-                    statusDiv.style.color = '#721c24';
-                    statusDiv.innerHTML = '<p>❌ ' + data.message + '</p>';
+                    this.connectionSuccess = false;
+                    this.connectionMessage = '❌ ' + data.message;
                 }
-            })
-            .catch(error => {
-                button.disabled = false;
-                statusDiv.style.backgroundColor = '#f8d7da';
-                statusDiv.style.borderColor = '#f5c6cb';
-                statusDiv.style.color = '#721c24';
-                statusDiv.innerHTML = '<p>❌ {{ __('common.error') }}: ' + error.message + '</p>';
-            });
-    }
+            } catch (error) {
+                this.testingConnection = false;
+                this.connectionSuccess = false;
+                this.connectionMessage = '❌ {{ __('common.error') }}: ' + error.message;
+            }
+        },
 
-    function getSummary(config) {
-        fetch('{{ route('staff.migrations.get-summary') }}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-            },
-            body: JSON.stringify(config),
-        })
-            .then(response => response.json())
-            .then(data => {
+        async getSummary() {
+            try {
+                const response = await fetch('{{ route('staff.migrations.get-summary') }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    },
+                    body: JSON.stringify(this.form),
+                });
+
+                const data = await response.json();
+
                 if (data.success) {
-                    displaySummary(data.data);
-                    document.getElementById('summary-section').style.display = 'block';
+                    this.summaryData = data.data;
+                    this.showSummary = true;
                 } else {
                     alert('{{ __('common.error') }}: ' + data.message);
                 }
-            })
-            .catch(error => {
+            } catch (error) {
                 alert('{{ __('common.error') }}: ' + error.message);
-            });
-    }
-
-    function displaySummary(summary) {
-        const tbody = document.getElementById('summary-table');
-        tbody.innerHTML = '';
-        selectedTables = [];
-
-        const tables = [
-            { name: 'users', label: '{{ __('migration.users') }}' },
-            { name: 'torrents', label: '{{ __('migration.torrents') }}' },
-            { name: 'peers', label: '{{ __('migration.peers') }}' },
-            { name: 'snatched', label: '{{ __('migration.snatched') }}' },
-        ];
-
-        tables.forEach(table => {
-            const rowCount = summary[table.name] || 0;
-            if (rowCount > 0) {
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.id = 'table-' + table.name;
-                checkbox.value = table.name;
-                checkbox.onchange = (e) => {
-                    if (e.target.checked) {
-                        selectedTables.push(table.name);
-                    } else {
-                        selectedTables = selectedTables.filter(t => t !== table.name);
-                    }
-                    updateMigrationButton();
-                };
-
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td><label for="table-${table.name}" style="cursor: pointer;">${table.label}</label></td>
-                    <td>${rowCount.toLocaleString()}</td>
-                    <td><input type="checkbox" id="table-${table.name}" value="${table.name}" onchange="handleTableToggle(this)"></td>
-                `;
-                tbody.appendChild(tr);
             }
-        });
+        },
 
-        document.getElementById('start-migration-btn').style.display = 'none';
-        document.getElementById('clear-selection-btn').style.display = 'none';
-    }
+        handleTableToggle(tableName, checked) {
+            if (checked) {
+                if (!this.selectedTables.includes(tableName)) {
+                    this.selectedTables.push(tableName);
+                }
+            } else {
+                this.selectedTables = this.selectedTables.filter(t => t !== tableName);
+            }
+        },
 
-    function handleTableToggle(checkbox) {
-        if (checkbox.checked) {
-            selectedTables.push(checkbox.value);
-        } else {
-            selectedTables = selectedTables.filter(t => t !== checkbox.value);
-        }
-        updateMigrationButton();
-    }
+        clearSelection() {
+            this.selectedTables = [];
+            document.querySelectorAll('input[type="checkbox"][id^="table-"]').forEach(cb => {
+                cb.checked = false;
+            });
+        },
 
-    function updateMigrationButton() {
-        const migrateBtn = document.getElementById('start-migration-btn');
-        const clearBtn = document.getElementById('clear-selection-btn');
+        async startMigration() {
+            if (!confirm('{{ __('migration.confirm-migration') }}')) {
+                return;
+            }
 
-        if (selectedTables.length > 0) {
-            migrateBtn.style.display = 'inline-block';
-            clearBtn.style.display = 'inline-block';
-        } else {
-            migrateBtn.style.display = 'none';
-            clearBtn.style.display = 'none';
-        }
-    }
+            this.showSummary = false;
+            this.showProgress = true;
+            this.migrationLogs = '<p style="color: #ff9800;">⏳ {{ __('common.loading') }}...</p>';
 
-    function clearSelection() {
-        document.querySelectorAll('#summary-table input[type="checkbox"]').forEach(cb => {
-            cb.checked = false;
-        });
-        selectedTables = [];
-        updateMigrationButton();
-    }
+            const formData = {
+                ...this.form,
+                tables: this.selectedTables
+            };
 
-    function startMigration() {
-        if (!confirm('{{ __('migration.confirm-migration') }}')) {
-            return;
-        }
+            try {
+                const response = await fetch('{{ route('staff.migrations.start') }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    },
+                    body: JSON.stringify(formData),
+                });
 
-        const formData = getFormData();
-        formData.tables = selectedTables;
-
-        document.getElementById('summary-section').style.display = 'none';
-        document.getElementById('progress-section').style.display = 'block';
-
-        const logsDiv = document.getElementById('migration-logs');
-        logsDiv.innerHTML = '<p style="color: #ff9800;">⏳ {{ __('common.loading') }}...</p>';
-
-        fetch('{{ route('staff.migrations.start') }}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-            },
-            body: JSON.stringify(formData),
-        })
-            .then(response => response.json())
-            .then(data => {
-                updateProgress(100, 'Migration completed!');
+                const data = await response.json();
 
                 if (data.success) {
-                    displayCompletionSummary(data.data);
-                    document.getElementById('progress-section').style.display = 'none';
-                    document.getElementById('completed-section').style.display = 'block';
+                    this.completionSummary = data.data;
+                    this.progress = 100;
+                    this.migrationLogs = '';
+                    this.showProgress = false;
+                    this.showCompleted = true;
                 } else {
-                    displayMigrationError(data.message || '{{ __('migration.migration-failed') }}');
+                    this.migrationLogs = `<div style="color: #c33;">❌ Error: ${data.message}</div>`;
                 }
-            })
-            .catch(error => {
-                displayMigrationError(error.message);
-            });
-    }
-
-    function updateProgress(percentage, message) {
-        const progressBar = document.getElementById('progress-bar');
-        const logsDiv = document.getElementById('migration-logs');
-
-        progressBar.style.width = percentage + '%';
-        progressBar.innerText = percentage + '%';
-
-        if (message) {
-            const timestamp = new Date().toLocaleTimeString();
-            logsDiv.innerHTML += `<div>[${timestamp}] ${message}</div>`;
-            logsDiv.scrollTop = logsDiv.scrollHeight;
-        }
-    }
-
-    function displayCompletionSummary(data) {
-        const summary = document.getElementById('completion-summary');
-        let html = '<ul style="margin-top: 0.5rem;">';
-
-        for (const [table, result] of Object.entries(data)) {
-            if (result.success) {
-                html += `<li>✅ ${table}: ${result.count} records migrated</li>`;
-            } else {
-                html += `<li>❌ ${table}: ${result.error}</li>`;
+            } catch (error) {
+                this.migrationLogs = `<div style="color: #c33;">❌ Error: ${error.message}</div>`;
             }
+        },
+
+        resetMigration() {
+            this.form = {
+                host: 'localhost',
+                port: 3306,
+                username: '',
+                password: '',
+                database: '',
+            };
+            this.connectionStatus = false;
+            this.showSummary = false;
+            this.showProgress = false;
+            this.showCompleted = false;
+            this.summaryData = {};
+            this.selectedTables = [];
+            this.progress = 0;
+            this.migrationLogs = '';
+            this.completionSummary = {};
+            document.getElementById('migration-config-form').reset();
         }
-
-        html += '</ul>';
-        summary.innerHTML = html;
-    }
-
-    function displayMigrationError(message) {
-        const logsDiv = document.getElementById('migration-logs');
-        logsDiv.innerHTML = `<div style="color: #c33;">❌ Error: ${message}</div>`;
-
-        const progressBar = document.getElementById('progress-bar');
-        progressBar.style.background = 'linear-gradient(90deg, #f44336, #da190b)';
-    }
-
-    function resetMigration() {
-        document.getElementById('summary-section').style.display = 'none';
-        document.getElementById('progress-section').style.display = 'none';
-        document.getElementById('completed-section').style.display = 'none';
-        document.getElementById('migration-config-form').reset();
-        document.getElementById('connection-status').style.display = 'none';
-        selectedTables = [];
-    }
+    };
+}
 </script>
+
 
 <style>
     .form__input {
