@@ -1471,6 +1471,12 @@ main[class*='page__staff-']:not(.page__staff-dashboard--index) {
     border: 1px solid;
     font-size: 0.9rem;
     margin-bottom: 0.5rem;
+
+    br + br {
+        display: block;
+        content: '';
+        margin-top: 0.5rem;
+    }
 }
 
 .migration-panel__status--success {

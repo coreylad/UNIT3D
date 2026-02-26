@@ -45,19 +45,26 @@ class MigrationController extends Controller
     {
         try {
             $config = request()->validate([
-                'host' => ['required', 'string'],
-                'port' => ['required', 'integer'],
+                'host'     => ['required', 'string'],
+                'port'     => ['required', 'integer'],
                 'username' => ['required', 'string'],
                 'password' => ['required', 'string'],
                 'database' => ['required', 'string'],
             ]);
 
-            $result = $this->migrationService->testConnection($config);
+            $this->migrationService->testConnection($config);
 
             return response()->json([
-                'success' => $result,
-                'message' => $result ? __('migration.connection-successful') : __('migration.connection-failed'),
+                'success' => true,
+                'message' => __('migration.connection-successful'),
             ]);
+        } catch (\PDOException $e) {
+            Log::error('Connection test failed: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => $this->describePdoError($e, request()->only(['host', 'port', 'username', 'database'])),
+            ], 200);
         } catch (\Exception $e) {
             Log::error('Connection test failed: ' . $e->getMessage());
 
@@ -66,6 +73,43 @@ class MigrationController extends Controller
                 'message' => $e->getMessage(),
             ], 400);
         }
+    }
+
+    /**
+     * Turn a raw PDO/MySQL error into a clear, actionable message.
+     */
+    private function describePdoError(\PDOException $e, array $params): string
+    {
+        $raw  = $e->getMessage();
+        $code = (string) ($e->errorInfo[1] ?? preg_match('/\[(\d+)\]/', $raw, $m) ? $m[1] : '0');
+        $host = ($params['host'] ?? 'unknown') . ':' . ($params['port'] ?? 3306);
+        $user = $params['username'] ?? 'unknown';
+        $db   = $params['database'] ?? 'unknown';
+
+        $hint = match ($code) {
+            // Host / network errors
+            '2002' => str_contains($raw, 'getaddrinfo') || str_contains($raw, 'Name or service')
+                ? "Cannot resolve hostname \"" . ($params['host'] ?? '') . "\". Check that the hostname is correct and DNS is reachable from this server."
+                : "Cannot reach {$host}. The port may be blocked by a firewall, the MySQL service may be down, or the host/port combination is wrong.",
+            '2003' => "Cannot connect to {$host}. Verify the host, port, and that the MySQL server is running and accepting remote connections.",
+            '2013' => "Connected to {$host} but the server dropped the connection immediately — usually a firewall rejecting the MySQL handshake.",
+            '2006' => "MySQL server at {$host} is unreachable or went away before the handshake completed.",
+            // Auth errors
+            '1045' => "Access denied for user \"{$user}\" — wrong username or password, or that user has no remote access grant from this server's IP.",
+            '1044' => "User \"{$user}\" does not have permission to access database \"{$db}\".",
+            // Database errors
+            '1049' => "Unknown database \"{$db}\". Double-check the database name — it is case-sensitive on Linux.",
+            '1130' => "Host is not allowed to connect. The MySQL user \"{$user}\" lacks a grant for the IP address of this server.",
+            '1251' => "Authentication plugin unsupported. The MySQL account may use caching_sha2_password. Try re-creating the user with mysql_native_password.",
+            '2026' => "SSL connection error. The server requires TLS but the driver could not negotiate it.",
+            default => null,
+        };
+
+        $detail = "Raw error ({$code}): {$raw}";
+
+        return $hint !== null
+            ? $hint . "\n\n" . $detail
+            : "Connection failed — " . $detail;
     }
 
     /**

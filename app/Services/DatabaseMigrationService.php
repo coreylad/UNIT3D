@@ -33,20 +33,14 @@ class DatabaseMigrationService
      */
     public function testConnection(array $config): bool
     {
-        try {
-            $this->sourceConnection = new PDO(
-                "mysql:host={$config['host']};port={$config['port']};dbname={$config['database']}",
-                $config['username'],
-                $config['password'],
-                [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
-            );
+        $this->sourceConnection = new PDO(
+            "mysql:host={$config['host']};port={$config['port']};dbname={$config['database']}",
+            $config['username'],
+            $config['password'],
+            [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+        );
 
-            return true;
-        } catch (Exception $e) {
-            Log::error('Database connection failed: ' . $e->getMessage());
-
-            return false;
-        }
+        return true;
     }
 
     /**

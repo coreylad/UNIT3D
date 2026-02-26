@@ -217,7 +217,12 @@
                             await this.getSummary();
                         } else {
                             this.connectionSuccess = false;
-                            this.connectionMessage = '❌ ' + data.message;
+                            const parts = data.message.split('\n\n');
+                            let html = parts[0];
+                            if (parts.length > 1) {
+                                html += '<br><span style="display:block;margin-top:0.5rem;font-size:0.78rem;opacity:0.6;font-family:monospace;word-break:break-all;">' + parts.slice(1).join('<br>') + '</span>';
+                            }
+                            this.connectionMessage = '❌ ' + html;
                         }
                     } catch (error) {
                         this.testingConnection = false;
