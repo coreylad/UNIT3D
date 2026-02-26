@@ -193,22 +193,36 @@
                     return labels[tableName] || tableName;
                 },
 
+                async _fetchJson(url, body) {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        },
+                        body: JSON.stringify(body),
+                    });
+                    const ct = response.headers.get('content-type') || '';
+                    if (!ct.includes('application/json')) {
+                        const text = await response.text();
+                        // Strip HTML tags for a readable plain-text snippet
+                        const snippet = text.replace(/<[^>]+>/g, ' ').replace(/\s{2,}/g, ' ').trim().slice(0, 300);
+                        throw new Error(`Server returned HTTP ${response.status} (non-JSON). ${snippet}`);
+                    }
+                    return response.json();
+                },
+
                 async testConnection() {
                     this.testingConnection = true;
                     this.connectionStatus = true;
                     this.connectionMessage = '⏳ {{ __('common.loading') }}...';
 
                     try {
-                        const response = await fetch('{{ route('staff.migrations.test-connection') }}', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                            },
-                            body: JSON.stringify(this.form),
-                        });
-
-                        const data = await response.json();
+                        const data = await this._fetchJson(
+                            '{{ route('staff.migrations.test-connection') }}',
+                            this.form
+                        );
                         this.testingConnection = false;
 
                         if (data.success) {
@@ -218,40 +232,35 @@
                         } else {
                             this.connectionSuccess = false;
                             const parts = data.message.split('\n\n');
-                            let html = parts[0];
+                            let html = '<strong>' + parts[0].replace(/\n/g, '<br>') + '</strong>';
                             if (parts.length > 1) {
-                                html += '<br><span style="display:block;margin-top:0.5rem;font-size:0.78rem;opacity:0.6;font-family:monospace;word-break:break-all;">' + parts.slice(1).join('<br>') + '</span>';
+                                html += '<br><span style="display:block;margin-top:0.5rem;font-size:0.78rem;opacity:0.6;font-family:monospace;word-break:break-all;">' + parts.slice(1).join(' ') + '</span>';
                             }
                             this.connectionMessage = '❌ ' + html;
                         }
                     } catch (error) {
                         this.testingConnection = false;
                         this.connectionSuccess = false;
-                        this.connectionMessage = '❌ {{ __('common.error') }}: ' + error.message;
+                        this.connectionMessage = '❌ ' + error.message;
                     }
                 },
 
                 async getSummary() {
                     try {
-                        const response = await fetch('{{ route('staff.migrations.get-summary') }}', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                            },
-                            body: JSON.stringify(this.form),
-                        });
-
-                        const data = await response.json();
-
+                        const data = await this._fetchJson(
+                            '{{ route('staff.migrations.get-summary') }}',
+                            this.form
+                        );
                         if (data.success) {
                             this.summaryData = data.data;
                             this.showSummary = true;
                         } else {
-                            alert('{{ __('common.error') }}: ' + data.message);
+                            this.connectionSuccess = false;
+                            this.connectionMessage = '❌ {{ __('common.error') }}: ' + data.message;
                         }
                     } catch (error) {
-                        alert('{{ __('common.error') }}: ' + error.message);
+                        this.connectionSuccess = false;
+                        this.connectionMessage = '❌ {{ __('common.error') }}: ' + error.message;
                     }
                 },
 
@@ -287,16 +296,10 @@
                     };
 
                     try {
-                        const response = await fetch('{{ route('staff.migrations.start') }}', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                            },
-                            body: JSON.stringify(formData),
-                        });
-
-                        const data = await response.json();
+                        const data = await this._fetchJson(
+                            '{{ route('staff.migrations.start') }}',
+                            formData
+                        );
 
                         if (data.success) {
                             this.completionSummary = data.data;
