@@ -206,9 +206,23 @@
                     const ct = response.headers.get('content-type') || '';
                     if (!ct.includes('application/json')) {
                         const text = await response.text();
-                        // Strip HTML tags for a readable plain-text snippet
-                        const snippet = text.replace(/<[^>]+>/g, ' ').replace(/\s{2,}/g, ' ').trim().slice(0, 300);
-                        throw new Error(`Server returned HTTP ${response.status} (non-JSON). ${snippet}`);
+                        // Try to pull the real exception message from Laravel's debug HTML page
+                        let detail = '';
+                        const titleMatch = text.match(/<title[^>]*>([^<]+)<\/title>/i);
+                        const h1Match   = text.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
+                        const msgMatch  = text.match(/class="[^"]*exception[^"]*message[^"]*"[^>]*>([\s\S]*?)<\/\w+>/i)
+                                       || text.match(/class="[^"]*message[^"]*"[^>]*>([\s\S]*?)<\/\w+>/i);
+                        if (msgMatch) {
+                            detail = msgMatch[1].replace(/<[^>]+>/g, '').trim();
+                        } else if (h1Match) {
+                            detail = h1Match[1].replace(/<[^>]+>/g, '').trim();
+                        } else if (titleMatch) {
+                            detail = titleMatch[1].trim();
+                        } else {
+                            // Last resort: strip all tags and take first 400 chars
+                            detail = text.replace(/<[^>]+>/g, ' ').replace(/\s{2,}/g, ' ').trim().slice(0, 400);
+                        }
+                        throw new Error(`HTTP ${response.status} — ${detail}`);
                     }
                     return response.json();
                 },
@@ -227,7 +241,10 @@
 
                         if (data.success) {
                             this.connectionSuccess = true;
-                            this.connectionMessage = '✅ ' + data.message;
+                            const driverBadge = data.driver
+                                ? ` <span style="font-size:0.72rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;background:hsl(38deg 92% 56% / 18%);color:hsl(38deg 92% 62%);border:1px solid hsl(38deg 92% 56% / 35%);border-radius:2px;padding:0.1rem 0.45rem;">${data.driver.toUpperCase()}</span>`
+                                : '';
+                            this.connectionMessage = '✅ ' + data.message.replace(/ \(driver:.*?\)/, '') + driverBadge;
                             await this.getSummary();
                         } else {
                             this.connectionSuccess = false;

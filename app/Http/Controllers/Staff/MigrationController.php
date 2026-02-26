@@ -54,25 +54,39 @@ class MigrationController extends Controller
 
             $this->migrationService->testConnection($config);
 
+            $driver = $this->migrationService->getActiveDriver();
+
             return response()->json([
                 'success' => true,
-                'message' => __('migration.connection-successful'),
+                'driver'  => $driver,
+                'message' => __('migration.connection-successful') . " (driver: {$driver})",
             ]);
-        } catch (\PDOException $e) {
+        } catch (\Throwable $e) {
             Log::error('Connection test failed: ' . $e->getMessage());
 
             return response()->json([
                 'success' => false,
-                'message' => $this->describePdoError($e, request()->only(['host', 'port', 'username', 'database'])),
+                'message' => $this->describeThrowable($e),
             ], 200);
-        } catch (\Exception $e) {
-            Log::error('Connection test failed: ' . $e->getMessage());
-
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], 400);
         }
+    }
+
+    /**
+     * Format any Throwable into a detailed message string.
+     * In debug mode the class name, file and line are included.
+     */
+    private function describeThrowable(\Throwable $e): string
+    {
+        $msg = $e->getMessage() ?: '(no message)';
+
+        if (config('app.debug')) {
+            $class = get_class($e);
+            $file  = str_replace(base_path() . DIRECTORY_SEPARATOR, '', $e->getFile());
+            $line  = $e->getLine();
+            $msg  .= "\n\n{$class} in {$file}:{$line}";
+        }
+
+        return $msg;
     }
 
     /**
@@ -132,13 +146,13 @@ class MigrationController extends Controller
                 'success' => true,
                 'data' => $summary,
             ]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Failed to get migration summary: ' . $e->getMessage());
 
             return response()->json([
                 'success' => false,
-                'message' => $e->getMessage(),
-            ], 400);
+                'message' => $this->describeThrowable($e),
+            ], 200);
         }
     }
 
@@ -200,13 +214,13 @@ class MigrationController extends Controller
             $this->migrationService->closeConnection();
 
             return response()->json($results);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Migration failed: ' . $e->getMessage());
 
             return response()->json([
                 'success' => false,
-                'message' => $e->getMessage(),
-            ], 400);
+                'message' => $this->describeThrowable($e),
+            ], 200);
         }
     }
 
