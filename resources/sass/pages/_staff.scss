@@ -22,12 +22,12 @@
 /* Staff Dashboard */
 
 main.page__staff-dashboard--index {
-    margin-inline: clamp(0.5rem, 1vw, 1.5rem);
+    margin-inline: 0;
 }
 
 .staff-dashboard {
     display: grid;
-    grid-template-columns: 280px 1fr;
+    grid-template-columns: 400px 1fr;
     gap: 0;
     min-height: calc(100vh - 160px);
     border-radius: 4px;
@@ -49,9 +49,9 @@ main.page__staff-dashboard--index {
 .staff-dashboard__sidebar-header {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    padding: 1.1rem 1.25rem;
-    font-size: 0.8rem;
+    gap: 0.9rem;
+    padding: 1.6rem 1.75rem;
+    font-size: 1.1rem;
     font-weight: 800;
     letter-spacing: 0.12em;
     text-transform: uppercase;
@@ -63,15 +63,15 @@ main.page__staff-dashboard--index {
     &::before {
         content: '';
         display: block;
-        width: 3px;
-        height: 1.25rem;
+        width: 4px;
+        height: 1.6rem;
         background: hsl(38deg 92% 56%);
         border-radius: 2px;
         flex-shrink: 0;
     }
 
     i {
-        font-size: 1rem;
+        font-size: 1.4rem;
         color: hsl(38deg 92% 56%);
     }
 }
@@ -79,20 +79,20 @@ main.page__staff-dashboard--index {
 .staff-dashboard__nav {
     list-style: none;
     margin: 0;
-    padding: 0.5rem 0;
+    padding: 0.75rem 0;
     flex: 1;
 }
 
 .staff-dashboard__nav-item {
     display: flex;
     align-items: center;
-    gap: 0.8rem;
+    gap: 1rem;
     width: 100%;
-    padding: 0.65rem 1.25rem;
+    padding: 0.95rem 1.75rem;
     border: none;
     background: transparent;
     color: hsl(222deg 8% 50%);
-    font-size: 0.8rem;
+    font-size: 1.05rem;
     font-weight: 600;
     letter-spacing: 0.04em;
     cursor: pointer;
@@ -101,9 +101,9 @@ main.page__staff-dashboard--index {
     position: relative;
 
     i {
-        width: 1.1rem;
+        width: 1.5rem;
         text-align: center;
-        font-size: 0.88rem;
+        font-size: 1.1rem;
         flex-shrink: 0;
         transition: color 0.12s ease;
     }
@@ -137,11 +137,11 @@ main.page__staff-dashboard--index {
     margin-left: auto;
     background: hsl(4deg 78% 50%);
     color: hsl(0deg 0% 100%);
-    font-size: 0.66rem;
+    font-size: 0.9rem;
     font-weight: 800;
-    padding: 0.1rem 0.4rem;
+    padding: 0.15rem 0.55rem;
     border-radius: 3px;
-    min-width: 1.2rem;
+    min-width: 1.6rem;
     text-align: center;
     line-height: 1.5;
     letter-spacing: 0.03em;
@@ -149,7 +149,7 @@ main.page__staff-dashboard--index {
 }
 
 .staff-dashboard__content {
-    padding: 1.75rem 2.5rem;
+    padding: 2.5rem 3.75rem;
     overflow-y: auto;
     background: hsl(222deg 18% 9%);
 }
@@ -157,29 +157,29 @@ main.page__staff-dashboard--index {
 .staff-dashboard__panel-title {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    font-size: 0.78rem;
+    gap: 1rem;
+    font-size: 1.05rem;
     font-weight: 800;
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: hsl(222deg 8% 85%);
-    margin: 0 0 1.75rem;
-    padding: 0.6rem 1rem;
-    border-left: 3px solid hsl(38deg 92% 56%);
+    margin: 0 0 2.25rem;
+    padding: 0.9rem 1.5rem;
+    border-left: 4px solid hsl(38deg 92% 56%);
     border-bottom: 1px solid hsl(222deg 15% 16%);
     background: hsl(222deg 20% 11%);
 
     i {
         color: hsl(38deg 92% 56%);
-        font-size: 0.9rem;
+        font-size: 1.2rem;
     }
 }
 
 .staff-dashboard__stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
     gap: 1px;
-    margin-bottom: 1.75rem;
+    margin-bottom: 2.5rem;
     border: 1px solid hsl(222deg 15% 18%);
     border-radius: 4px;
     overflow: hidden;
@@ -187,7 +187,7 @@ main.page__staff-dashboard--index {
 
 .staff-dashboard__stat-card {
     background: hsl(222deg 20% 11%);
-    padding: 1.1rem;
+    padding: 1.6rem;
     position: relative;
     overflow: hidden;
     transition: background 0.12s ease;
@@ -206,13 +206,13 @@ main.page__staff-dashboard--index {
 
 .staff-dashboard__stat-icon {
     position: absolute;
-    top: 0.65rem;
-    right: 0.85rem;
+    top: 0.9rem;
+    right: 1.1rem;
     pointer-events: none;
     display: flex;
 
     i {
-        font-size: 2.8rem;
+        font-size: 4rem;
         opacity: 0.06;
         line-height: 1;
     }
@@ -226,21 +226,21 @@ main.page__staff-dashboard--index {
 }
 
 .staff-dashboard__stat-info {
-    margin-bottom: 0.55rem;
+    margin-bottom: 0.75rem;
     position: relative;
 
     h3 {
-        font-size: 0.68rem;
+        font-size: 0.95rem;
         font-weight: 800;
         color: hsl(222deg 8% 48%);
         text-transform: uppercase;
         letter-spacing: 0.1em;
-        margin: 0 0 0.35rem;
+        margin: 0 0 0.5rem;
     }
 }
 
 .staff-dashboard__stat-number {
-    font-size: 1.7rem;
+    font-size: 2.4rem;
     font-weight: 800;
     color: hsl(222deg 5% 94%);
     font-variant-numeric: tabular-nums;
@@ -251,9 +251,9 @@ main.page__staff-dashboard--index {
 .staff-dashboard__stat-details {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 0.2rem 0.5rem;
-    margin: 0.7rem 0 0;
-    padding-top: 0.6rem;
+    gap: 0.3rem 0.75rem;
+    margin: 1rem 0 0;
+    padding-top: 0.85rem;
     border-top: 1px solid hsl(222deg 15% 16%);
     position: relative;
 
@@ -261,18 +261,18 @@ main.page__staff-dashboard--index {
         display: flex;
         justify-content: space-between;
         align-items: baseline;
-        gap: 0.25rem;
+        gap: 0.35rem;
     }
 
     dt {
-        font-size: 0.68rem;
+        font-size: 0.9rem;
         color: hsl(222deg 8% 44%);
         letter-spacing: 0.06em;
         text-transform: uppercase;
     }
 
     dd {
-        font-size: 0.73rem;
+        font-size: 0.98rem;
         color: hsl(222deg 5% 78%);
         font-weight: 700;
         margin: 0;
@@ -282,9 +282,9 @@ main.page__staff-dashboard--index {
 
 .staff-dashboard__info-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-    gap: 1.25rem;
-    margin-bottom: 1.75rem;
+    grid-template-columns: repeat(auto-fill, minmax(480px, 1fr));
+    gap: 1.75rem;
+    margin-bottom: 2.5rem;
 }
 
 .staff-dashboard__card {
@@ -305,25 +305,25 @@ main.page__staff-dashboard--index {
 .staff-dashboard__card-title {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    font-size: 0.72rem;
+    gap: 0.65rem;
+    font-size: 1rem;
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.09em;
     color: hsl(222deg 8% 70%);
-    padding: 0.6rem 1rem;
+    padding: 0.9rem 1.4rem;
     margin: 0;
     background: hsl(222deg 22% 9%);
     border-bottom: 1px solid hsl(222deg 15% 18%);
 
     i {
         color: hsl(38deg 92% 56%);
-        font-size: 0.78rem;
+        font-size: 1.05rem;
     }
 }
 
 .staff-dashboard__card-body {
-    padding: 0.85rem 1rem;
+    padding: 1.2rem 1.4rem;
 }
 
 .staff-dashboard__kv-list {
@@ -333,8 +333,8 @@ main.page__staff-dashboard--index {
         display: flex;
         justify-content: space-between;
         align-items: baseline;
-        gap: 1rem;
-        padding: 0.42rem 0;
+        gap: 1.5rem;
+        padding: 0.65rem 0;
 
         &:not(:last-child) {
             border-bottom: 1px solid hsl(222deg 15% 14%);
@@ -342,7 +342,7 @@ main.page__staff-dashboard--index {
     }
 
     dt {
-        font-size: 0.72rem;
+        font-size: 1rem;
         color: hsl(222deg 8% 46%);
         text-transform: uppercase;
         letter-spacing: 0.06em;
@@ -350,7 +350,7 @@ main.page__staff-dashboard--index {
     }
 
     dd {
-        font-size: 0.78rem;
+        font-size: 1.05rem;
         color: hsl(222deg 5% 78%);
         font-weight: 600;
         margin: 0;
@@ -362,7 +362,7 @@ main.page__staff-dashboard--index {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0.5rem 0;
+    padding: 0.75rem 0;
 
     &:not(:last-child) {
         border-bottom: 1px solid hsl(222deg 15% 14%);
@@ -372,7 +372,7 @@ main.page__staff-dashboard--index {
         color: hsl(38deg 92% 62%);
         font-weight: 600;
         text-decoration: none;
-        font-size: 0.875rem;
+        font-size: 1.15rem;
 
         &:hover {
             color: hsl(38deg 92% 72%);
@@ -385,9 +385,9 @@ main.page__staff-dashboard--index {
     background: hsl(165deg 65% 35% / 15%);
     color: hsl(165deg 60% 55%);
     border: 1px solid hsl(165deg 60% 40% / 28%);
-    padding: 0.28rem 0.8rem;
+    padding: 0.45rem 1.1rem;
     border-radius: 3px;
-    font-size: 0.72rem;
+    font-size: 1rem;
     font-weight: 700;
     letter-spacing: 0.05em;
     text-transform: uppercase;
@@ -401,9 +401,9 @@ main.page__staff-dashboard--index {
 
 .staff-dashboard__links-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 1px;
-    margin-bottom: 1.75rem;
+    margin-bottom: 2.5rem;
     border: 1px solid hsl(222deg 15% 18%);
     border-radius: 4px;
     overflow: hidden;
@@ -414,21 +414,21 @@ main.page__staff-dashboard--index {
     display: flex;
     flex-direction: row;
     align-items: center;
-    gap: 0.75rem;
-    padding: 0.8rem 1rem;
+    gap: 1rem;
+    padding: 1.1rem 1.4rem;
     background: hsl(222deg 20% 11%);
     text-decoration: none;
     color: hsl(222deg 8% 62%);
-    font-size: 0.8rem;
+    font-size: 1.05rem;
     font-weight: 600;
     letter-spacing: 0.02em;
     transition: background 0.1s ease, color 0.1s ease;
     position: relative;
 
     i {
-        font-size: 0.95rem;
+        font-size: 1.25rem;
         color: hsl(38deg 92% 52%);
-        width: 1.1rem;
+        width: 1.5rem;
         text-align: center;
         flex-shrink: 0;
         transition: color 0.1s ease;
@@ -454,30 +454,30 @@ main.page__staff-dashboard--index {
 }
 
 .staff-dashboard__actions-section {
-    padding: 1.25rem 0 0;
+    padding: 1.75rem 0 0;
     border-top: 1px solid hsl(222deg 15% 16%);
-    margin-top: 0.25rem;
+    margin-top: 0.5rem;
 }
 
 .staff-dashboard__section-subtitle {
-    font-size: 0.66rem;
+    font-size: 0.9rem;
     font-weight: 800;
     color: hsl(222deg 8% 42%);
     text-transform: uppercase;
     letter-spacing: 0.12em;
-    margin: 0 0 0.85rem;
+    margin: 0 0 1.1rem;
 }
 
 .staff-dashboard__danger-btn {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.65rem;
     background: hsl(4deg 72% 48% / 12%);
     color: hsl(4deg 75% 62%);
     border: 1px solid hsl(4deg 72% 48% / 28%);
-    padding: 0.5rem 1.1rem;
+    padding: 0.75rem 1.5rem;
     border-radius: 3px;
-    font-size: 0.75rem;
+    font-size: 1rem;
     font-weight: 700;
     letter-spacing: 0.05em;
     text-transform: uppercase;
@@ -487,6 +487,16 @@ main.page__staff-dashboard--index {
     &:hover {
         background: hsl(4deg 72% 48% / 22%);
         border-color: hsl(4deg 72% 48% / 48%);
+    }
+}
+
+@media (max-width: 1200px) {
+    .staff-dashboard {
+        grid-template-columns: 320px 1fr;
+    }
+
+    .staff-dashboard__content {
+        padding: 2rem 2.5rem;
     }
 }
 
@@ -503,14 +513,14 @@ main.page__staff-dashboard--index {
     .staff-dashboard__nav {
         display: flex;
         flex-wrap: wrap;
-        padding: 0.5rem;
-        gap: 0.25rem;
+        padding: 0.75rem;
+        gap: 0.35rem;
     }
 
     .staff-dashboard__nav-item {
-        padding: 0.45rem 0.75rem;
+        padding: 0.6rem 1rem;
         border-radius: 3px;
-        font-size: 0.78rem;
+        font-size: 0.95rem;
 
         &--active::before {
             display: none;
@@ -523,22 +533,22 @@ main.page__staff-dashboard--index {
     }
 
     .staff-dashboard__content {
-        padding: 1rem;
+        padding: 1.25rem;
     }
 
     .staff-dashboard__links-grid {
-        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     }
 
     main.page__staff-dashboard--index {
-        margin-inline: 0.25rem;
+        margin-inline: 0;
     }
 }
 
 /* ── Collapsible sidebar ──────────────────────────────────── */
 
 .staff-dashboard--collapsed {
-    grid-template-columns: 64px 1fr;
+    grid-template-columns: 80px 1fr;
 
     .staff-dashboard__sidebar {
         overflow: visible;
@@ -546,7 +556,7 @@ main.page__staff-dashboard--index {
 
     .staff-dashboard__sidebar-header {
         justify-content: center;
-        padding: 1rem 0.5rem;
+        padding: 1.25rem 0.5rem;
 
         &::before { display: none; }
         i { margin: 0; }
@@ -554,7 +564,7 @@ main.page__staff-dashboard--index {
 
     .staff-dashboard__nav-item {
         justify-content: center;
-        padding: 0.75rem 0;
+        padding: 1rem 0;
 
         i { width: auto; }
     }
@@ -573,12 +583,12 @@ main.page__staff-dashboard--index {
     border: 1px solid hsl(222deg 15% 20%);
     border-radius: 3px;
     color: hsl(222deg 8% 45%);
-    width: 1.6rem;
-    height: 1.6rem;
+    width: 2.2rem;
+    height: 2.2rem;
     flex-shrink: 0;
     cursor: pointer;
     transition: color 0.12s ease, border-color 0.12s ease, background 0.12s ease;
-    font-size: 0.65rem;
+    font-size: 0.9rem;
 
     &:hover {
         color: hsl(38deg 92% 62%);
@@ -589,13 +599,13 @@ main.page__staff-dashboard--index {
 
 .staff-dashboard__nav-shortcut {
     margin-left: auto;
-    font-size: 0.6rem;
+    font-size: 0.8rem;
     font-weight: 700;
     color: hsl(222deg 8% 32%);
     background: hsl(222deg 15% 14%);
     border: 1px solid hsl(222deg 15% 20%);
     border-radius: 3px;
-    padding: 0.05rem 0.32rem;
+    padding: 0.1rem 0.45rem;
     line-height: 1.5;
     flex-shrink: 0;
     font-variant-numeric: tabular-nums;
@@ -606,8 +616,8 @@ main.page__staff-dashboard--index {
 .staff-dashboard__sidebar-footer {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
-    padding: 0.85rem 1rem;
+    gap: 0.65rem;
+    padding: 1.25rem 1.5rem;
     border-top: 1px solid hsl(222deg 15% 16%);
     background: hsl(222deg 22% 7%);
     margin-top: auto;
@@ -616,15 +626,15 @@ main.page__staff-dashboard--index {
 .staff-dashboard__clock {
     display: flex;
     align-items: center;
-    gap: 0.45rem;
-    font-size: 0.78rem;
+    gap: 0.6rem;
+    font-size: 1.05rem;
     font-weight: 700;
     color: hsl(222deg 8% 55%);
     font-variant-numeric: tabular-nums;
     letter-spacing: 0.04em;
 
     i {
-        font-size: 0.7rem;
+        font-size: 0.95rem;
         color: hsl(38deg 92% 50% / 60%);
     }
 }
@@ -632,30 +642,30 @@ main.page__staff-dashboard--index {
 .staff-dashboard__cmd-trigger {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.65rem;
     width: 100%;
     background: hsl(222deg 15% 13%);
     border: 1px solid hsl(222deg 15% 20%);
     border-radius: 3px;
     color: hsl(222deg 8% 48%);
-    font-size: 0.75rem;
+    font-size: 1rem;
     font-weight: 600;
-    padding: 0.4rem 0.65rem;
+    padding: 0.6rem 0.9rem;
     cursor: pointer;
     transition: border-color 0.12s ease, color 0.12s ease;
     text-align: left;
 
-    i { font-size: 0.7rem; color: hsl(222deg 8% 40%); }
+    i { font-size: 0.95rem; color: hsl(222deg 8% 40%); }
 
     span { flex: 1; }
 
     kbd {
         margin-left: auto;
-        font-size: 0.6rem;
+        font-size: 0.8rem;
         background: hsl(222deg 15% 9%);
         border: 1px solid hsl(222deg 15% 22%);
         border-radius: 3px;
-        padding: 0.05rem 0.3rem;
+        padding: 0.1rem 0.4rem;
         color: hsl(222deg 8% 40%);
         font-family: inherit;
     }
@@ -672,8 +682,8 @@ main.page__staff-dashboard--index {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.25rem 0.4rem;
-    font-size: 0.62rem;
+    gap: 0.3rem 0.55rem;
+    font-size: 0.85rem;
     color: hsl(222deg 8% 35%);
 }
 
@@ -681,9 +691,9 @@ main.page__staff-dashboard--index {
     background: hsl(222deg 15% 12%);
     border: 1px solid hsl(222deg 15% 22%);
     border-radius: 3px;
-    padding: 0.05rem 0.3rem;
+    padding: 0.1rem 0.4rem;
     font-weight: 700;
-    font-size: 0.62rem;
+    font-size: 0.85rem;
     color: hsl(222deg 8% 48%);
     font-variant-numeric: tabular-nums;
 }
@@ -693,23 +703,23 @@ main.page__staff-dashboard--index {
 .staff-dashboard__toolbar {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 1.5rem;
-    padding-bottom: 1rem;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    padding-bottom: 1.25rem;
     border-bottom: 1px solid hsl(222deg 15% 14%);
-    min-height: 2.5rem;
+    min-height: 3.25rem;
 }
 
 .staff-dashboard__search-wrap {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.65rem;
     flex: 1;
-    max-width: 360px;
+    max-width: 500px;
     background: hsl(222deg 20% 9%);
     border: 1px solid hsl(222deg 15% 20%);
     border-radius: 4px;
-    padding: 0 0.65rem;
+    padding: 0 0.9rem;
     transition: border-color 0.12s ease;
 
     &:focus-within {
@@ -717,7 +727,7 @@ main.page__staff-dashboard--index {
     }
 
     > i {
-        font-size: 0.72rem;
+        font-size: 1rem;
         color: hsl(222deg 8% 38%);
         flex-shrink: 0;
     }
@@ -729,8 +739,8 @@ main.page__staff-dashboard--index {
     border: none;
     outline: none;
     color: hsl(222deg 5% 85%);
-    font-size: 0.8rem;
-    padding: 0.45rem 0;
+    font-size: 1.05rem;
+    padding: 0.65rem 0;
     font-family: inherit;
 
     &::placeholder { color: hsl(222deg 8% 36%); }
@@ -761,26 +771,26 @@ main.page__staff-dashboard--index {
 .staff-dashboard__tool-btn {
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.55rem;
     background: hsl(222deg 20% 11%);
     border: 1px solid hsl(222deg 15% 20%);
     border-radius: 4px;
     color: hsl(222deg 8% 50%);
-    font-size: 0.75rem;
+    font-size: 1rem;
     font-weight: 600;
-    padding: 0.4rem 0.65rem;
+    padding: 0.6rem 0.95rem;
     cursor: pointer;
     transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
     white-space: nowrap;
 
-    i { font-size: 0.78rem; }
+    i { font-size: 1rem; }
 
     kbd {
-        font-size: 0.65rem;
+        font-size: 0.85rem;
         background: hsl(222deg 15% 9%);
         border: 1px solid hsl(222deg 15% 22%);
         border-radius: 3px;
-        padding: 0.05rem 0.3rem;
+        padding: 0.1rem 0.4rem;
         color: hsl(222deg 8% 42%);
         font-family: inherit;
     }
@@ -862,7 +872,7 @@ main.page__staff-dashboard--index {
     border: none;
     outline: none;
     color: hsl(222deg 5% 92%);
-    font-size: 0.95rem;
+    font-size: 1.3rem;
     font-family: inherit;
     caret-color: hsl(38deg 92% 56%);
 
@@ -903,8 +913,8 @@ main.page__staff-dashboard--index {
 .staff-dashboard__cmd-result {
     display: flex;
     align-items: center;
-    gap: 0.65rem;
-    padding: 0.55rem 1rem;
+    gap: 0.85rem;
+    padding: 0.8rem 1.4rem;
     cursor: pointer;
     transition: background 0.08s ease;
 
@@ -930,14 +940,14 @@ main.page__staff-dashboard--index {
 
 .staff-dashboard__cmd-label {
     flex: 1;
-    font-size: 0.82rem;
+    font-size: 1.05rem;
     font-weight: 600;
     color: hsl(222deg 5% 80%);
     transition: color 0.08s ease;
 }
 
 .staff-dashboard__cmd-panel {
-    font-size: 0.65rem;
+    font-size: 0.85rem;
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -945,37 +955,37 @@ main.page__staff-dashboard--index {
     background: hsl(222deg 15% 14%);
     border: 1px solid hsl(222deg 15% 20%);
     border-radius: 3px;
-    padding: 0.1rem 0.4rem;
+    padding: 0.15rem 0.55rem;
     flex-shrink: 0;
 }
 
 .staff-dashboard__cmd-empty {
     display: flex;
     align-items: center;
-    gap: 0.6rem;
-    padding: 1.25rem 1rem;
+    gap: 0.75rem;
+    padding: 1.75rem 1.4rem;
     color: hsl(222deg 8% 40%);
-    font-size: 0.82rem;
+    font-size: 1.05rem;
     font-style: italic;
 
-    i { color: hsl(4deg 60% 45%); font-size: 0.8rem; }
+    i { color: hsl(4deg 60% 45%); font-size: 1rem; }
 }
 
 .staff-dashboard__cmd-footer {
     display: flex;
     align-items: center;
-    gap: 1rem;
-    padding: 0.5rem 1rem;
+    gap: 1.25rem;
+    padding: 0.7rem 1.4rem;
     border-top: 1px solid hsl(222deg 15% 16%);
     background: hsl(222deg 22% 8%);
-    font-size: 0.65rem;
+    font-size: 0.88rem;
     color: hsl(222deg 8% 38%);
 
     kbd {
         background: hsl(222deg 15% 12%);
         border: 1px solid hsl(222deg 15% 22%);
         border-radius: 3px;
-        padding: 0.05rem 0.35rem;
+        padding: 0.1rem 0.45rem;
         font-family: inherit;
         color: hsl(222deg 8% 52%);
     }
@@ -985,26 +995,26 @@ main.page__staff-dashboard--index {
 
 .staff-dashboard--compact {
     .staff-dashboard__link-card {
-        padding: 0.5rem 0.75rem;
-        font-size: 0.75rem;
+        padding: 0.7rem 1rem;
+        font-size: 0.9rem;
 
-        i { font-size: 0.82rem; }
+        i { font-size: 1rem; }
     }
 
     .staff-dashboard__links-grid {
-        grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
     }
 
     .staff-dashboard__stat-card {
-        padding: 0.75rem;
+        padding: 1.1rem;
     }
 
     .staff-dashboard__stat-number {
-        font-size: 1.3rem;
+        font-size: 1.8rem;
     }
 
     .staff-dashboard__content {
-        padding: 1.25rem 1.75rem;
+        padding: 1.75rem 2.5rem;
     }
 }
 
@@ -1046,4 +1056,499 @@ main.page__staff-dashboard--index {
     & > div {
         flex: 1;
     }
+}
+
+/* =====================================================================
+   STAFF TOOL PAGES — Dark Navy / Amber theme
+   Applies to every page under /staff/* except the main /dashboard
+   (which has .page__staff-dashboard--index and its own full layout)
+   ===================================================================== */
+
+// Private colour tokens (reused throughout)
+$_s-bg:          hsl(222deg 18% 9%);
+$_s-panel-bg:    hsl(222deg 20% 10%);
+$_s-head-bg:     hsl(222deg 22% 7%);
+$_s-border:      hsl(222deg 15% 18%);
+$_s-border-dim:  hsl(222deg 15% 14%);
+$_s-amber:       hsl(38deg 92% 56%);
+$_s-amber-glow:  hsl(38deg 92% 56% / 15%);
+$_s-amber-hover: hsl(38deg 92% 66%);
+$_s-text:        hsl(222deg 5% 88%);
+$_s-muted:       hsl(222deg 8% 48%);
+$_s-row-odd:     hsl(222deg 20% 11%);
+$_s-row-even:    hsl(222deg 20% 8%);
+$_s-row-hover:   hsl(222deg 20% 15%);
+$_s-danger:      hsl(4deg 72% 48%);
+$_s-danger-text: hsl(4deg 75% 62%);
+
+main[class*='page__staff-']:not(.page__staff-dashboard--index) {
+    // ── Page chrome ────────────────────────────────────────────
+    background: $_s-bg;
+    color: $_s-text;
+    margin-inline: 0;
+    padding-block: 1.75rem;
+
+    // Override CSS custom properties so data-tables + panel variables
+    // cascade the dark theme automatically
+    --panel-bg:                 #{$_s-panel-bg};
+    --panel-head-bg:            #{$_s-head-bg};
+    --panel-head-fg:            #{$_s-amber};
+    --panel-border:             1px solid #{$_s-border};
+    --panel-border-radius:      3px;
+    --panel-head-border-radius: 0;
+    --panel-box-shadow:         none;
+
+    --data-table-fg:            #{$_s-text};
+    --data-table-th-bg:         #{$_s-head-bg};
+    --data-table-thead-border:  1px solid #{$_s-border};
+    --data-table-tr-border:     1px solid #{$_s-border-dim};
+    --data-table-tfoot-border:  1px solid #{$_s-border};
+    --data-table-tr-odd-bg:     #{$_s-row-odd};
+    --data-table-tr-even-bg:    #{$_s-row-even};
+    --data-table-tr-hover-bg:   #{$_s-row-hover};
+    --data-table-padding:       0.7rem 0.9rem;
+    --data-table-border-radius: 0;
+
+    // ── Panel shell ────────────────────────────────────────────
+    .panelV2 {
+        background: $_s-panel-bg;
+        border: 1px solid $_s-border;
+        border-radius: 3px;
+        box-shadow: none;
+        overflow: hidden;
+    }
+
+    // ── Panel header / heading bar ─────────────────────────────
+    .panel__header {
+        background: $_s-head-bg;
+        border-bottom: 1px solid $_s-border;
+        border-left: 4px solid $_s-amber;
+        border-radius: 0;
+        padding: 0;
+    }
+
+    .panel__heading {
+        background: $_s-head-bg;
+        color: $_s-amber;
+        font-size: 0.82rem;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        padding: 0.85rem 1.25rem;
+        // When heading is standalone (no .panel__header wrapper), give it the amber bar
+        border-bottom: 1px solid $_s-border;
+        border-left: 4px solid $_s-amber;
+    }
+
+    // When heading is INSIDE a panel__header, the border-left is on the header
+    .panel__header .panel__heading {
+        border-left: none;
+        border-bottom: none;
+        padding: 0.85rem 1.25rem;
+    }
+
+    .panel__actions {
+        background: $_s-head-bg;
+        padding-inline: 0.85rem;
+        gap: 0.5rem;
+        align-items: center;
+    }
+
+    .panel__action {
+        background: transparent;
+        color: $_s-muted;
+    }
+
+    // ── Panel body ─────────────────────────────────────────────
+    .panel__body {
+        background: $_s-panel-bg;
+        color: $_s-text;
+        padding: 1.25rem 1.5rem;
+
+        p, li { color: $_s-text; }
+
+        h3, h4 {
+            color: $_s-text;
+            font-size: 0.9rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: $_s-muted;
+            margin-bottom: 0.85rem;
+        }
+    }
+
+    // ── Panel tabs ─────────────────────────────────────────────
+    .panel__tabs {
+        background: $_s-head-bg;
+        border-bottom: 1px solid $_s-border;
+        overflow-x: auto;
+    }
+
+    .panel__tab {
+        background: transparent;
+        color: $_s-muted;
+        border-bottom: 2px solid transparent;
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        padding: 0.65rem 1rem;
+        cursor: pointer;
+        transition: color 0.1s ease, border-color 0.1s ease;
+
+        &:hover { color: $_s-text; }
+    }
+
+    .panel__tab--active {
+        color: $_s-amber;
+        border-bottom: 2px solid $_s-amber;
+    }
+
+    // ── Data table rows / cells ────────────────────────────────
+    .data-table > tr > th,
+    .data-table > thead > tr > th,
+    .data-table > tbody > tr > th,
+    .data-table > tfoot > tr > th {
+        background: $_s-head-bg;
+        color: $_s-muted;
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        border-bottom: 1px solid $_s-border;
+        padding: 0.75rem 0.9rem;
+    }
+
+    .data-table > tr > td,
+    .data-table > thead > tr > td,
+    .data-table > tbody > tr > td,
+    .data-table > tfoot > tr > td {
+        color: $_s-text;
+        font-size: 0.9rem;
+        padding: 0.7rem 0.9rem;
+
+        a {
+            color: $_s-amber;
+            text-decoration: none;
+            &:hover { color: $_s-amber-hover; }
+        }
+    }
+
+    // ── Pagination ─────────────────────────────────────────────
+    .pagination {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 3px;
+        padding: 0.75rem 1rem;
+        background: $_s-head-bg;
+        border-top: 1px solid $_s-border;
+        margin: 0;
+
+        li {
+            list-style: none;
+
+            a, span {
+                display: block;
+                background: hsl(222deg 18% 14%);
+                color: $_s-text;
+                border: 1px solid $_s-border;
+                padding: 0.3rem 0.65rem;
+                font-size: 0.82rem;
+                border-radius: 2px;
+                text-decoration: none;
+                transition: background 0.1s ease, border-color 0.1s ease;
+
+                &:hover {
+                    background: $_s-amber-glow;
+                    color: $_s-amber;
+                    border-color: $_s-amber;
+                }
+            }
+
+            &.active a,
+            &.active span {
+                background: $_s-amber;
+                color: $_s-head-bg;
+                border-color: $_s-amber;
+                font-weight: 700;
+            }
+
+            &.disabled a,
+            &.disabled span {
+                opacity: 0.35;
+                pointer-events: none;
+            }
+        }
+    }
+
+    // ── Form inputs ────────────────────────────────────────────
+    .form__input,
+    .form__select,
+    textarea.form__input {
+        background: $_s-head-bg;
+        border: 1px solid $_s-border;
+        color: $_s-text;
+        border-radius: 3px;
+        padding: 0.55rem 0.85rem;
+        font-size: 0.9rem;
+        transition: border-color 0.12s ease, box-shadow 0.12s ease;
+
+        &:focus {
+            outline: none;
+            border-color: $_s-amber;
+            box-shadow: 0 0 0 2px $_s-amber-glow;
+        }
+
+        &::placeholder { color: $_s-muted; }
+    }
+
+    .form__label {
+        color: $_s-muted;
+        font-size: 0.8rem;
+        font-weight: 700;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+    }
+
+    // Text / ghost buttons (add, edit links in panel__actions)
+    .form__button--text,
+    a.form__button--text,
+    .panel__action.form__button--text {
+        background: $_s-amber-glow;
+        color: $_s-amber;
+        border: 1px solid hsl(38deg 92% 56% / 28%);
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+        padding: 0.38rem 0.85rem;
+        border-radius: 2px;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        transition: background 0.12s ease, border-color 0.12s ease;
+
+        &:hover {
+            background: hsl(38deg 92% 56% / 24%);
+            border-color: hsl(38deg 92% 56% / 55%);
+            color: $_s-amber-hover;
+        }
+    }
+
+    // Filled / primary buttons
+    .form__button--filled {
+        background: $_s-amber;
+        color: $_s-head-bg;
+        border: none;
+        font-weight: 700;
+        border-radius: 3px;
+        padding: 0.55rem 1.2rem;
+        transition: background 0.12s ease;
+
+        &:hover { background: $_s-amber-hover; }
+    }
+
+    // Danger / destructive buttons
+    .form__button--danger,
+    button[class*='form__button--danger'] {
+        background: hsl(4deg 72% 48% / 12%);
+        color: $_s-danger-text;
+        border: 1px solid hsl(4deg 72% 48% / 28%);
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+        padding: 0.38rem 0.85rem;
+        border-radius: 2px;
+        text-decoration: none;
+        transition: background 0.12s ease, border-color 0.12s ease;
+
+        &:hover {
+            background: hsl(4deg 72% 48% / 22%);
+            border-color: hsl(4deg 72% 48% / 50%);
+        }
+    }
+
+    // ── Misc: nav-tabs, alerts, avatar ─────────────────────────
+    .nav-tabs {
+        background: $_s-head-bg;
+        border-bottom: 1px solid $_s-border;
+        gap: 0;
+        padding-inline: 0.5rem;
+    }
+
+    .alert {
+        border-radius: 3px;
+        font-size: 0.9rem;
+        padding: 0.75rem 1rem;
+    }
+
+    .alert-warning {
+        background: hsl(38deg 80% 12%);
+        border: 1px solid hsl(38deg 70% 30%);
+        border-left: 4px solid $_s-amber;
+        color: hsl(38deg 90% 68%);
+    }
+
+    .alert-danger,
+    .alert-error {
+        background: hsl(4deg 55% 12%);
+        border: 1px solid hsl(4deg 50% 28%);
+        border-left: 4px solid $_s-danger;
+        color: hsl(4deg 70% 62%);
+    }
+
+    .alert-success {
+        background: hsl(142deg 55% 8%);
+        border: 1px solid hsl(142deg 50% 22%);
+        border-left: 4px solid hsl(142deg 60% 40%);
+        color: hsl(142deg 65% 62%);
+    }
+
+    // General links outside of tables also get amber
+    a:not([class]) {
+        color: $_s-amber;
+        &:hover { color: $_s-amber-hover; }
+    }
+
+    // ── form__button--primary / --secondary aliases ─────────────
+    // (used by the migration tool and any other pages that use these classes)
+    .form__button--primary {
+        background: $_s-amber;
+        color: $_s-head-bg;
+        border: none;
+        font-weight: 700;
+        font-size: 0.85rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        border-radius: 3px;
+        padding: 0.55rem 1.25rem;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        transition: background 0.12s ease, opacity 0.12s ease;
+
+        &:hover:not(:disabled) { background: $_s-amber-hover; }
+        &:disabled { opacity: 0.38; cursor: not-allowed; }
+    }
+
+    .form__button--secondary {
+        background: hsl(222deg 18% 18%);
+        color: $_s-muted;
+        border: 1px solid $_s-border;
+        font-weight: 700;
+        font-size: 0.85rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        border-radius: 3px;
+        padding: 0.55rem 1.25rem;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        transition: background 0.12s ease, color 0.12s ease;
+
+        &:hover:not(:disabled) {
+            background: hsl(222deg 18% 22%);
+            color: $_s-text;
+        }
+
+        &:disabled { opacity: 0.38; cursor: not-allowed; }
+    }
+}
+
+/* ── Migration Tool Page specifics ────────────────────────────────
+   Classes used to replace all the hardcoded inline styles in the
+   migration blade so everything matches the dark navy/amber theme.
+   ────────────────────────────────────────────────────────────────── */
+
+.migration-panel__status {
+    padding: 0.85rem 1.1rem;
+    border-radius: 3px;
+    border: 1px solid;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+}
+
+.migration-panel__status--success {
+    background: hsl(142deg 55% 10%);
+    border-color: hsl(142deg 50% 24%);
+    color: hsl(142deg 65% 60%);
+}
+
+.migration-panel__status--error {
+    background: hsl(4deg 55% 12%);
+    border-color: hsl(4deg 50% 28%);
+    color: hsl(4deg 70% 62%);
+}
+
+.migration-panel__progress-track {
+    background: hsl(222deg 18% 12%);
+    border: 1px solid hsl(222deg 15% 18%);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+}
+
+.migration-panel__progress-fill {
+    height: 2.25rem;
+    background: linear-gradient(90deg, hsl(38deg 92% 42%), hsl(38deg 92% 60%));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: hsl(222deg 22% 7%);
+    font-weight: 800;
+    font-size: 0.85rem;
+    letter-spacing: 0.07em;
+    transition: width 0.3s ease;
+    min-width: 3.5rem;
+}
+
+.migration-panel__log {
+    background: hsl(222deg 25% 6%);
+    border: 1px solid hsl(222deg 15% 15%);
+    border-radius: 3px;
+    padding: 1rem 1.25rem;
+    max-height: 300px;
+    overflow-y: auto;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 0.82rem;
+    line-height: 1.65;
+    color: hsl(222deg 5% 70%);
+}
+
+.migration-panel__complete-box {
+    background: hsl(142deg 55% 8%);
+    border: 1px solid hsl(142deg 50% 22%);
+    border-left: 4px solid hsl(142deg 60% 40%);
+    border-radius: 3px;
+    padding: 1.25rem 1.5rem;
+    color: hsl(142deg 65% 62%);
+
+    h4 {
+        font-size: 1rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin: 0 0 0.75rem;
+        color: hsl(142deg 65% 62%);
+    }
+
+    ul {
+        margin: 0;
+        padding-left: 1.25rem;
+        font-size: 0.88rem;
+    }
+
+    li {
+        color: hsl(222deg 5% 78%);
+        line-height: 1.75;
+    }
+}
+
+.-col-span-2 {
+    grid-column: span 2;
 }

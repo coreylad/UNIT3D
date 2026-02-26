@@ -25,55 +25,7 @@
 
 @section('page', 'page__staff-migration-manager--index')
 
-@section('styles')
-    <style>
-        .migration-panel .form__input {
-            padding: 0.5rem;
-            border: 1px solid #ddd;
-            border-radius: 0.25rem;
-            font-family: inherit;
-        }
-        .migration-panel .form__button {
-            padding: 0.5rem 1rem;
-            border: none;
-            border-radius: 0.25rem;
-            cursor: pointer;
-            font-weight: 500;
-            transition: background-color 0.2s ease;
-        }
-        .migration-panel .form__button--primary {
-            background-color: #1976d2;
-            color: white;
-        }
-        .migration-panel .form__button--primary:hover:not(:disabled) {
-            background-color: #1565c0;
-        }
-        .migration-panel .form__button--secondary {
-            background-color: #757575;
-            color: white;
-        }
-        .migration-panel .form__button--secondary:hover:not(:disabled) {
-            background-color: #616161;
-        }
-        .migration-panel .form__button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        .migration-panel .alert {
-            border-radius: 0.5rem;
-            padding: 1rem;
-            margin-bottom: 1rem;
-        }
-        .migration-panel .alert-warning {
-            background-color: #fff3cd;
-            border-color: #ffeaa7;
-            color: #856404;
-        }
-        .migration-panel .-col-span-2 {
-            grid-column: span 2;
-        }
-    </style>
-@endsection
+
 
 @section('main')
     <div class="migration-panel" style="display: flex; flex-direction: column; gap: 1rem" x-data="migrationPanel()">
@@ -83,7 +35,7 @@
             </header>
 
             @if(session('migration-warning'))
-                <div class="alert alert-warning" style="margin: 1rem;">
+                <div class="alert alert-warning" style="margin: 0.75rem 1.25rem;">
                     <strong>⚠️ {{ __('common.warning') }}:</strong> {{ session('migration-warning') }}
                 </div>
             @endif
@@ -123,12 +75,13 @@
                         </button>
                     </div>
 
-                    <div x-show="connectionStatus" x-cloak style="padding: 1rem; border-radius: 0.5rem;" :style="connectionStatus && {
-                        backgroundColor: connectionSuccess ? '#d4edda' : '#f8d7da',
-                        borderColor: connectionSuccess ? '#c3e6cb' : '#f5c6cb',
-                        color: connectionSuccess ? '#155724' : '#721c24',
-                    }">
-                        <p x-html="connectionMessage"></p>
+                    <div
+                        x-show="connectionStatus"
+                        x-cloak
+                        class="migration-panel__status"
+                        :class="connectionSuccess ? 'migration-panel__status--success' : 'migration-panel__status--error'"
+                    >
+                        <p x-html="connectionMessage" style="margin: 0;"></p>
                     </div>
                 </section>
 
@@ -173,20 +126,22 @@
                 <section x-show="showProgress" x-cloak>
                     <h3 style="margin-bottom: 1rem;">{{ __('migration.migration-progress') }}</h3>
 
-                    <div style="margin-bottom: 1.5rem;">
-                        <div style="background: #f0f0f0; border-radius: 0.25rem; overflow: hidden;">
-                            <div style="height: 2rem; background: linear-gradient(90deg, #4CAF50, #45a049); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; transition: width 0.3s ease;" :style="{ width: progress + '%' }" x-text="progress + '%'"></div>
-                        </div>
+                    <div class="migration-panel__progress-track">
+                        <div
+                            class="migration-panel__progress-fill"
+                            :style="{ width: progress + '%' }"
+                            x-text="progress + '%'"
+                        ></div>
                     </div>
 
-                    <div style="background: #f5f5f5; border: 1px solid #ddd; border-radius: 0.5rem; padding: 1rem; max-height: 300px; overflow-y: auto; font-family: monospace; font-size: 0.875rem;" x-html="migrationLogs"></div>
+                    <div class="migration-panel__log" x-html="migrationLogs"></div>
                 </section>
 
                 {{-- Completed Section --}}
                 <section x-show="showCompleted" x-cloak>
-                    <div style="background: #d4edda; border: 1px solid #c3e6cb; border-radius: 0.5rem; padding: 1rem; color: #155724;">
+                    <div class="migration-panel__complete-box">
                         <h4>✅ {{ __('migration.migration-completed') }}</h4>
-                        <ul style="margin: 0.5rem 0 0;">
+                        <ul>
                             <template x-for="(result, table) in completionSummary" :key="table">
                                 <li x-html="result.success ? `✅ ${table}: ${result.count} records migrated` : `❌ ${table}: ${result.error}`"></li>
                             </template>
@@ -319,7 +274,7 @@
 
                     this.showSummary = false;
                     this.showProgress = true;
-                    this.migrationLogs = '<p style="color: #ff9800;">⏳ {{ __('common.loading') }}...</p>';
+                    this.migrationLogs = '<p style="color:hsl(38,92%,60%);">⏳ {{ __('common.loading') }}...</p>';
 
                     const formData = {
                         ...this.form,
@@ -345,10 +300,10 @@
                             this.showProgress = false;
                             this.showCompleted = true;
                         } else {
-                            this.migrationLogs = `<div style="color: #c33;">❌ Error: ${data.message}</div>`;
+                            this.migrationLogs = `<div style="color:hsl(4deg,70%,62%);">❌ Error: ${data.message}</div>`;
                         }
                     } catch (error) {
-                        this.migrationLogs = `<div style="color: #c33;">❌ Error: ${error.message}</div>`;
+                        this.migrationLogs = `<div style="color:hsl(4deg,70%,62%);">❌ Error: ${error.message}</div>`;
                     }
                 },
 
