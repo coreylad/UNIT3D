@@ -17,12 +17,82 @@
 @section('page', 'page__staff-dashboard--index')
 
 @section('content')
-    <div class="staff-dashboard" x-data="{ activePanel: 'overview' }">
+    <div
+        class="staff-dashboard"
+        :class="{ 'staff-dashboard--collapsed': collapsed, 'staff-dashboard--compact': compact }"
+        x-data="{
+            activePanel: 'overview',
+            collapsed: false,
+            search: '',
+            compact: localStorage.getItem('sd-compact') === '1',
+            clock: '',
+            cmdOpen: false,
+            cmdQuery: '',
+            cmdSelected: 0,
+            links: [],
+            init() {
+                this.updateClock();
+                setInterval(() => this.updateClock(), 1000);
+                this.$nextTick(() => {
+                    document.querySelectorAll('.staff-dashboard__link-card[href]').forEach(el => {
+                        const label = el.querySelector('span')?.textContent?.trim();
+                        const href = el.getAttribute('href');
+                        const panel = el.closest('[x-show]')?.getAttribute('x-show')?.match(/'([^']+)'/) ?.[1] || '';
+                        if (label && href) this.links.push({ label, href, panel });
+                    });
+                });
+                window.addEventListener('keydown', e => {
+                    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+                    const map = {'1':'overview','2':'links','3':'chat','4':'general','5':'torrents','6':'users','7':'logs'};
+                    if (map[e.key] && !this.cmdOpen) { this.activePanel = map[e.key]; return; }
+                    if (e.key === '[') { this.collapsed = !this.collapsed; return; }
+                    if (e.key === '/' || ((e.metaKey || e.ctrlKey) && e.key === 'k')) {
+                        e.preventDefault();
+                        this.cmdOpen = true;
+                        this.cmdQuery = '';
+                        this.cmdSelected = 0;
+                        this.$nextTick(() => this.$refs.cmdInput?.focus());
+                        return;
+                    }
+                    if (e.key === 'Escape') { this.cmdOpen = false; this.cmdQuery = ''; return; }
+                    if (this.cmdOpen) {
+                        if (e.key === 'ArrowDown') { e.preventDefault(); this.cmdSelected = Math.min(this.cmdSelected + 1, this.cmdResults().length - 1); }
+                        if (e.key === 'ArrowUp')   { e.preventDefault(); this.cmdSelected = Math.max(this.cmdSelected - 1, 0); }
+                        if (e.key === 'Enter')     { const r = this.cmdResults()[this.cmdSelected]; if (r) this.cmdGo(r); }
+                    }
+                });
+            },
+            updateClock() {
+                this.clock = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            },
+            toggleCompact() {
+                this.compact = !this.compact;
+                localStorage.setItem('sd-compact', this.compact ? '1' : '0');
+            },
+            cmdResults() {
+                const q = this.cmdQuery.toLowerCase();
+                if (!q) return this.links.slice(0, 12);
+                return this.links.filter(l => l.label.toLowerCase().includes(q) || l.panel.toLowerCase().includes(q)).slice(0, 12);
+            },
+            cmdGo(link) {
+                this.cmdOpen = false;
+                this.cmdQuery = '';
+                window.location.href = link.href;
+            }
+        }"
+    >
         {{-- Left Sidebar Navigation --}}
         <nav class="staff-dashboard__sidebar">
             <div class="staff-dashboard__sidebar-header">
                 <i class="{{ config('other.font-awesome') }} fa-shield-alt"></i>
-                <span>Admin Panel</span>
+                <span x-show="!collapsed" x-cloak>Admin Panel</span>
+                <button
+                    class="staff-dashboard__collapse-btn"
+                    x-on:click="collapsed = !collapsed"
+                    :title="collapsed ? 'Expand sidebar' : 'Collapse sidebar  [ '"
+                >
+                    <i class="{{ config('other.font-awesome') }}" :class="collapsed ? 'fa-chevron-right' : 'fa-chevron-left'"></i>
+                </button>
             </div>
 
             <ul class="staff-dashboard__nav">
@@ -31,9 +101,11 @@
                         class="staff-dashboard__nav-item"
                         :class="{ 'staff-dashboard__nav-item--active': activePanel === 'overview' }"
                         x-on:click="activePanel = 'overview'"
+                        title="Overview"
                     >
                         <i class="{{ config('other.font-awesome') }} fa-tachometer-alt"></i>
-                        <span>Overview</span>
+                        <span x-show="!collapsed" x-cloak>Overview</span>
+                        <span class="staff-dashboard__nav-shortcut" x-show="!collapsed" x-cloak>1</span>
                     </button>
                 </li>
                 <li>
@@ -41,9 +113,11 @@
                         class="staff-dashboard__nav-item"
                         :class="{ 'staff-dashboard__nav-item--active': activePanel === 'links' }"
                         x-on:click="activePanel = 'links'"
+                        title="{{ __('staff.links') }}"
                     >
                         <i class="{{ config('other.font-awesome') }} fa-link"></i>
-                        <span>{{ __('staff.links') }}</span>
+                        <span x-show="!collapsed" x-cloak>{{ __('staff.links') }}</span>
+                        <span class="staff-dashboard__nav-shortcut" x-show="!collapsed" x-cloak>2</span>
                     </button>
                 </li>
                 <li>
@@ -51,9 +125,11 @@
                         class="staff-dashboard__nav-item"
                         :class="{ 'staff-dashboard__nav-item--active': activePanel === 'chat' }"
                         x-on:click="activePanel = 'chat'"
+                        title="{{ __('staff.chat-tools') }}"
                     >
                         <i class="{{ config('other.font-awesome') }} fa-comment-dots"></i>
-                        <span>{{ __('staff.chat-tools') }}</span>
+                        <span x-show="!collapsed" x-cloak>{{ __('staff.chat-tools') }}</span>
+                        <span class="staff-dashboard__nav-shortcut" x-show="!collapsed" x-cloak>3</span>
                     </button>
                 </li>
                 <li>
@@ -61,9 +137,11 @@
                         class="staff-dashboard__nav-item"
                         :class="{ 'staff-dashboard__nav-item--active': activePanel === 'general' }"
                         x-on:click="activePanel = 'general'"
+                        title="{{ __('staff.general-tools') }}"
                     >
                         <i class="{{ config('other.font-awesome') }} fa-wrench"></i>
-                        <span>{{ __('staff.general-tools') }}</span>
+                        <span x-show="!collapsed" x-cloak>{{ __('staff.general-tools') }}</span>
+                        <span class="staff-dashboard__nav-shortcut" x-show="!collapsed" x-cloak>4</span>
                     </button>
                 </li>
                 <li>
@@ -71,9 +149,11 @@
                         class="staff-dashboard__nav-item"
                         :class="{ 'staff-dashboard__nav-item--active': activePanel === 'torrents' }"
                         x-on:click="activePanel = 'torrents'"
+                        title="{{ __('staff.torrent-tools') }}"
                     >
                         <i class="{{ config('other.font-awesome') }} fa-download"></i>
-                        <span>{{ __('staff.torrent-tools') }}</span>
+                        <span x-show="!collapsed" x-cloak>{{ __('staff.torrent-tools') }}</span>
+                        <span class="staff-dashboard__nav-shortcut" x-show="!collapsed" x-cloak>5</span>
                     </button>
                 </li>
                 <li>
@@ -81,12 +161,14 @@
                         class="staff-dashboard__nav-item"
                         :class="{ 'staff-dashboard__nav-item--active': activePanel === 'users' }"
                         x-on:click="activePanel = 'users'"
+                        title="{{ __('staff.user-tools') }}"
                     >
                         <i class="{{ config('other.font-awesome') }} fa-users"></i>
-                        <span>{{ __('staff.user-tools') }}</span>
+                        <span x-show="!collapsed" x-cloak>{{ __('staff.user-tools') }}</span>
                         @if ($pendingApplicationsCount > 0)
                             <span class="staff-dashboard__badge">{{ $pendingApplicationsCount }}</span>
                         @endif
+                        <span class="staff-dashboard__nav-shortcut" x-show="!collapsed && {{ $pendingApplicationsCount }} === 0" x-cloak>6</span>
                     </button>
                 </li>
                 <li>
@@ -94,19 +176,79 @@
                         class="staff-dashboard__nav-item"
                         :class="{ 'staff-dashboard__nav-item--active': activePanel === 'logs' }"
                         x-on:click="activePanel = 'logs'"
+                        title="{{ __('staff.logs') }}"
                     >
                         <i class="{{ config('other.font-awesome') }} fa-file-alt"></i>
-                        <span>{{ __('staff.logs') }}</span>
+                        <span x-show="!collapsed" x-cloak>{{ __('staff.logs') }}</span>
                         @if ($unsolvedReportsCount > 0)
                             <span class="staff-dashboard__badge">{{ $unsolvedReportsCount }}</span>
                         @endif
+                        <span class="staff-dashboard__nav-shortcut" x-show="!collapsed && {{ $unsolvedReportsCount }} === 0" x-cloak>7</span>
                     </button>
                 </li>
             </ul>
+            {{-- Sidebar Footer --}}
+            <div class="staff-dashboard__sidebar-footer">
+                <div class="staff-dashboard__clock" x-show="!collapsed" x-cloak>
+                    <i class="{{ config('other.font-awesome') }} fa-clock"></i>
+                    <span x-text="clock"></span>
+                </div>
+                <button
+                    class="staff-dashboard__cmd-trigger"
+                    x-show="!collapsed"
+                    x-cloak
+                    x-on:click="cmdOpen = true; $nextTick(() => $refs.cmdInput?.focus())"
+                    title="Command palette"
+                >
+                    <i class="{{ config('other.font-awesome') }} fa-search"></i>
+                    <span>Search panels</span>
+                    <kbd>Ctrl+K</kbd>
+                </button>
+                <div class="staff-dashboard__shortcut-hint" x-show="!collapsed" x-cloak>
+                    <span class="staff-dashboard__hint-key">1–7</span><span>panels</span>
+                    <span class="staff-dashboard__hint-key">[</span><span>collapse</span>
+                </div>
+            </div>
         </nav>
 
         {{-- Main Content Area --}}
         <div class="staff-dashboard__content">
+            {{-- Content Toolbar --}}
+            <div class="staff-dashboard__toolbar">
+                <div class="staff-dashboard__search-wrap" x-show="activePanel !== 'overview'" x-cloak>
+                    <i class="{{ config('other.font-awesome') }} fa-search"></i>
+                    <input
+                        class="staff-dashboard__search-input"
+                        type="text"
+                        placeholder="Filter cards…"
+                        x-model="search"
+                        x-on:keydown.escape="search = ''"
+                        x-on:keydown.stop
+                    />
+                    <button class="staff-dashboard__search-clear" x-show="search" x-on:click="search = ''" x-cloak>
+                        <i class="{{ config('other.font-awesome') }} fa-times"></i>
+                    </button>
+                </div>
+                <div class="staff-dashboard__toolbar-right">
+                    <button
+                        class="staff-dashboard__tool-btn"
+                        :class="{ 'staff-dashboard__tool-btn--active': compact }"
+                        x-on:click="toggleCompact()"
+                        title="Toggle compact density"
+                    >
+                        <i class="{{ config('other.font-awesome') }}" :class="compact ? 'fa-expand-alt' : 'fa-compress-alt'"></i>
+                    </button>
+                    <button
+                        class="staff-dashboard__tool-btn staff-dashboard__tool-btn--cmd"
+                        x-on:click="cmdOpen = true; $nextTick(() => $refs.cmdInput?.focus())"
+                        title="Command palette"
+                    >
+                        <i class="{{ config('other.font-awesome') }} fa-terminal"></i>
+                        <span>Jump to…</span>
+                        <kbd>⌃K</kbd>
+                    </button>
+                </div>
+            </div>
             {{-- Overview Panel --}}
             <div x-show="activePanel === 'overview'" x-cloak>
                 <h2 class="staff-dashboard__panel-title">
@@ -377,7 +519,10 @@
                     <i class="{{ config('other.font-awesome') }} fa-link"></i>
                     {{ __('staff.links') }}
                 </h2>
-                <div class="staff-dashboard__links-grid">
+                <div
+                    class="staff-dashboard__links-grid"
+                    x-effect="Array.from($el.querySelectorAll(':scope > .staff-dashboard__link-card')).forEach(c => c.style.display = (!search || c.querySelector('span')?.textContent.trim().toLowerCase().includes(search.toLowerCase())) ? '' : 'none')"
+                >
                     <a class="staff-dashboard__link-card" href="{{ route('home.index') }}">
                         <i class="{{ config('other.font-awesome') }} fa-columns"></i>
                         <span>{{ __('staff.frontend') }}</span>
@@ -419,7 +564,10 @@
                     <i class="{{ config('other.font-awesome') }} fa-comment-dots"></i>
                     {{ __('staff.chat-tools') }}
                 </h2>
-                <div class="staff-dashboard__links-grid">
+                <div
+                    class="staff-dashboard__links-grid"
+                    x-effect="Array.from($el.querySelectorAll(':scope > .staff-dashboard__link-card')).forEach(c => c.style.display = (!search || c.querySelector('span')?.textContent.trim().toLowerCase().includes(search.toLowerCase())) ? '' : 'none')"
+                >
                     <a class="staff-dashboard__link-card" href="{{ route('staff.statuses.index') }}">
                         <i class="{{ config('other.font-awesome') }} fa-comment-dots"></i>
                         <span>{{ __('staff.statuses') }}</span>
@@ -460,7 +608,10 @@
                     <i class="{{ config('other.font-awesome') }} fa-wrench"></i>
                     {{ __('staff.general-tools') }}
                 </h2>
-                <div class="staff-dashboard__links-grid">
+                <div
+                    class="staff-dashboard__links-grid"
+                    x-effect="Array.from($el.querySelectorAll(':scope > .staff-dashboard__link-card')).forEach(c => c.style.display = (!search || c.querySelector('span')?.textContent.trim().toLowerCase().includes(search.toLowerCase())) ? '' : 'none')"
+                >
                     @if (auth()->user()->group->is_admin)
                         <a class="staff-dashboard__link-card" href="{{ route('staff.site_settings.branding') }}">
                             <i class="{{ config('other.font-awesome') }} fa-paintbrush"></i>
@@ -594,7 +745,10 @@
                     <i class="{{ config('other.font-awesome') }} fa-download"></i>
                     {{ __('staff.torrent-tools') }}
                 </h2>
-                <div class="staff-dashboard__links-grid">
+                <div
+                    class="staff-dashboard__links-grid"
+                    x-effect="Array.from($el.querySelectorAll(':scope > .staff-dashboard__link-card')).forEach(c => c.style.display = (!search || c.querySelector('span')?.textContent.trim().toLowerCase().includes(search.toLowerCase())) ? '' : 'none')"
+                >
                     <a class="staff-dashboard__link-card" href="{{ route('staff.moderation.index') }}">
                         <i class="{{ config('other.font-awesome') }} fa-gavel"></i>
                         <span>{{ __('staff.torrent-moderation') }}</span>
@@ -690,7 +844,10 @@
                     <i class="{{ config('other.font-awesome') }} fa-users"></i>
                     {{ __('staff.user-tools') }}
                 </h2>
-                <div class="staff-dashboard__links-grid">
+                <div
+                    class="staff-dashboard__links-grid"
+                    x-effect="Array.from($el.querySelectorAll(':scope > .staff-dashboard__link-card')).forEach(c => c.style.display = (!search || c.querySelector('span')?.textContent.trim().toLowerCase().includes(search.toLowerCase())) ? '' : 'none')"
+                >
                     <a class="staff-dashboard__link-card" href="{{ route('staff.applications.index') }}">
                         <i class="{{ config('other.font-awesome') }} fa-list"></i>
                         <span>{{ __('staff.applications') }}</span>
@@ -787,7 +944,10 @@
                     <i class="{{ config('other.font-awesome') }} fa-file-alt"></i>
                     {{ __('staff.logs') }}
                 </h2>
-                <div class="staff-dashboard__links-grid">
+                <div
+                    class="staff-dashboard__links-grid"
+                    x-effect="Array.from($el.querySelectorAll(':scope > .staff-dashboard__link-card')).forEach(c => c.style.display = (!search || c.querySelector('span')?.textContent.trim().toLowerCase().includes(search.toLowerCase())) ? '' : 'none')"
+                >
                     <a class="staff-dashboard__link-card" href="{{ route('staff.audits.index') }}">
                         <i class="{{ config('other.font-awesome') }} fa-clipboard-list"></i>
                         <span>{{ __('staff.audit-log') }}</span>
@@ -829,6 +989,55 @@
                             <span>{{ __('staff.laravel-log') }}</span>
                         </a>
                     @endif
+                </div>
+            </div>
+            {{-- Command Palette --}}
+            <div
+                class="staff-dashboard__cmd-overlay"
+                x-show="cmdOpen"
+                x-cloak
+                x-on:click.self="cmdOpen = false; cmdQuery = ''"
+            >
+                <div class="staff-dashboard__cmd-palette">
+                    <div class="staff-dashboard__cmd-header">
+                        <i class="{{ config('other.font-awesome') }} fa-terminal"></i>
+                        <input
+                            x-ref="cmdInput"
+                            class="staff-dashboard__cmd-input"
+                            type="text"
+                            placeholder="Jump to any page… (type to search)"
+                            x-model="cmdQuery"
+                            x-on:input="cmdSelected = 0"
+                            x-on:keydown.stop
+                        />
+                        <button class="staff-dashboard__cmd-close" x-on:click="cmdOpen = false; cmdQuery = ''">
+                            <kbd>ESC</kbd>
+                        </button>
+                    </div>
+                    <ul class="staff-dashboard__cmd-results">
+                        <template x-for="(result, i) in cmdResults()" :key="result.href">
+                            <li
+                                class="staff-dashboard__cmd-result"
+                                :class="{ 'staff-dashboard__cmd-result--active': cmdSelected === i }"
+                                x-on:click="cmdGo(result)"
+                                x-on:mousemove="cmdSelected = i"
+                            >
+                                <i class="{{ config('other.font-awesome') }} fa-arrow-right staff-dashboard__cmd-arrow"></i>
+                                <span class="staff-dashboard__cmd-label" x-text="result.label"></span>
+                                <span class="staff-dashboard__cmd-panel" x-text="result.panel"></span>
+                            </li>
+                        </template>
+                        <li class="staff-dashboard__cmd-empty" x-show="cmdResults().length === 0" x-cloak>
+                            <i class="{{ config('other.font-awesome') }} fa-ban"></i>
+                            No results for &ldquo;<span x-text="cmdQuery"></span>&rdquo;
+                        </li>
+                    </ul>
+                    <div class="staff-dashboard__cmd-footer">
+                        <span><kbd>↑↓</kbd> navigate</span>
+                        <span><kbd>↵</kbd> go</span>
+                        <span><kbd>Esc</kbd> close</span>
+                        <span><kbd>Ctrl+K</kbd> open</span>
+                    </div>
                 </div>
             </div>
         </div>
