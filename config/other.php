@@ -122,7 +122,7 @@ return [
     | Restricted mode for invites. If set to true, invites will be restricted
     | Exempt these groups from the invite restrictions
     */
-    'invite-only'   => true,
+    'invite-only'   => false,
     'invite_expire' => 14,
 
     'invites_restriced' => false,

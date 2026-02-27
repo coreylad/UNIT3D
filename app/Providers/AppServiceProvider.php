@@ -80,6 +80,12 @@ class AppServiceProvider extends ServiceProvider
                     'mail.from.name'    => $siteSetting->smtp_from_name ?? config('other.title'),
                 ]);
             }
+
+            // Sync registration settings from DB into config so all app code reads live values
+            config([
+                'other.invite-only'         => (bool) $siteSetting->invite_only,
+                'other.registration_open'   => (bool) $siteSetting->registration_open,
+            ]);
         } catch (\Throwable) {
             // DB not ready (e.g. first migrate) — keep env defaults
         }
