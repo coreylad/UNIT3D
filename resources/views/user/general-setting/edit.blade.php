@@ -174,6 +174,13 @@
                             >
                                 Betaups (Desktop only)
                             </option>
+                            <option
+                                class="form__option"
+                                value="17"
+                                @selected($user->settings->style === 17)
+                            >
+                                Command Center (Desktop only)
+                            </option>
                         </select>
                         <label class="form__label form__label--floating" for="style">Theme</label>
                     </p>

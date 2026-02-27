@@ -95,6 +95,10 @@
             @vite('resources/sass/themes/_betaups.scss')
 
             @break
+        @case(17)
+            @vite('resources/sass/themes/_command-center.scss')
+
+            @break
     @endswitch
 
     @if (isset(auth()->user()->settings->custom_css))

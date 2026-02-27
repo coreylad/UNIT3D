@@ -93,6 +93,10 @@
                                     Betaups theme
 
                                     @break
+                                @case('17')
+                                    Command Center theme
+
+                                    @break
                             @endswitch
                         </td>
                         <td>Used by {{ $siteTheme->value }} users</td>

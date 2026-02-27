@@ -54,3 +54,4 @@ frankenphp-worker.php
 config/caddy/autosave.json
 /data/
 package-lock.json
+TSSEDB.sql

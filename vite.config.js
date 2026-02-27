@@ -25,6 +25,7 @@ export default defineConfig({
         'resources/sass/themes/_nord.scss',
         'resources/sass/themes/_revel.scss',
         'resources/sass/themes/_betaups.scss',
+        'resources/sass/themes/_command-center.scss',
         'resources/js/app.js',
         'resources/js/unit3d/chat.js',
         'resources/js/vendor/chart.js',

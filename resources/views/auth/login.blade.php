@@ -32,7 +32,13 @@
                 <form class="auth-form__form" method="POST" action="{{ route('login') }}">
                     @csrf
                     <a class="auth-form__branding" href="{{ route('home.index') }}">
-                        <i class="fal fa-tv-retro"></i>
+                        @if (file_exists(public_path('img/logo-banner.png')))
+                            <img
+                                class="auth-form__banner-logo"
+                                src="{{ url('/img/logo-banner.png') }}"
+                                alt="{{ $siteSetting->title }}"
+                            />
+                        @endif
                         <span class="auth-form__site-logo">{{ $siteSetting->title }}</span>
                     </a>
                     @if ($siteSetting->login_message)
