@@ -85,6 +85,7 @@ class AppServiceProvider extends ServiceProvider
             config([
                 'other.invite-only'         => (bool) $siteSetting->invite_only,
                 'other.registration_open'   => (bool) $siteSetting->registration_open,
+                'chat.nerd_bot'             => (bool) ($siteSetting->nerd_bot ?? true),
             ]);
         } catch (\Throwable) {
             // DB not ready (e.g. first migrate) — keep env defaults

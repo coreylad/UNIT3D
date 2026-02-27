@@ -85,6 +85,7 @@ class SiteSettingController extends Controller
         $scalar['registration_open']       = $request->boolean('registration_open');
         $scalar['invite_only']             = $request->boolean('invite_only');
         $scalar['category_filter_enabled'] = $request->boolean('category_filter_enabled');
+        $scalar['nerd_bot']                = $request->boolean('nerd_bot');
 
         $setting->fill($scalar);
 

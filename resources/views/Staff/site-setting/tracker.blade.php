@@ -272,6 +272,18 @@
             </label>
         </label>
 
+        <label class="ss-toggle" for="nerd_bot">
+            <span class="ss-toggle__info">
+                <span class="ss-toggle__title">NerdBot Stats</span>
+                <span class="ss-toggle__desc">Automatically post hourly site statistics (uploads, logins, peers, etc.) to the shoutbox</span>
+            </span>
+            <label class="ss-switch">
+                <input type="hidden" name="nerd_bot" value="0" />
+                <input id="nerd_bot" type="checkbox" name="nerd_bot" value="1" @checked(old('nerd_bot', $siteSetting->nerd_bot ?? true)) />
+                <span class="ss-switch__track"></span>
+            </label>
+        </label>
+
         <div class="ss-divider"></div>
 
         <div class="ss-field">

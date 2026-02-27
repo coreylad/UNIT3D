@@ -52,6 +52,7 @@ class UpdateSiteSettingRequest extends FormRequest
             // Tracker
             'announce_interval' => ['nullable', 'integer', 'between:60,86400'],
             'category_filter_enabled' => ['nullable', 'boolean'],
+            'nerd_bot' => ['nullable', 'boolean'],
 
             // Social
             'discord_url' => ['nullable', 'url', 'max:500'],

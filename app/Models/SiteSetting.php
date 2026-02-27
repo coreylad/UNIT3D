@@ -39,6 +39,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property int          $default_download_slots
  * @property int          $announce_interval
  * @property bool         $category_filter_enabled
+ * @property bool         $nerd_bot
  * @property string|null  $discord_url
  * @property string|null  $twitter_url
  * @property string|null  $github_url
@@ -56,6 +57,7 @@ final class SiteSetting extends Model
         'registration_open'       => 'boolean',
         'invite_only'             => 'boolean',
         'category_filter_enabled' => 'boolean',
+        'nerd_bot'                => 'boolean',
         'smtp_port'               => 'integer',
         'default_download_slots'  => 'integer',
         'announce_interval'       => 'integer',
