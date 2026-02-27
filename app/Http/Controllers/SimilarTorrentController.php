@@ -47,7 +47,15 @@ class SimilarTorrentController extends Controller
                     'companies',
                     'collections.movies',
                 ])
-                    ->findOrFail($tmdbId);
+                    ->find($tmdbId);
+
+                if ($meta === null) {
+                    // Metadata not scraped yet — queue the job and ask the user to try again shortly
+                    new TMDBScraper()->movie($tmdbId);
+
+                    return back()->with('info', 'Movie metadata is still being fetched. Please try again in a moment.');
+                }
+
                 $tmdb = $tmdbId;
 
                 break;
@@ -62,7 +70,14 @@ class SimilarTorrentController extends Controller
                     'companies',
                     'networks'
                 ])
-                    ->findOrFail($tmdbId);
+                    ->find($tmdbId);
+
+                if ($meta === null) {
+                    new TMDBScraper()->tv($tmdbId);
+
+                    return back()->with('info', 'TV metadata is still being fetched. Please try again in a moment.');
+                }
+
                 $tmdb = $tmdbId;
 
                 break;
@@ -76,7 +91,13 @@ class SimilarTorrentController extends Controller
                     'companies',
                     'platforms',
                 ])
-                    ->findOrFail($tmdbId);
+                    ->find($tmdbId);
+
+                if ($meta === null) {
+                    new IgdbScraper()->game($tmdbId);
+
+                    return back()->with('info', 'Game metadata is still being fetched. Please try again in a moment.');
+                }
 
                 $igdb = $tmdbId;
 
