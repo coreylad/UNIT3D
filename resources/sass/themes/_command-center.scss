@@ -1147,6 +1147,17 @@ svg > circle:last-child  { fill: var(--cc-accent); }
 
 /* ── Searches ───────────────────────────────────────────────────────────── */
 
+/* Neutralise the negative-margin vw expansion on the active-torrents table */
+.user-peers,
+.user-torrents,
+.user-uploads,
+.user-resurrections {
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto;
+}
+
 .user-torrents__filters,
 .user-peers__filters,
 .user-uploads__filters,
