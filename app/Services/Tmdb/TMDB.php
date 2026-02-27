@@ -23,8 +23,24 @@ class TMDB
      */
     public function image(string $type, array $array): ?string
     {
-        if (isset($array[$type.'_path'])) {
+        // Primary: language-specific path from top-level response
+        if (!empty($array[$type.'_path'])) {
             return 'https://image.tmdb.org/t/p/original'.$array[$type.'_path'];
+        }
+
+        // Fallback: language-agnostic images array (included via append_to_response)
+        // poster → images.posters[0].file_path
+        // backdrop → images.backdrops[0].file_path
+        $imageKey = match ($type) {
+            'poster'   => 'posters',
+            'backdrop' => 'backdrops',
+            default    => $type.'s',
+        };
+
+        $path = $array['images'][$imageKey][0]['file_path'] ?? null;
+
+        if (!empty($path)) {
+            return 'https://image.tmdb.org/t/p/original'.$path;
         }
 
         return null;
