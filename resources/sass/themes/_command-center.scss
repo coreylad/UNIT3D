@@ -433,7 +433,6 @@ body {
     font-size: 13px;
     font-weight: 300;
     min-width: 1140px;
-    overflow-x: hidden;
     grid-template-areas: 'header' 'alerts' 'main' 'footer';
     grid-template-rows: auto auto auto auto;
     row-gap: 2px !important;
@@ -512,11 +511,20 @@ main > div > article {
     box-sizing: border-box;
 }
 
-/* Neutralise the negative-margin bleed-out on the torrent search page —
-   in CC the article is already exactly 1140px so we don't need the expansion */
-.page__torrents {
-    margin-left: 0 !important;
-    margin-right: 0 !important;
+/* Neutralise the negative-margin / vw-based expansion hacks from _torrents.scss
+   — in CC the article is already exactly 1140px so we never want them. */
+.page__torrents,
+.page__torrents:not(:has(.torrent-search--grouped__results)) {
+    margin: 0 !important;
+}
+
+.torrent-search__filters {
+    margin: 0 !important;
+}
+
+.torrent-search__category-bar {
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 
@@ -1098,6 +1106,17 @@ main > article,
 
 .message-input,
 .message-input > .row { background-color: inherit; }
+
+/* Keep floating labels INSIDE textareas when empty & unfocused.
+   _form.scss unconditionally floats :valid labels to top: -11px,
+   but non-required textareas are always :valid even when empty.  */
+.form__textarea:valid:placeholder-shown:not(:focus) + .form__label--floating,
+.form__textarea:valid:placeholder-shown:not(:focus) ~ .form__label--floating {
+    top: 10px;
+    font-size: 13px;
+    color: var(--cc-text-muted);
+    padding: 0 4px;
+}
 
 /* ── Notifications ──────────────────────────────────────────────────────── */
 
