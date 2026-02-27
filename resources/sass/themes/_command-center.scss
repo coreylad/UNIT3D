@@ -433,6 +433,7 @@ body {
     font-size: 13px;
     font-weight: 300;
     min-width: 1140px;
+    overflow-x: hidden;
     grid-template-areas: 'header' 'alerts' 'main' 'footer';
     grid-template-rows: auto auto auto auto;
     row-gap: 2px !important;
@@ -509,8 +510,16 @@ main > article,
 main > div > article {
     width: 100%;
     box-sizing: border-box;
-    overflow-x: hidden;
 }
+
+/* Neutralise the negative-margin bleed-out on the torrent search page —
+   in CC the article is already exactly 1140px so we don't need the expansion */
+.page__torrents {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+}
+
+
 
 .sidebar2,
 main > article,
