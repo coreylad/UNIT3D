@@ -518,13 +518,30 @@ main > div > article {
     margin: 0 !important;
 }
 
-.torrent-search__filters {
+.torrent-search__filters,
+.similar-torrents__filters {
     margin: 0 !important;
 }
 
 .torrent-search__category-bar {
     max-width: 100%;
     box-sizing: border-box;
+}
+
+/* Trending block on home page uses the same negative-margin vw trick */
+.trending--weekly {
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto;
+}
+
+/* Catch-all: prevent any remaining negative-margin bleed from escaping the
+   1140px column. overflow-x:clip does not create a new BFC so sticky/fixed
+   children are unaffected, unlike overflow-x:hidden. */
+main > article,
+main > div > article {
+    overflow-x: clip;
 }
 
 
@@ -1061,6 +1078,14 @@ main > article,
 .comment { grid-template-areas: 'header header' 'aside content'; border-radius: 0; }
 
 /* ── Dashboard ──────────────────────────────────────────────────────────── */
+
+/* Staff dashboard uses layout.default (no article wrapper) so constrain main */
+main.page__staff-dashboard--index {
+    max-width: 1140px;
+    width: 100%;
+    margin-inline: auto !important;
+    box-sizing: border-box;
+}
 
 .dashboard__menus { gap: 2px; }
 .dashboard__stats { grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 2px; }
