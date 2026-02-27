@@ -175,7 +175,9 @@ class MigrationController extends Controller
                 'tables'   => ['required', 'array'],
             ]);
 
-            $tables = $config['tables'];
+            $tables   = $config['tables'];
+            $offset   = (int) request()->input('offset', 0);
+            $pageSize = max(50, min(2000, (int) request()->input('page_size', 500)));
             unset($config['tables']);
 
             $results = [
@@ -185,10 +187,10 @@ class MigrationController extends Controller
 
             // Each table is wrapped independently so one failure cannot crash the whole request
             $tableMap = [
-                'users'         => fn () => $this->migrationService->migrateUsers($config),
-                'torrents'      => fn () => $this->migrationService->migrateTorrents($config),
-                'peers'         => fn () => $this->migrationService->migratePeers($config),
-                'snatched'      => fn () => $this->migrationService->migrateSnatched($config),
+                'users'         => fn () => $this->migrationService->migrateUsers($config, $offset, $pageSize),
+                'torrents'      => fn () => $this->migrationService->migrateTorrents($config, $offset, $pageSize),
+                'peers'         => fn () => $this->migrationService->migratePeers($config, $offset, $pageSize),
+                'snatched'      => fn () => $this->migrationService->migrateSnatched($config, $offset, $pageSize),
                 'forums'        => fn () => $this->migrationService->migrateForums($config),
                 'forum_threads' => fn () => $this->migrationService->migrateForumThreads($config),
                 'forum_posts'   => fn () => $this->migrationService->migrateForumPosts($config),

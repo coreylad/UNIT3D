@@ -325,48 +325,70 @@
                     this.migrationLogs = '';
                     this.progress = 0;
 
-                    const tables = [...this.selectedTables];
-                    const total  = tables.length;
+                    const tables   = [...this.selectedTables];
+                    const total    = tables.length;
+                    const pageSize = 500;
 
-                    // ── Migrate one table per HTTP request ───────────────────────────
-                    // This keeps every individual request short so Nginx never times out.
+                    // ── Paginated per-table requests ─────────────────────────────────
+                    // Each HTTP call processes at most pageSize rows, then loops until
+                    // the server returns done:true — preventing Nginx 504 timeouts on
+                    // large tables (users, torrents, peers, snatched).
                     for (let i = 0; i < tables.length; i++) {
                         const table = tables[i];
                         this.progress = Math.round((i / total) * 100);
                         this._appendLog(`⏳ Migrating <strong>${table}</strong>…`, 'hsl(38,92%,60%)');
 
-                        try {
-                            const data = await this._fetchJson(
-                                '{{ route('staff.migrations.start') }}',
-                                { ...this.form, tables: [table] }
-                            );
+                        let offset         = 0;
+                        let tableTotal     = 0;
+                        let tableDone      = false;
+                        let tableSucceeded = true;
+                        const tableLogs    = [];
 
-                            const result = data.data?.[table] ?? (data.success === false
-                                ? { success: false, error: data.message ?? 'Server error', logs: data.logs }
-                                : { success: false, error: 'No result returned' });
+                        while (!tableDone) {
+                            try {
+                                const data = await this._fetchJson(
+                                    '{{ route('staff.migrations.start') }}',
+                                    { ...this.form, tables: [table], offset, page_size: pageSize }
+                                );
 
-                            this.completionSummary[table] = result;
+                                const result = data.data?.[table] ?? (data.success === false
+                                    ? { success: false, error: data.message ?? 'Server error', logs: data.logs, done: true }
+                                    : { success: false, error: 'No result returned', done: true });
 
-                            if (result.success) {
-                                this._appendLog(`✅ <strong>${table}</strong>: ${(result.count ?? 0).toLocaleString()} records migrated`, 'hsl(140,55%,60%)');
-                            } else {
+                                tableTotal += result.count ?? 0;
+                                tableDone   = result.done ?? true;   // small tables have no done flag → stop after 1 page
+                                offset     += pageSize;
+
+                                if (result.logs?.length) {
+                                    tableLogs.push(...result.logs);
+                                    result.logs.slice(-3).forEach(entry => {
+                                        const colour = (entry.includes('failed') || entry.includes('Error'))
+                                            ? 'hsl(4,65%,60%)' : 'hsl(210,12%,55%)';
+                                        this._appendLog(`&nbsp;&nbsp;&nbsp;${entry}`, colour, '0.72rem');
+                                    });
+                                }
+
+                                if (!result.success) {
+                                    tableSucceeded = false;
+                                    this.migrationHadErrors = true;
+                                    this._appendLog(`❌ <strong>${table}</strong> page failed: ${result.error ?? 'Unknown error'}`, 'hsl(4,70%,62%)');
+                                    tableDone = true;
+                                } else if (!tableDone) {
+                                    this._appendLog(`&nbsp;&nbsp;&nbsp;↻ ${table}: ${tableTotal.toLocaleString()} migrated so far…`, 'hsl(210,12%,55%)', '0.72rem');
+                                }
+
+                            } catch (error) {
+                                tableSucceeded = false;
                                 this.migrationHadErrors = true;
-                                this._appendLog(`❌ <strong>${table}</strong>: ${result.error ?? 'Unknown error'}`, 'hsl(4,70%,62%)');
+                                this._appendLog(`❌ <strong>${table}</strong>: ${error.message}`, 'hsl(4,70%,62%)');
+                                tableDone = true;
                             }
+                        }
 
-                            // Show last few service log lines for this table
-                            if (result.logs?.length) {
-                                result.logs.slice(-8).forEach(entry => {
-                                    const colour = (entry.includes('failed') || entry.includes('Error'))
-                                        ? 'hsl(4,65%,60%)' : 'hsl(210,12%,55%)';
-                                    this._appendLog(`&nbsp;&nbsp;&nbsp;${entry}`, colour, '0.72rem');
-                                });
-                            }
+                        this.completionSummary[table] = { success: tableSucceeded, count: tableTotal, logs: tableLogs };
 
-                        } catch (error) {
-                            this.migrationHadErrors = true;
-                            this.completionSummary[table] = { success: false, error: error.message };
-                            this._appendLog(`❌ <strong>${table}</strong>: ${error.message}`, 'hsl(4,70%,62%)');
+                        if (tableSucceeded) {
+                            this._appendLog(`✅ <strong>${table}</strong>: ${tableTotal.toLocaleString()} records migrated`, 'hsl(140,55%,60%)');
                         }
                     }
 

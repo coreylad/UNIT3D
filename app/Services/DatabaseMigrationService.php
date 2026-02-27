@@ -33,6 +33,9 @@ class DatabaseMigrationService
 
     private array $migrationLog = [];
 
+    /** Group column name discovered in the source users table */
+    private ?string $resolvedGroupCol = null;
+
     // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // Connection
     // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -316,125 +319,204 @@ class DatabaseMigrationService
      */
     private function buildGroupMap(array $config): array
     {
-        // ── 1. Load UNIT3D destination groups ────────────────────────────
+        // ── 1. Load all UNIT3D destination groups ────────────────────────
         $unit3dGroups = DB::table('groups')
-            ->get(['id', 'name', 'slug'])
-            ->keyBy('slug');          // keyed by slug for easy lookup
+            ->get(['id', 'name', 'slug']);
 
-        // Resolve the fallback "regular user" group id
-        $fallbackId = $unit3dGroups->get('user')?->id
+        $bySlug = $unit3dGroups->keyBy('slug');
+        $byName = $unit3dGroups->keyBy(fn ($g) => strtolower($g->name));
+
+        $fallbackId = $bySlug->get('user')?->id
             ?? $unit3dGroups->first()?->id
             ?? 1;
 
-        // Build a keyword → unit3d_group_id lookup table
-        $keywordMap = [];
-        foreach ([
-            ['keywords' => ['admin', 'administrator', 'staff'],   'slug' => 'administrator'],
-            ['keywords' => ['owner', 'founder'],                   'slug' => 'owner'],
-            ['keywords' => ['mod', 'moderator', 'modo'],           'slug' => 'moderator'],
-            ['keywords' => ['torrent mod', 'torrent moderator'],   'slug' => 'torrent-moderator'],
-            ['keywords' => ['uploader', 'encoder', 'internal'],    'slug' => 'uploader'],
-            ['keywords' => ['trustee', 'trusted'],                 'slug' => 'trustee'],
-            ['keywords' => ['banned', 'ban'],                      'slug' => 'banned'],
-            ['keywords' => ['disabled'],                           'slug' => 'disabled'],
-            ['keywords' => ['pruned', 'deleted'],                  'slug' => 'pruned'],
-            ['keywords' => ['validating', 'pending', 'unvalidated', 'inactive'], 'slug' => 'validating'],
-            ['keywords' => ['poweruser', 'power user', 'power'],   'slug' => 'poweruser'],
-            ['keywords' => ['superuser', 'super user'],            'slug' => 'superuser'],
-            ['keywords' => ['extremeuser', 'extreme'],             'slug' => 'extremeuser'],
-            ['keywords' => ['insane', 'insaneuser'],               'slug' => 'insaneuser'],
-            ['keywords' => ['veteran'],                            'slug' => 'veteran'],
-            ['keywords' => ['seeder'],                             'slug' => 'seeder'],
-            ['keywords' => ['archivist'],                          'slug' => 'archivist'],
-            ['keywords' => ['leech', 'leecher'],                   'slug' => 'leech'],
-            ['keywords' => ['user', 'member', 'registered'],       'slug' => 'user'],
-        ] as $rule) {
-            $destId = $unit3dGroups->get($rule['slug'])?->id ?? $fallbackId;
-            foreach ($rule['keywords'] as $kw) {
-                $keywordMap[$kw] = $destId;
+        $this->log('UNIT3D groups available: ' . $unit3dGroups->map(fn ($g) => "#{$g->id} {$g->name}")->implode(', '));
+
+        // ── 2. Keyword → UNIT3D group id table ───────────────────────────
+        // Ordered longest-first so "power user" matches before "user"
+        $keywordRules = [
+            ['keywords' => ['sysop', 'sys op', 'root'],                       'slug' => 'administrator'],
+            ['keywords' => ['owner', 'founder'],                               'slug' => 'owner'],
+            ['keywords' => ['super admin', 'superadmin'],                      'slug' => 'administrator'],
+            ['keywords' => ['admin', 'administrator', 'staff'],                'slug' => 'administrator'],
+            ['keywords' => ['torrent mod', 'torrent moderator'],               'slug' => 'torrent-moderator'],
+            ['keywords' => ['super mod', 'supermod', 'senior mod', 'smod'],   'slug' => 'moderator'],
+            ['keywords' => ['mod', 'moderator', 'modo'],                       'slug' => 'moderator'],
+            ['keywords' => ['encoder', 'internal'],                            'slug' => 'uploader'],
+            ['keywords' => ['uploader'],                                       'slug' => 'uploader'],
+            ['keywords' => ['trustee', 'trusted'],                             'slug' => 'trustee'],
+            ['keywords' => ['ban', 'banned'],                                  'slug' => 'banned'],
+            ['keywords' => ['disabled', 'suspended'],                          'slug' => 'disabled'],
+            ['keywords' => ['pruned', 'deleted', 'removed'],                   'slug' => 'pruned'],
+            ['keywords' => ['validating', 'pending', 'unvalidated', 'inactive', 'await'], 'slug' => 'validating'],
+            ['keywords' => ['insane'],                                          'slug' => 'insaneuser'],
+            ['keywords' => ['extreme'],                                         'slug' => 'extremeuser'],
+            ['keywords' => ['super user', 'superuser'],                        'slug' => 'superuser'],
+            ['keywords' => ['power user', 'poweruser', 'powerpeer'],          'slug' => 'poweruser'],
+            ['keywords' => ['veteran'],                                        'slug' => 'veteran'],
+            ['keywords' => ['seeder'],                                         'slug' => 'seeder'],
+            ['keywords' => ['archivist'],                                      'slug' => 'archivist'],
+            ['keywords' => ['vip'],                                            'slug' => 'vip'],
+            ['keywords' => ['leech', 'leecher'],                               'slug' => 'leech'],
+            ['keywords' => ['user', 'member', 'registered'],                   'slug' => 'user'],
+        ];
+
+        // Numeric class → UNIT3D slug (common TBDev/xbt/UNIT3D-classic ordering)
+        $classRules = [
+            0 => 'user',           // Regular user
+            1 => 'poweruser',      // Power User
+            2 => 'superuser',      // Super User / VIP
+            3 => 'uploader',       // Uploader
+            4 => 'moderator',      // Moderator
+            5 => 'moderator',      // Senior Moderator
+            6 => 'administrator',  // Administrator
+            7 => 'administrator',  // Sysop / Owner
+            // Also map common banned/disabled sentinels
+            -1 => 'banned',
+            -2 => 'disabled',
+        ];
+
+        $resolveByKeyword = function (string $srcName) use ($keywordRules, $bySlug, $byName, $fallbackId): int {
+            $lower = strtolower(trim($srcName));
+
+            // Exact slug match
+            if ($bySlug->has($lower)) {
+                return $bySlug->get($lower)->id;
+            }
+            // Exact name match
+            if ($byName->has($lower)) {
+                return $byName->get($lower)->id;
+            }
+            // Longest keyword first
+            foreach ($keywordRules as $rule) {
+                foreach ($rule['keywords'] as $kw) {
+                    if (str_contains($lower, $kw)) {
+                        return $bySlug->get($rule['slug'])?->id ?? $fallbackId;
+                    }
+                }
+            }
+
+            return $fallbackId;
+        };
+
+        // ── 3. Discover the group column used in the source users table ──
+        // We ask the DB directly rather than guessing
+        $groupColCandidates = ['group_id', 'class', 'rank', 'role_id', 'permission_id', 'user_class', 'level'];
+        $groupCol           = null;
+
+        try {
+            $userCols = $this->sourceColumn(
+                'SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+                 WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?',
+                [$config['database'], 'users']
+            );
+
+            foreach ($groupColCandidates as $candidate) {
+                if (in_array($candidate, $userCols, true)) {
+                    $groupCol = $candidate;
+                    break;
+                }
+            }
+        } catch (\Throwable $e) {
+            $this->log('Could not inspect users columns: ' . $e->getMessage());
+        }
+
+        $this->log("Source group column in users table: " . ($groupCol ?? '(none found — will use 0)'));
+
+        // Collect the distinct group values actually used in the users table
+        $distinctGroupValues = [];
+        if ($groupCol !== null) {
+            try {
+                $distinctGroupValues = array_map(
+                    'intval',
+                    $this->sourceColumn("SELECT DISTINCT `{$groupCol}` FROM `users` WHERE `{$groupCol}` IS NOT NULL ORDER BY `{$groupCol}`")
+                );
+                $this->log('Distinct source group values: ' . implode(', ', $distinctGroupValues));
+            } catch (\Throwable $e) {
+                $this->log('Could not read distinct group values: ' . $e->getMessage());
             }
         }
 
-        // ── 2. Try to read source groups table ───────────────────────────
+        // ── 4. Try to find a named groups table in the source DB ─────────
         $sourceGroupsTable = $this->tryResolveSourceTable(
-            ['groups', 'user_groups', 'member_groups', 'permissions', 'usergroups', 'ranks'],
+            ['groups', 'user_groups', 'member_groups', 'permissions', 'usergroups',
+             'ranks', 'classes', 'user_classes', 'roles', 'user_roles'],
             $config
         );
 
         $map = [];  // source_group_id => unit3d_group_id
 
         if ($sourceGroupsTable !== null) {
+            $this->log("Source groups table found: `{$sourceGroupsTable}`");
+
             try {
                 $sourceGroups = $this->sourceQuery("SELECT * FROM `{$sourceGroupsTable}`");
+                $this->log('Source groups rows: ' . count($sourceGroups));
 
                 foreach ($sourceGroups as $sg) {
-                    // Find the numeric id column in source group row
-                    $srcId = $sg['id'] ?? $sg['group_id'] ?? $sg['gid'] ?? null;
+                    $srcId = $sg['id'] ?? $sg['group_id'] ?? $sg['gid'] ?? $sg['class_id'] ?? null;
                     if ($srcId === null) {
                         continue;
                     }
+                    $srcId = (int) $srcId;
 
-                    // Find the name column
-                    $srcName = strtolower(
-                        $sg['name'] ?? $sg['group_name'] ?? $sg['title'] ?? ''
-                    );
+                    $srcName = (string) ($sg['name'] ?? $sg['group_name'] ?? $sg['title'] ?? $sg['class_name'] ?? '');
 
-                    // Exact slug match
-                    if ($unit3dGroups->has($srcName)) {
-                        $map[(int) $srcId] = $unit3dGroups->get($srcName)->id;
-                        continue;
-                    }
+                    $destId   = $resolveByKeyword($srcName);
+                    $destName = $unit3dGroups->first(fn ($g) => $g->id === $destId)?->name ?? "id={$destId}";
+                    $map[$srcId] = $destId;
 
-                    // Exact name match against UNIT3D group names
-                    $nameMatch = $unit3dGroups->first(
-                        fn ($g) => strtolower($g->name) === $srcName
-                    );
-                    if ($nameMatch) {
-                        $map[(int) $srcId] = $nameMatch->id;
-                        continue;
-                    }
-
-                    // Keyword / substring match
-                    $matched = false;
-                    foreach ($keywordMap as $kw => $destId) {
-                        if (str_contains($srcName, $kw)) {
-                            $map[(int) $srcId] = $destId;
-                            $matched = true;
-                            break;
-                        }
-                    }
-
-                    if (!$matched) {
-                        $map[(int) $srcId] = $fallbackId;
-                    }
+                    $this->log("  src #{$srcId} '{$srcName}' → UNIT3D '{$destName}' (id={$destId})");
                 }
 
-                $this->log("Group map built from `{$sourceGroupsTable}`: " . count($map) . " source groups mapped.");
+                $this->log('Group map built from `' . $sourceGroupsTable . '`: ' . count($map) . ' source groups mapped.');
             } catch (\Throwable $e) {
-                $this->log("Could not read source groups table: " . $e->getMessage());
+                $this->log('Could not read source groups table: ' . $e->getMessage());
+                $sourceGroupsTable = null;  // fall through to numeric mapping
             }
-        } else {
-            $this->log("No source groups table found — all users will be assigned the User group.");
         }
 
-        return ['map' => $map, 'fallback' => $fallbackId];
+        // ── 5. Fill in any missing group values using numeric class rules ─
+        // Covers: values in users that don't appear in the groups table,
+        // OR trackers that have no groups table at all (TBDev class-based).
+        $missingValues = array_diff($distinctGroupValues, array_keys($map));
+        if (!empty($missingValues)) {
+            $this->log('Group values in users not covered by groups table: ' . implode(', ', $missingValues) . ' — applying numeric class fallback');
+
+            foreach ($missingValues as $classVal) {
+                $slug   = $classRules[$classVal] ?? 'user';
+                $destId = $bySlug->get($slug)?->id ?? $fallbackId;
+                $map[$classVal] = $destId;
+                $destName = $unit3dGroups->first(fn ($g) => $g->id === $destId)?->name ?? "id={$destId}";
+                $this->log("  class {$classVal} → UNIT3D '{$destName}' (slug={$slug}, id={$destId})");
+            }
+        }
+
+        if (empty($map)) {
+            $this->log('No group mappings resolved — all users will use the fallback User group.');
+        }
+
+        // Store the resolved group column so migrateUsers can use it
+        $this->resolvedGroupCol = $groupCol;
+
+        return ['map' => $map, 'fallback' => $fallbackId, 'groupCol' => $groupCol];
     }
 
     /**
      * Migrate users from source to destination
      */
-    public function migrateUsers(array $sourceConfig): array
+    public function migrateUsers(array $sourceConfig, int $offset = 0, int $limit = 500): array
     {
-        $this->log('Starting user migration...');
+        $this->log("Starting user migration (offset={$offset}, limit={$limit})...");
 
         try {
             $this->ensureConnected($sourceConfig);
 
-            // Streamed in chunks — avoids loading all rows into RAM
-            $users = $this->chunkSourceQuery('SELECT * FROM users ORDER BY id', [], 300);
+            $users   = $this->sourceQuery("SELECT * FROM users ORDER BY id LIMIT {$limit} OFFSET {$offset}");
+            $fetched = count($users);
 
             // Build group map: source_group_id => unit3d_group_id
-            ['map' => $groupMap, 'fallback' => $fallbackGroupId] = $this->buildGroupMap($sourceConfig);
+            ['map' => $groupMap, 'fallback' => $fallbackGroupId, 'groupCol' => $groupCol] = $this->buildGroupMap($sourceConfig);
 
             $count = 0;
             $batch = [];
@@ -446,10 +528,16 @@ class DatabaseMigrationService
                     $rawPass  = $user['password'] ?? $user['passwd'] ?? $user['pass_hash'] ?? $user['user_password'] ?? null;
                     $password = !empty($rawPass) ? $rawPass : bcrypt(bin2hex(random_bytes(16)));
 
-                    // Resolve group: use the mapped group if we have a source group_id,
-                    // otherwise try to guess from the user row itself (e.g. 'class', 'rank')
-                    $srcGroupId = (int) ($user['group_id'] ?? $user['class'] ?? $user['rank'] ?? $user['role_id'] ?? 0);
+                    // Use the column discovered by buildGroupMap, with fallback chain
+                    $srcGroupId  = (int) (
+                        ($groupCol !== null ? ($user[$groupCol] ?? null) : null)
+                        ?? $user['group_id'] ?? $user['class'] ?? $user['rank'] ?? $user['role_id'] ?? 0
+                    );
                     $destGroupId = $groupMap[$srcGroupId] ?? $fallbackGroupId;
+                    if (!isset($groupMap[$srcGroupId]) && $count < 5) {
+                        $col = $groupCol ?? 'group_id';
+                        $this->log("  User #{$user['id']} src {$col}={$srcGroupId} not in map → fallback group {$fallbackGroupId}");
+                    }
 
                     // Handle date fields safely — NULL or invalid dates/timestamps become null
                     $parseDate = static function (mixed $v): ?string {
@@ -514,22 +602,23 @@ class DatabaseMigrationService
 
             $this->log("User migration completed: {$count} users migrated");
 
-            return ['success' => true, 'count' => $count, 'logs' => $this->migrationLog];
+            return ['success' => true, 'count' => $count, 'done' => $fetched < $limit, 'logs' => $this->migrationLog];
         } catch (\Throwable $e) {
             $this->log('User migration failed: ' . $e->getMessage());
 
-            return ['success' => false, 'error' => $e->getMessage(), 'logs' => $this->migrationLog];
+            return ['success' => false, 'error' => $e->getMessage(), 'done' => true, 'logs' => $this->migrationLog];
         }
     }
 
-    public function migrateTorrents(array $sourceConfig): array
+    public function migrateTorrents(array $sourceConfig, int $offset = 0, int $limit = 500): array
     {
-        $this->log('Starting torrent migration...');
+        $this->log("Starting torrent migration (offset={$offset}, limit={$limit})...");
 
         try {
             $this->ensureConnected($sourceConfig);
 
-            $torrents = $this->chunkSourceQuery('SELECT * FROM torrents ORDER BY id', [], 300);
+            $torrents = $this->sourceQuery("SELECT * FROM torrents ORDER BY id LIMIT {$limit} OFFSET {$offset}");
+            $fetched  = count($torrents);
 
             $count = 0;
             $batch = [];
@@ -580,25 +669,26 @@ class DatabaseMigrationService
 
             $this->log("Torrent migration completed: {$count} torrents migrated");
 
-            return ['success' => true, 'count' => $count, 'logs' => $this->migrationLog];
+            return ['success' => true, 'count' => $count, 'done' => $fetched < $limit, 'logs' => $this->migrationLog];
         } catch (\Throwable $e) {
             $this->log('Torrent migration failed: ' . $e->getMessage());
 
-            return ['success' => false, 'error' => $e->getMessage(), 'logs' => $this->migrationLog];
+            return ['success' => false, 'error' => $e->getMessage(), 'done' => true, 'logs' => $this->migrationLog];
         }
     }
 
     /**
      * Migrate peers from source to destination
      */
-    public function migratePeers(array $sourceConfig): array
+    public function migratePeers(array $sourceConfig, int $offset = 0, int $limit = 500): array
     {
-        $this->log('Starting peer migration...');
+        $this->log("Starting peer migration (offset={$offset}, limit={$limit})...");
 
         try {
             $this->ensureConnected($sourceConfig);
 
-            $peers = $this->chunkSourceQuery('SELECT * FROM peers ORDER BY userid', [], 500);
+            $peers   = $this->sourceQuery("SELECT * FROM peers ORDER BY userid LIMIT {$limit} OFFSET {$offset}");
+            $fetched = count($peers);
 
             $count = 0;
             $batch = [];
@@ -640,25 +730,26 @@ class DatabaseMigrationService
 
             $this->log("Peer migration completed: {$count} peers migrated");
 
-            return ['success' => true, 'count' => $count, 'logs' => $this->migrationLog];
+            return ['success' => true, 'count' => $count, 'done' => $fetched < $limit, 'logs' => $this->migrationLog];
         } catch (\Throwable $e) {
             $this->log('Peer migration failed: ' . $e->getMessage());
 
-            return ['success' => false, 'error' => $e->getMessage(), 'logs' => $this->migrationLog];
+            return ['success' => false, 'error' => $e->getMessage(), 'done' => true, 'logs' => $this->migrationLog];
         }
     }
 
     /**
      * Migrate snatched from source to destination
      */
-    public function migrateSnatched(array $sourceConfig): array
+    public function migrateSnatched(array $sourceConfig, int $offset = 0, int $limit = 500): array
     {
-        $this->log('Starting snatched migration...');
+        $this->log("Starting snatched migration (offset={$offset}, limit={$limit})...");
 
         try {
             $this->ensureConnected($sourceConfig);
 
-            $snatched = $this->chunkSourceQuery('SELECT * FROM snatched ORDER BY userid', [], 500);
+            $snatched = $this->sourceQuery("SELECT * FROM snatched ORDER BY userid LIMIT {$limit} OFFSET {$offset}");
+            $fetched  = count($snatched);
 
             $count = 0;
             $batch = [];
@@ -697,11 +788,11 @@ class DatabaseMigrationService
 
             $this->log("Snatched migration completed: {$count} records migrated");
 
-            return ['success' => true, 'count' => $count, 'logs' => $this->migrationLog];
+            return ['success' => true, 'count' => $count, 'done' => $fetched < $limit, 'logs' => $this->migrationLog];
         } catch (\Throwable $e) {
             $this->log('Snatched migration failed: ' . $e->getMessage());
 
-            return ['success' => false, 'error' => $e->getMessage(), 'logs' => $this->migrationLog];
+            return ['success' => false, 'error' => $e->getMessage(), 'done' => true, 'logs' => $this->migrationLog];
         }
     }
 
@@ -733,7 +824,6 @@ class DatabaseMigrationService
                         $newId = DB::table('forums')->insertGetId([
                             'name'        => $forumName,
                             'description' => $forum['description'] ?? $forum['forum_desc'] ?? '',
-                            'icon'        => $forum['icon'] ?? null,
                             'position'    => $forum['id'] ?? $forum['fid'] ?? $forum['forum_id'] ?? 0,
                             'created_at'  => now(),
                             'updated_at'  => now(),
