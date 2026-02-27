@@ -119,7 +119,7 @@
 
                     Toast.fire({
                         icon: '{{ $key }}',
-                        title: '{{ Session::get($key) }}',
+                        title: {{ json_encode((string) Session::get($key)) }},
                     });
                 </script>
             @endif
@@ -153,13 +153,14 @@
 
                 Toast.fire({
                     icon: 'success',
-                    title: event.detail.message,
+                    title: event.detail?.message ?? '',
                 });
             });
         </script>
 
         <script nonce="{{ HDVinnie\SecureHeaders\SecureHeaders::nonce('script') }}">
             window.addEventListener('error', (event) => {
+                if (!event.detail?.message) return;
                 Swal.fire({
                     title: '<strong style=" color: rgb(17,17,17);">Error</strong>',
                     icon: 'error',
