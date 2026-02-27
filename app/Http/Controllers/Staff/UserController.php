@@ -73,7 +73,8 @@ class UserController extends Controller
     public function store(StoreUserRequest $request): \Illuminate\Http\RedirectResponse
     {
         $validated = $request->validated();
-        $validated['password'] = Hash::make($validated['password']);
+        $validated['password']          = Hash::make($validated['password']);
+        $validated['email_verified_at'] = now();
 
         $user = User::create($validated);
 
