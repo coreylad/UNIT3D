@@ -177,7 +177,7 @@ class MigrationController extends Controller
 
             $tables   = $config['tables'];
             $offset   = (int) request()->input('offset', 0);
-            $pageSize = max(50, min(2000, (int) request()->input('page_size', 500)));
+            $pageSize = max(10, min(2000, (int) request()->input('page_size', 100)));
             unset($config['tables']);
 
             $results = [

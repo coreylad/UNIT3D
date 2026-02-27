@@ -327,7 +327,7 @@
 
                     const tables   = [...this.selectedTables];
                     const total    = tables.length;
-                    const pageSize = 500;
+                    const pageSize = 100;
 
                     // ── Paginated per-table requests ─────────────────────────────────
                     // Each HTTP call processes at most pageSize rows, then loops until

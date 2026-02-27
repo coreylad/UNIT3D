@@ -523,7 +523,7 @@ class DatabaseMigrationService
     /**
      * Migrate users from source to destination
      */
-    public function migrateUsers(array $sourceConfig, int $offset = 0, int $limit = 500): array
+    public function migrateUsers(array $sourceConfig, int $offset = 0, int $limit = 100): array
     {
         $this->log("Starting user migration (offset={$offset}, limit={$limit})...");
 
@@ -715,7 +715,7 @@ class DatabaseMigrationService
     /**
      * Migrate peers from source to destination
      */
-    public function migratePeers(array $sourceConfig, int $offset = 0, int $limit = 500): array
+    public function migratePeers(array $sourceConfig, int $offset = 0, int $limit = 100): array
     {
         $this->log("Starting peer migration (offset={$offset}, limit={$limit})...");
 
@@ -776,7 +776,7 @@ class DatabaseMigrationService
     /**
      * Migrate snatched from source to destination
      */
-    public function migrateSnatched(array $sourceConfig, int $offset = 0, int $limit = 500): array
+    public function migrateSnatched(array $sourceConfig, int $offset = 0, int $limit = 100): array
     {
         $this->log("Starting snatched migration (offset={$offset}, limit={$limit})...");
 
