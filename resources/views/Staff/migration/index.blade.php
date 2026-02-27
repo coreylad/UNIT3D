@@ -317,62 +317,66 @@
                         return;
                     }
 
-                    this.showSummary = false;
+                    this.showSummary  = false;
                     this.showProgress = true;
+                    this.showCompleted = false;
                     this.migrationHadErrors = false;
-                    this.migrationLogs = '<p style="color:hsl(38,92%,60%);">⏳ {{ __('common.loading') }}...</p>';
+                    this.completionSummary  = {};
+                    this.migrationLogs = '';
+                    this.progress = 0;
 
-                    const formData = {
-                        ...this.form,
-                        tables: this.selectedTables
-                    };
+                    const tables = [...this.selectedTables];
+                    const total  = tables.length;
 
-                    try {
-                        const data = await this._fetchJson(
-                            '{{ route('staff.migrations.start') }}',
-                            formData
-                        );
+                    // ── Migrate one table per HTTP request ───────────────────────────
+                    // This keeps every individual request short so Nginx never times out.
+                    for (let i = 0; i < tables.length; i++) {
+                        const table = tables[i];
+                        this.progress = Math.round((i / total) * 100);
+                        this._appendLog(`⏳ Migrating <strong>${table}</strong>…`, 'hsl(38,92%,60%)');
 
-                        // Build a running log in the progress area
-                        let logHtml = '';
-                        if (data.data) {
-                            for (const [table, result] of Object.entries(data.data)) {
-                                if (result.success) {
-                                    logHtml += `<div style="color:hsl(140,55%,60%)">✅ ${table}: ${(result.count ?? 0).toLocaleString()} records</div>`;
-                                } else {
-                                    logHtml += `<div style="color:hsl(4,70%,62%)">❌ ${table}: ${result.error ?? 'error'}</div>`;
-                                    this.migrationHadErrors = true;
-                                }
-                                // Show first 10 log lines per table
-                                if (result.logs && result.logs.length) {
-                                    result.logs.slice(-10).forEach(entry => {
-                                        const colour = entry.includes('failed') || entry.includes('Error')
-                                            ? 'hsl(4,70%,62%)' : 'hsl(210,15%,60%)';
-                                        logHtml += `<div style="font-size:0.72rem;color:${colour};padding-left:1rem">${entry}</div>`;
-                                    });
-                                }
+                        try {
+                            const data = await this._fetchJson(
+                                '{{ route('staff.migrations.start') }}',
+                                { ...this.form, tables: [table] }
+                            );
+
+                            const result = data.data?.[table] ?? (data.success === false
+                                ? { success: false, error: data.message ?? 'Server error', logs: data.logs }
+                                : { success: false, error: 'No result returned' });
+
+                            this.completionSummary[table] = result;
+
+                            if (result.success) {
+                                this._appendLog(`✅ <strong>${table}</strong>: ${(result.count ?? 0).toLocaleString()} records migrated`, 'hsl(140,55%,60%)');
+                            } else {
+                                this.migrationHadErrors = true;
+                                this._appendLog(`❌ <strong>${table}</strong>: ${result.error ?? 'Unknown error'}`, 'hsl(4,70%,62%)');
                             }
-                        }
-                        // Top-level error (entire request failed)
-                        if (!data.success && data.message) {
-                            logHtml += `<div style="color:hsl(4,70%,62%);margin-top:0.5rem"><strong>Fatal:</strong> ${data.message}</div>`;
-                            if (data.logs && data.logs.length) {
-                                data.logs.forEach(entry => {
-                                    logHtml += `<div style="font-size:0.72rem;color:hsl(4,60%,55%);padding-left:1rem">${entry}</div>`;
+
+                            // Show last few service log lines for this table
+                            if (result.logs?.length) {
+                                result.logs.slice(-8).forEach(entry => {
+                                    const colour = (entry.includes('failed') || entry.includes('Error'))
+                                        ? 'hsl(4,65%,60%)' : 'hsl(210,12%,55%)';
+                                    this._appendLog(`&nbsp;&nbsp;&nbsp;${entry}`, colour, '0.72rem');
                                 });
                             }
-                            this.migrationHadErrors = true;
-                        }
 
-                        this.migrationLogs = logHtml || '<div style="color:hsl(210,15%,60%)">No log output.</div>';
-                        this.completionSummary = data.data ?? {};
-                        this.progress = 100;
-                        this.showProgress = false;
-                        this.showCompleted = true;
-                    } catch (error) {
-                        this.migrationHadErrors = true;
-                        this.migrationLogs = `<div style="color:hsl(4deg,70%,62%);">❌ Error: ${error.message}</div>`;
+                        } catch (error) {
+                            this.migrationHadErrors = true;
+                            this.completionSummary[table] = { success: false, error: error.message };
+                            this._appendLog(`❌ <strong>${table}</strong>: ${error.message}`, 'hsl(4,70%,62%)');
+                        }
                     }
+
+                    this.progress = 100;
+                    this.showProgress = false;
+                    this.showCompleted = true;
+                },
+
+                _appendLog(html, colour = 'hsl(210,15%,65%)', fontSize = '0.82rem') {
+                    this.migrationLogs += `<div style="color:${colour};font-size:${fontSize};line-height:1.6;">${html}</div>`;
                 },
 
                 resetMigration() {
