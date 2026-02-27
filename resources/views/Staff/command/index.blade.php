@@ -19,14 +19,34 @@
 
 @section('page', 'page__staff-command--index')
 
-@section('main')
-    <div
-        style="
+@section('styles')
+    <style>
+        .cmd-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 2rem;
-        "
-    >
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .cmd-grid .panelV2 {
+            min-width: 0;
+            overflow: hidden;
+        }
+        /* Prevent legacy import panel from blowing out the grid */
+        .cmd-grid .panelV2 input.form__text {
+            width: 100%;
+            box-sizing: border-box;
+            min-width: 0;
+        }
+        /* Make legacy import span full width on its own row when grid wraps */
+        .cmd-panel--full {
+            grid-column: 1 / -1;
+        }
+    </style>
+@endsection
+
+@section('main')
+    <div class="cmd-grid">
         <section class="panelV2">
             <h2 class="panel__heading">Maintenance mode</h2>
             <div class="panel__body">
@@ -155,7 +175,7 @@
                 </div>
             </div>
         </section>
-        <section class="panelV2">
+        <section class="panelV2 cmd-panel--full">
             <h2 class="panel__heading">Legacy database import</h2>
             <div class="panel__body">
                 <form method="POST" action="{{ url('/dashboard/commands/import-legacy-sql') }}">
