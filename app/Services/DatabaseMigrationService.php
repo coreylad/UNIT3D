@@ -274,15 +274,7 @@ class DatabaseMigrationService
         try {
             $this->ensureConnected($sourceConfig);
 
-            $users = $this->sourceQuery('SELECT 
-                id, username, email, password, passkey, 
-                uploaded, downloaded, seedbonus, invites, hitandruns,
-                active, image, title, about, signature,
-                fl_tokens, rsskey, hidden, style, nav, ratings,
-                can_chat, can_comment, can_download, can_request, can_invite, can_upload,
-                show_poster, peer_hidden, private_profile, stat_hidden,
-                registered, last_login, last_action
-            FROM users');
+            $users = $this->sourceQuery('SELECT * FROM users');
 
             $count = 0;
             $batch = [];
@@ -290,7 +282,9 @@ class DatabaseMigrationService
 
             foreach ($users as $user) {
                 try {
-                    $password = !empty($user['password']) ? $user['password'] : bcrypt(bin2hex(random_bytes(16)));
+                    // Support 'password', 'passwd', 'pass_hash', 'user_password', etc.
+                    $rawPass  = $user['password'] ?? $user['passwd'] ?? $user['pass_hash'] ?? $user['user_password'] ?? null;
+                    $password = !empty($rawPass) ? $rawPass : bcrypt(bin2hex(random_bytes(16)));
 
                     $batch[] = [
                         'id'             => $user['id'],
@@ -358,9 +352,7 @@ class DatabaseMigrationService
         try {
             $this->ensureConnected($sourceConfig);
 
-            $torrents = $this->sourceQuery(
-                'SELECT id, name, category, description, info_hash, seedtime, leechers, seeders, size, uploaded, language FROM torrents'
-            );
+            $torrents = $this->sourceQuery('SELECT * FROM torrents');
 
             $count = 0;
             $batch = [];
@@ -368,14 +360,21 @@ class DatabaseMigrationService
 
             foreach ($torrents as $torrent) {
                 try {
-                    $infohash = strtolower($torrent['info_hash']);
+                    // Support both 'info_hash' and 'infohash' column names
+                    $rawHash  = $torrent['info_hash'] ?? $torrent['infohash'] ?? $torrent['torrent_hash'] ?? null;
+                    $infohash = $rawHash !== null ? strtolower($rawHash) : null;
+
+                    if ($infohash === null) {
+                        continue;
+                    }
+
                     $existing = DB::table('torrents')->where('infohash', $infohash)->first();
 
                     if (!$existing) {
                         $batch[] = [
-                            'name'        => $torrent['name'],
-                            'category_id' => $this->mapCategory($torrent['category']),
-                            'description' => $torrent['description'] ?? '',
+                            'name'        => $torrent['name'] ?? $torrent['torrent_name'] ?? 'Unknown',
+                            'category_id' => $this->mapCategory((int) ($torrent['category'] ?? $torrent['cat_id'] ?? $torrent['category_id'] ?? 0)),
+                            'description' => $torrent['description'] ?? $torrent['details'] ?? $torrent['torrent_description'] ?? '',
                             'infohash'    => $infohash,
                             'size'        => $torrent['size'] ?? 0,
                             'leechers'    => $torrent['leechers'] ?? 0,
@@ -422,9 +421,7 @@ class DatabaseMigrationService
         try {
             $this->ensureConnected($sourceConfig);
 
-            $peers = $this->sourceQuery(
-                'SELECT userid, infohash, peerid, ip, port, `left`, uploaded, downloaded FROM peers'
-            );
+            $peers = $this->sourceQuery('SELECT * FROM peers');
 
             $count = 0;
             $batch = [];
@@ -432,9 +429,14 @@ class DatabaseMigrationService
 
             foreach ($peers as $peer) {
                 try {
+                    $peerHash = $peer['infohash'] ?? $peer['info_hash'] ?? $peer['torrent_hash'] ?? null;
+                    if ($peerHash === null) {
+                        continue;
+                    }
+
                     $batch[] = [
-                        'infohash'   => strtolower($peer['infohash']),
-                        'peerid'     => $peer['peerid'],
+                        'infohash'   => strtolower($peerHash),
+                        'peerid'     => $peer['peerid'] ?? $peer['peer_id'] ?? '',
                         'ip'         => $peer['ip'],
                         'port'       => $peer['port'] ?? 0,
                         'left'       => $peer['left'] ?? 0,
@@ -479,9 +481,7 @@ class DatabaseMigrationService
         try {
             $this->ensureConnected($sourceConfig);
 
-            $snatched = $this->sourceQuery(
-                'SELECT userid, infohash, snatched_time, downloaded, uploaded FROM snatched'
-            );
+            $snatched = $this->sourceQuery('SELECT * FROM snatched');
 
             $count = 0;
             $batch = [];
@@ -489,8 +489,13 @@ class DatabaseMigrationService
 
             foreach ($snatched as $snatch) {
                 try {
+                    $snatchHash = $snatch['infohash'] ?? $snatch['info_hash'] ?? $snatch['torrent_hash'] ?? null;
+                    if ($snatchHash === null) {
+                        continue;
+                    }
+
                     $batch[] = [
-                        'infohash'     => strtolower($snatch['infohash']),
+                        'infohash'     => strtolower($snatchHash),
                         'uploaded'     => $snatch['uploaded'] ?? 0,
                         'downloaded'   => $snatch['downloaded'] ?? 0,
                         'completed_at' => $snatch['snatched_time'] ?? now(),
@@ -533,26 +538,26 @@ class DatabaseMigrationService
         try {
             $this->ensureConnected($sourceConfig);
 
-            $forums = $this->sourceQuery(
-                'SELECT id, name, description, category_id, icon, min_power, type FROM tsf_forums'
-            );
+            $forums = $this->sourceQuery('SELECT * FROM tsf_forums');
 
             $count    = 0;
             $forumMap = [];
 
             foreach ($forums as $forum) {
                 try {
-                    $existing = DB::table('forums')->where('name', $forum['name'])->first();
+                    $forumName = $forum['name'] ?? $forum['forum_name'] ?? 'Forum';
+                    $existing  = DB::table('forums')->where('name', $forumName)->first();
                     if (!$existing) {
                         $newId = DB::table('forums')->insertGetId([
-                            'name'        => $forum['name'],
-                            'description' => $forum['description'] ?? '',
+                            'name'        => $forumName,
+                            'description' => $forum['description'] ?? $forum['forum_desc'] ?? '',
                             'icon'        => $forum['icon'] ?? null,
-                            'position'    => $forum['id'] ?? 0,
+                            'position'    => $forum['id'] ?? $forum['fid'] ?? $forum['forum_id'] ?? 0,
                             'created_at'  => now(),
                             'updated_at'  => now(),
                         ]);
-                        $forumMap[$forum['id']] = $newId;
+                        $sourceId           = $forum['id'] ?? $forum['fid'] ?? $forum['forum_id'] ?? 0;
+                        $forumMap[$sourceId] = $newId;
                         $count++;
                     }
                 } catch (\Throwable $e) {
@@ -582,9 +587,7 @@ class DatabaseMigrationService
         try {
             $this->ensureConnected($sourceConfig);
 
-            $threads  = $this->sourceQuery(
-                'SELECT id, forum_id, title, user_id, post_text, thread_date, sticky, locked, views FROM tsf_threads'
-            );
+            $threads = $this->sourceQuery('SELECT * FROM tsf_threads');
             $count    = 0;
             $batch    = [];
             $batchSize = 200;
@@ -592,17 +595,19 @@ class DatabaseMigrationService
 
             foreach ($threads as $thread) {
                 try {
-                    $newForumId = $forumMap[$thread['forum_id']] ?? null;
+                    $sourceFid  = $thread['forum_id'] ?? $thread['fid'] ?? 0;
+                    $newForumId = $forumMap[$sourceFid] ?? null;
 
                     if ($newForumId) {
+                        $threadDate = $thread['thread_date'] ?? $thread['created_at'] ?? $thread['post_date'] ?? null;
                         $batch[] = [
                             'forum_id'   => $newForumId,
-                            'user_id'    => $thread['user_id'] ?? 0,
-                            'title'      => $thread['title'] ?? 'Thread',
-                            'sticky'     => $thread['sticky'] ?? false,
-                            'locked'     => $thread['locked'] ?? false,
-                            'views'      => $thread['views'] ?? 0,
-                            'created_at' => $thread['thread_date'] ? date('Y-m-d H:i:s', $thread['thread_date']) : now(),
+                            'user_id'    => $thread['user_id'] ?? $thread['uid'] ?? $thread['author_id'] ?? 0,
+                            'title'      => $thread['title'] ?? $thread['thread_title'] ?? $thread['subject'] ?? 'Thread',
+                            'sticky'     => (bool) ($thread['sticky'] ?? $thread['pinned'] ?? false),
+                            'locked'     => (bool) ($thread['locked'] ?? $thread['closed'] ?? false),
+                            'views'      => (int) ($thread['views'] ?? 0),
+                            'created_at' => $threadDate ? date('Y-m-d H:i:s', (int) $threadDate) : now(),
                             'updated_at' => now(),
                         ];
 
@@ -642,9 +647,7 @@ class DatabaseMigrationService
         try {
             $this->ensureConnected($sourceConfig);
 
-            $posts = $this->sourceQuery(
-                'SELECT id, thread_id, user_id, post_text, post_date, edited_by, edited_at FROM tsf_posts'
-            );
+            $posts = $this->sourceQuery('SELECT * FROM tsf_posts');
 
             $count = 0;
             $batch = [];
@@ -652,12 +655,14 @@ class DatabaseMigrationService
 
             foreach ($posts as $post) {
                 try {
+                    $postDate   = $post['post_date'] ?? $post['created_at'] ?? $post['date_posted'] ?? null;
+                    $editedDate = $post['edited_at'] ?? $post['edited_time'] ?? $post['updated_at'] ?? null;
                     $batch[] = [
-                        'thread_id'  => $post['thread_id'] ?? 0,
-                        'user_id'    => $post['user_id'] ?? 0,
-                        'content'    => $post['post_text'] ?? '',
-                        'created_at' => $post['post_date'] ? date('Y-m-d H:i:s', $post['post_date']) : now(),
-                        'updated_at' => $post['edited_at'] ? date('Y-m-d H:i:s', $post['edited_at']) : now(),
+                        'thread_id'  => $post['thread_id'] ?? $post['tid'] ?? 0,
+                        'user_id'    => $post['user_id'] ?? $post['uid'] ?? $post['author_id'] ?? 0,
+                        'content'    => $post['post_text'] ?? $post['message'] ?? $post['content'] ?? $post['body'] ?? '',
+                        'created_at' => $postDate   ? date('Y-m-d H:i:s', (int) $postDate)   : now(),
+                        'updated_at' => $editedDate ? date('Y-m-d H:i:s', (int) $editedDate) : now(),
                     ];
 
                     if (count($batch) >= $batchSize) {
