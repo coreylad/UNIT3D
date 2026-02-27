@@ -47,61 +47,84 @@ class DatabaseMigrationService
      */
     public function testConnection(array $config): bool
     {
+        // Trim every value - invisible whitespace is a common paste mistake
+        $config = array_map(static fn ($v) => is_string($v) ? trim($v) : $v, $config);
+
+        // On Linux, MySQL treats "localhost" as a Unix socket connection,
+        // but most users are granted access via "127.0.0.1" (TCP).
+        // If the user typed "localhost" we automatically also try "127.0.0.1".
+        $hosts = [$config['host']];
+        if (strtolower($config['host']) === 'localhost') {
+            $hosts[] = '127.0.0.1';
+        }
+
         $pdoError    = null;
         $mysqliError = null;
 
-        // â”€â”€ Attempt 1: PDO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-        if (extension_loaded('pdo_mysql')) {
-            try {
-                $pdo = new PDO(
-                    "mysql:host={$config['host']};port={$config['port']};dbname={$config['database']};charset=utf8mb4",
-                    $config['username'],
-                    $config['password'],
-                    [
-                        PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-                        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                        PDO::ATTR_TIMEOUT            => 10,
-                    ]
-                );
-                $this->pdoConnection    = $pdo;
-                $this->mysqliConnection = null;
-                $this->driver           = 'pdo';
+        foreach ($hosts as $host) {
+            $cfg = array_merge($config, ['host' => $host]);
 
-                return true;
-            } catch (\Throwable $e) {
-                $pdoError = '[PDO] ' . $e->getMessage();
+            // Attempt: PDO
+            if (extension_loaded('pdo_mysql')) {
+                try {
+                    $dsn = "mysql:host={$cfg['host']};port={$cfg['port']};dbname={$cfg['database']};charset=utf8mb4";
+                    $pdo = new PDO(
+                        $dsn,
+                        $cfg['username'],
+                        $cfg['password'],
+                        [
+                            PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+                            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                            PDO::ATTR_TIMEOUT            => 10,
+                        ]
+                    );
+                    $this->pdoConnection    = $pdo;
+                    $this->mysqliConnection = null;
+                    $this->driver           = 'pdo';
+
+                    return true;
+                } catch (\Throwable $e) {
+                    $pdoError = "[PDO@{$host}] " . $e->getMessage();
+                }
+            } else {
+                $pdoError = '[PDO] pdo_mysql extension is not loaded on this server.';
             }
-        } else {
-            $pdoError = '[PDO] pdo_mysql extension is not loaded on this server.';
+
+            // Attempt: MySQLi
+            if (extension_loaded('mysqli')) {
+                try {
+                    mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+                    $mysqli = new \mysqli(
+                        $cfg['host'],
+                        $cfg['username'],
+                        $cfg['password'],
+                        $cfg['database'],
+                        (int) $cfg['port']
+                    );
+                    $mysqli->set_charset('utf8mb4');
+                    $this->mysqliConnection = $mysqli;
+                    $this->pdoConnection    = null;
+                    $this->driver           = 'mysqli';
+
+                    return true;
+                } catch (\Throwable $e) {
+                    $mysqliError = "[MySQLi@{$host}] " . $e->getMessage();
+                }
+            } else {
+                $mysqliError = '[MySQLi] mysqli extension is not loaded on this server.';
+            }
         }
 
-        // â”€â”€ Attempt 2: MySQLi â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-        if (extension_loaded('mysqli')) {
-            try {
-                mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
-                $mysqli = new \mysqli(
-                    $config['host'],
-                    $config['username'],
-                    $config['password'],
-                    $config['database'],
-                    (int) $config['port']
-                );
-                $mysqli->set_charset('utf8mb4');
-                $this->mysqliConnection = $mysqli;
-                $this->pdoConnection    = null;
-                $this->driver           = 'mysqli';
+        // All hosts and drivers failed - build an actionable error message
+        $localhostHint = strtolower($config['host']) === 'localhost'
+            ? "\n\nTip: On Linux \"localhost\" uses a Unix socket while MySQL grants are often"
+              . " defined for \"127.0.0.1\" (TCP). Both hosts were tried and both failed."
+              . " Verify: SHOW GRANTS FOR '{$config['username']}'@'127.0.0.1';"
+            : '';
 
-                return true;
-            } catch (\Throwable $e) {
-                $mysqliError = '[MySQLi] ' . $e->getMessage();
-            }
-        } else {
-            $mysqliError = '[MySQLi] mysqli extension is not loaded on this server.';
-        }
-
-        // Both failed â€” throw with combined diagnostics
         throw new \RuntimeException(
-            "Could not connect with either PDO or MySQLi.\n\n"
+            "Could not connect with either PDO or MySQLi."
+            . $localhostHint . "\n\n"
             . ($pdoError    ?? '') . "\n"
             . ($mysqliError ?? '')
         );
