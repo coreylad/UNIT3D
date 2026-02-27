@@ -1107,6 +1107,13 @@ main > article,
 .message-input,
 .message-input > .row { background-color: inherit; }
 
+/* Chatbox: the form__group needs an opaque background so the floating
+   label can mask the textarea border when it rises above it on focus.
+   #frame → .panel-body are all transparent, so inherit = transparent. */
+.chatroom__new-message .form__group {
+    background-color: var(--cc-bg-main);
+}
+
 /* Keep floating labels INSIDE textareas when empty & unfocused.
    _form.scss unconditionally floats :valid labels to top: -11px,
    but non-required textareas are always :valid even when empty.  */
