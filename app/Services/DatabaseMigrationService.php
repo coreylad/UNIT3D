@@ -271,6 +271,127 @@ class DatabaseMigrationService
     /**
      * Migrate users from source to destination
      */
+    /**
+     * Build a map of source_group_id => unit3d_group_id.
+     *
+     * Strategy:
+     *  1. Load all UNIT3D groups indexed by slug and by lowercased name.
+     *  2. Try to find a groups/user_groups table in the source DB.
+     *  3. If found, match each source group name to a UNIT3D group via:
+     *       - exact slug match
+     *       - exact name match (case-insensitive)
+     *       - keyword match (admin, mod, banned, owner, uploader, validated, disabled, pruned)
+     *  4. Unmapped source groups fall back to the UNIT3D "User" group.
+     */
+    private function buildGroupMap(array $config): array
+    {
+        // ── 1. Load UNIT3D destination groups ────────────────────────────
+        $unit3dGroups = DB::table('groups')
+            ->get(['id', 'name', 'slug'])
+            ->keyBy('slug');          // keyed by slug for easy lookup
+
+        // Resolve the fallback "regular user" group id
+        $fallbackId = $unit3dGroups->get('user')?->id
+            ?? $unit3dGroups->first()?->id
+            ?? 1;
+
+        // Build a keyword → unit3d_group_id lookup table
+        $keywordMap = [];
+        foreach ([
+            ['keywords' => ['admin', 'administrator', 'staff'],   'slug' => 'administrator'],
+            ['keywords' => ['owner', 'founder'],                   'slug' => 'owner'],
+            ['keywords' => ['mod', 'moderator', 'modo'],           'slug' => 'moderator'],
+            ['keywords' => ['torrent mod', 'torrent moderator'],   'slug' => 'torrent-moderator'],
+            ['keywords' => ['uploader', 'encoder', 'internal'],    'slug' => 'uploader'],
+            ['keywords' => ['trustee', 'trusted'],                 'slug' => 'trustee'],
+            ['keywords' => ['banned', 'ban'],                      'slug' => 'banned'],
+            ['keywords' => ['disabled'],                           'slug' => 'disabled'],
+            ['keywords' => ['pruned', 'deleted'],                  'slug' => 'pruned'],
+            ['keywords' => ['validating', 'pending', 'unvalidated', 'inactive'], 'slug' => 'validating'],
+            ['keywords' => ['poweruser', 'power user', 'power'],   'slug' => 'poweruser'],
+            ['keywords' => ['superuser', 'super user'],            'slug' => 'superuser'],
+            ['keywords' => ['extremeuser', 'extreme'],             'slug' => 'extremeuser'],
+            ['keywords' => ['insane', 'insaneuser'],               'slug' => 'insaneuser'],
+            ['keywords' => ['veteran'],                            'slug' => 'veteran'],
+            ['keywords' => ['seeder'],                             'slug' => 'seeder'],
+            ['keywords' => ['archivist'],                          'slug' => 'archivist'],
+            ['keywords' => ['leech', 'leecher'],                   'slug' => 'leech'],
+            ['keywords' => ['user', 'member', 'registered'],       'slug' => 'user'],
+        ] as $rule) {
+            $destId = $unit3dGroups->get($rule['slug'])?->id ?? $fallbackId;
+            foreach ($rule['keywords'] as $kw) {
+                $keywordMap[$kw] = $destId;
+            }
+        }
+
+        // ── 2. Try to read source groups table ───────────────────────────
+        $sourceGroupsTable = $this->tryResolveSourceTable(
+            ['groups', 'user_groups', 'member_groups', 'permissions', 'usergroups', 'ranks'],
+            $config
+        );
+
+        $map = [];  // source_group_id => unit3d_group_id
+
+        if ($sourceGroupsTable !== null) {
+            try {
+                $sourceGroups = $this->sourceQuery("SELECT * FROM `{$sourceGroupsTable}`");
+
+                foreach ($sourceGroups as $sg) {
+                    // Find the numeric id column in source group row
+                    $srcId = $sg['id'] ?? $sg['group_id'] ?? $sg['gid'] ?? null;
+                    if ($srcId === null) {
+                        continue;
+                    }
+
+                    // Find the name column
+                    $srcName = strtolower(
+                        $sg['name'] ?? $sg['group_name'] ?? $sg['title'] ?? ''
+                    );
+
+                    // Exact slug match
+                    if ($unit3dGroups->has($srcName)) {
+                        $map[(int) $srcId] = $unit3dGroups->get($srcName)->id;
+                        continue;
+                    }
+
+                    // Exact name match against UNIT3D group names
+                    $nameMatch = $unit3dGroups->first(
+                        fn ($g) => strtolower($g->name) === $srcName
+                    );
+                    if ($nameMatch) {
+                        $map[(int) $srcId] = $nameMatch->id;
+                        continue;
+                    }
+
+                    // Keyword / substring match
+                    $matched = false;
+                    foreach ($keywordMap as $kw => $destId) {
+                        if (str_contains($srcName, $kw)) {
+                            $map[(int) $srcId] = $destId;
+                            $matched = true;
+                            break;
+                        }
+                    }
+
+                    if (!$matched) {
+                        $map[(int) $srcId] = $fallbackId;
+                    }
+                }
+
+                $this->log("Group map built from `{$sourceGroupsTable}`: " . count($map) . " source groups mapped.");
+            } catch (\Throwable $e) {
+                $this->log("Could not read source groups table: " . $e->getMessage());
+            }
+        } else {
+            $this->log("No source groups table found — all users will be assigned the User group.");
+        }
+
+        return ['map' => $map, 'fallback' => $fallbackId];
+    }
+
+    /**
+     * Migrate users from source to destination
+     */
     public function migrateUsers(array $sourceConfig): array
     {
         $this->log('Starting user migration...');
@@ -280,20 +401,8 @@ class DatabaseMigrationService
 
             $users = $this->sourceQuery('SELECT * FROM users');
 
-            // Resolve the destination group_id for a regular 'User'.
-            // We try 'User' first, then fall back to the first non-admin group.
-            $defaultGroupId = DB::table('groups')
-                ->where('slug', 'user')
-                ->orWhere('name', 'User')
-                ->value('id');
-
-            if ($defaultGroupId === null) {
-                $defaultGroupId = DB::table('groups')
-                    ->where('is_admin', false)
-                    ->where('is_modo', false)
-                    ->orderBy('id')
-                    ->value('id') ?? 1;
-            }
+            // Build group map: source_group_id => unit3d_group_id
+            ['map' => $groupMap, 'fallback' => $fallbackGroupId] = $this->buildGroupMap($sourceConfig);
 
             $count = 0;
             $batch = [];
@@ -305,35 +414,53 @@ class DatabaseMigrationService
                     $rawPass  = $user['password'] ?? $user['passwd'] ?? $user['pass_hash'] ?? $user['user_password'] ?? null;
                     $password = !empty($rawPass) ? $rawPass : bcrypt(bin2hex(random_bytes(16)));
 
+                    // Resolve group: use the mapped group if we have a source group_id,
+                    // otherwise try to guess from the user row itself (e.g. 'class', 'rank')
+                    $srcGroupId = (int) ($user['group_id'] ?? $user['class'] ?? $user['rank'] ?? $user['role_id'] ?? 0);
+                    $destGroupId = $groupMap[$srcGroupId] ?? $fallbackGroupId;
+
+                    // Handle date fields safely — NULL or invalid dates/timestamps become null
+                    $parseDate = static function (mixed $v): ?string {
+                        if (empty($v) || $v === '0000-00-00 00:00:00' || $v === '0') {
+                            return null;
+                        }
+                        // Could be a Unix timestamp (integer) or a date string
+                        $ts = is_numeric($v) ? (int) $v : @strtotime((string) $v);
+                        return ($ts && $ts > 0) ? date('Y-m-d H:i:s', $ts) : null;
+                    };
+
                     $batch[] = [
-                        'id'             => $user['id'],
-                        'username'       => $user['username'],
-                        'email'          => $user['email'] ?? '',
-                        'password'       => $password,
-                        'passkey'        => $user['passkey'] ?? bin2hex(random_bytes(16)),
-                        'group_id'       => $defaultGroupId,
-                        'active'         => $user['active'] ?? 1,
-                        'uploaded'       => (int) ($user['uploaded'] ?? 0),
-                        'downloaded'     => (int) ($user['downloaded'] ?? 0),
-                        'image'          => $user['image'] ?? null,
-                        'title'          => $user['title'] ?? null,
-                        'about'          => $user['about'] ?? null,
-                        'signature'      => $user['signature'] ?? null,
-                        'fl_tokens'      => (int) ($user['fl_tokens'] ?? 0),
-                        'seedbonus'      => (float) ($user['seedbonus'] ?? 0),
-                        'invites'        => (int) ($user['invites'] ?? 0),
-                        'hitandruns'     => (int) ($user['hitandruns'] ?? 0),
-                        'rsskey'         => $user['rsskey'] ?? bin2hex(random_bytes(16)),
-                        'hidden'         => (bool) ($user['hidden'] ?? 0),
-                        'can_chat'       => (bool) ($user['can_chat'] ?? 1),
-                        'can_comment'    => (bool) ($user['can_comment'] ?? 1),
-                        'can_download'   => (bool) ($user['can_download'] ?? 1),
-                        'can_request'    => (bool) ($user['can_request'] ?? 1),
-                        'can_invite'     => (bool) ($user['can_invite'] ?? 1),
-                        'can_upload'     => (bool) ($user['can_upload'] ?? 1),
-                        'last_login'     => !empty($user['last_login']) && $user['last_login'] !== '0000-00-00 00:00:00' ? date('Y-m-d H:i:s', strtotime($user['last_login'])) : null,
-                        'created_at'     => !empty($user['registered']) && $user['registered'] !== '0000-00-00 00:00:00' ? date('Y-m-d H:i:s', strtotime($user['registered'])) : now(),
-                        'updated_at'     => now(),
+                        // Identity
+                        'id'          => (int) $user['id'],
+                        'username'    => (string) ($user['username'] ?? $user['user_name'] ?? $user['name'] ?? 'user_' . $user['id']),
+                        'email'       => (string) ($user['email'] ?? $user['email_address'] ?? $user['mail'] ?? ''),
+                        'password'    => $password,
+                        'passkey'     => (string) ($user['passkey'] ?? $user['torrent_pass'] ?? $user['announce_key'] ?? bin2hex(random_bytes(16))),
+                        'rsskey'      => (string) ($user['rsskey'] ?? $user['rss_key'] ?? $user['feed_key'] ?? bin2hex(random_bytes(16))),
+                        // Group (mapped from source)
+                        'group_id'    => $destGroupId,
+                        // Stats
+                        'uploaded'    => (int) ($user['uploaded'] ?? $user['upload'] ?? 0),
+                        'downloaded'  => (int) ($user['downloaded'] ?? $user['download'] ?? 0),
+                        'seedbonus'   => (float) ($user['seedbonus'] ?? $user['bonus'] ?? $user['points'] ?? 0),
+                        'fl_tokens'   => (int) ($user['fl_tokens'] ?? $user['freelech_tokens'] ?? 0),
+                        'invites'     => (int) ($user['invites'] ?? 0),
+                        'hitandruns'  => (int) ($user['hitandruns'] ?? $user['hnr'] ?? 0),
+                        // Profile
+                        'image'       => $user['image'] ?? $user['avatar'] ?? $user['profile_pic'] ?? null,
+                        'title'       => $user['title'] ?? $user['custom_title'] ?? null,
+                        'about'       => $user['about'] ?? $user['profile'] ?? $user['bio'] ?? null,
+                        'signature'   => $user['signature'] ?? $user['sig'] ?? null,
+                        // Permissions (nullable in UNIT3D — null inherits from group)
+                        'can_chat'     => isset($user['can_chat'])     ? (int) (bool) $user['can_chat']     : null,
+                        'can_download' => isset($user['can_download'])  ? (int) (bool) $user['can_download'] : 1,
+                        'can_request'  => isset($user['can_request'])   ? (int) (bool) $user['can_request']  : null,
+                        'can_invite'   => isset($user['can_invite'])    ? (int) (bool) $user['can_invite']   : null,
+                        'can_upload'   => isset($user['can_upload'])    ? (int) (bool) $user['can_upload']   : null,
+                        // Timestamps
+                        'last_login'  => $parseDate($user['last_login'] ?? $user['lastvisit'] ?? $user['last_seen'] ?? null),
+                        'created_at'  => $parseDate($user['registered'] ?? $user['created_at'] ?? $user['joindate'] ?? $user['join_date'] ?? null) ?? now(),
+                        'updated_at'  => now(),
                     ];
 
                     if (count($batch) >= $batchSize) {
@@ -342,7 +469,9 @@ class DatabaseMigrationService
                         $batch = [];
                     }
                 } catch (\Throwable $e) {
-                    $this->log("Error preparing user {$user['username']}: " . $e->getMessage());
+                    $uid = $user['id'] ?? '?';
+                    $uname = $user['username'] ?? '?';
+                    $this->log("Skipped user #{$uid} ({$uname}): " . $e->getMessage());
                 }
             }
 
@@ -361,9 +490,6 @@ class DatabaseMigrationService
         }
     }
 
-    /**
-     * Migrate torrents from source to destination
-     */
     public function migrateTorrents(array $sourceConfig): array
     {
         $this->log('Starting torrent migration...');
