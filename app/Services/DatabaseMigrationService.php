@@ -239,8 +239,12 @@ class DatabaseMigrationService
     /**
      * Get row count for a table
      */
-    public function getTableRowCount(string $table, ?array $config = null): int
+    public function getTableRowCount(?string $table, ?array $config = null): int
     {
+        if ($table === null) {
+            return 0;
+        }
+
         try {
             if ($config !== null) {
                 $this->ensureConnected($config);
@@ -276,6 +280,21 @@ class DatabaseMigrationService
 
             $users = $this->sourceQuery('SELECT * FROM users');
 
+            // Resolve the destination group_id for a regular 'User'.
+            // We try 'User' first, then fall back to the first non-admin group.
+            $defaultGroupId = DB::table('groups')
+                ->where('slug', 'user')
+                ->orWhere('name', 'User')
+                ->value('id');
+
+            if ($defaultGroupId === null) {
+                $defaultGroupId = DB::table('groups')
+                    ->where('is_admin', false)
+                    ->where('is_modo', false)
+                    ->orderBy('id')
+                    ->value('id') ?? 1;
+            }
+
             $count = 0;
             $batch = [];
             $batchSize = 50;
@@ -292,7 +311,7 @@ class DatabaseMigrationService
                         'email'          => $user['email'] ?? '',
                         'password'       => $password,
                         'passkey'        => $user['passkey'] ?? bin2hex(random_bytes(16)),
-                        'group_id'       => 0,
+                        'group_id'       => $defaultGroupId,
                         'active'         => $user['active'] ?? 1,
                         'uploaded'       => (int) ($user['uploaded'] ?? 0),
                         'downloaded'     => (int) ($user['downloaded'] ?? 0),
@@ -538,7 +557,12 @@ class DatabaseMigrationService
         try {
             $this->ensureConnected($sourceConfig);
 
-            $forums = $this->sourceQuery('SELECT * FROM tsf_forums');
+            $forumsTable = $this->resolveSourceTable(
+                ['tsf_forums', 'forums', 'forum_categories', 'forum_sections', 'categories'],
+                $sourceConfig
+            );
+            $this->log("Forum source table resolved: {$forumsTable}");
+            $forums = $this->sourceQuery("SELECT * FROM `{$forumsTable}`");
 
             $count    = 0;
             $forumMap = [];
@@ -566,6 +590,7 @@ class DatabaseMigrationService
             }
 
             Cache::put('forum_id_map', $forumMap, now()->addHours(24));
+            Cache::put('forum_source_db', $sourceConfig['database'], now()->addHours(24));
 
             $this->log("Forum migration completed: {$count} forums migrated");
 
@@ -587,7 +612,12 @@ class DatabaseMigrationService
         try {
             $this->ensureConnected($sourceConfig);
 
-            $threads = $this->sourceQuery('SELECT * FROM tsf_threads');
+            $threadsTable = $this->resolveSourceTable(
+                ['tsf_threads', 'forum_threads', 'threads', 'topics', 'forum_topics'],
+                $sourceConfig
+            );
+            $this->log("Thread source table resolved: {$threadsTable}");
+            $threads = $this->sourceQuery("SELECT * FROM `{$threadsTable}`");
             $count    = 0;
             $batch    = [];
             $batchSize = 200;
@@ -647,7 +677,12 @@ class DatabaseMigrationService
         try {
             $this->ensureConnected($sourceConfig);
 
-            $posts = $this->sourceQuery('SELECT * FROM tsf_posts');
+            $postsTable = $this->resolveSourceTable(
+                ['tsf_posts', 'forum_posts', 'posts', 'messages', 'forum_messages'],
+                $sourceConfig
+            );
+            $this->log("Post source table resolved: {$postsTable}");
+            $posts = $this->sourceQuery("SELECT * FROM `{$postsTable}`");
 
             $count = 0;
             $batch = [];
@@ -704,9 +739,18 @@ class DatabaseMigrationService
                 'peers'         => $this->getTableRowCount('peers', $sourceConfig),
                 'snatched'      => $this->getTableRowCount('snatched', $sourceConfig),
                 'comments'      => $this->getTableRowCount('comments', $sourceConfig),
-                'forums'        => $this->getTableRowCount('tsf_forums', $sourceConfig),
-                'forum_threads' => $this->getTableRowCount('tsf_threads', $sourceConfig),
-                'forum_posts'   => $this->getTableRowCount('tsf_posts', $sourceConfig),
+                'forums'        => $this->getTableRowCount(
+                    $this->tryResolveSourceTable(['tsf_forums', 'forums', 'forum_categories', 'forum_sections', 'categories'], $sourceConfig),
+                    $sourceConfig
+                ),
+                'forum_threads' => $this->getTableRowCount(
+                    $this->tryResolveSourceTable(['tsf_threads', 'forum_threads', 'threads', 'topics', 'forum_topics'], $sourceConfig),
+                    $sourceConfig
+                ),
+                'forum_posts'   => $this->getTableRowCount(
+                    $this->tryResolveSourceTable(['tsf_posts', 'forum_posts', 'posts', 'messages', 'forum_messages'], $sourceConfig),
+                    $sourceConfig
+                ),
             ];
         } catch (\Throwable $e) {
             Log::error('Failed to get migration summary: ' . $e->getMessage());
@@ -746,6 +790,59 @@ class DatabaseMigrationService
             5 => 5,
             default => 6,
         };
+    }
+
+    /**
+     * Resolve which table name to use on the SOURCE database.
+     * Tries each candidate in order and returns the first that exists.
+     * Throws RuntimeException if none exist.
+     *
+     * @param  string[]  $candidates
+     */
+    private function resolveSourceTable(array $candidates, array $config): string
+    {
+        foreach ($candidates as $table) {
+            try {
+                $rows = $this->sourceQuery(
+                    'SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?',
+                    [$config['database'], $table]
+                );
+                if (!empty($rows)) {
+                    return $table;
+                }
+            } catch (\Throwable) {
+                // driver error — try next candidate
+            }
+        }
+
+        throw new \RuntimeException(
+            'Could not find a matching source table. Tried: ' . implode(', ', $candidates)
+        );
+    }
+
+    /**
+     * Like resolveSourceTable() but returns null instead of throwing when
+     * none of the candidates exist. Safe to call in summary queries.
+     *
+     * @param  string[]  $candidates
+     */
+    private function tryResolveSourceTable(array $candidates, array $config): ?string
+    {
+        foreach ($candidates as $table) {
+            try {
+                $rows = $this->sourceQuery(
+                    'SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?',
+                    [$config['database'], $table]
+                );
+                if (!empty($rows)) {
+                    return $table;
+                }
+            } catch (\Throwable) {
+                // continue
+            }
+        }
+
+        return null;
     }
 
     /**
