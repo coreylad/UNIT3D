@@ -701,6 +701,7 @@ class DatabaseMigrationService
                     ];
 
                     if (count($batch) >= $batchSize) {
+                        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
                         DB::table('users')->upsert($batch, ['id'], [
                             'username', 'email', 'password', 'passkey', 'rsskey',
                             'group_id', 'uploaded', 'downloaded', 'seedbonus',
@@ -709,6 +710,7 @@ class DatabaseMigrationService
                             'can_chat', 'can_download', 'can_request', 'can_invite', 'can_upload',
                             'last_login', 'created_at', 'updated_at',
                         ]);
+                        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
                         $count += count($batch);
                         $batch = [];
                     }
@@ -720,6 +722,7 @@ class DatabaseMigrationService
             }
 
             if (!empty($batch)) {
+                DB::statement('SET FOREIGN_KEY_CHECKS=0;');
                 DB::table('users')->upsert($batch, ['id'], [
                     'username', 'email', 'password', 'passkey', 'rsskey',
                     'group_id', 'uploaded', 'downloaded', 'seedbonus',
@@ -728,6 +731,7 @@ class DatabaseMigrationService
                     'can_chat', 'can_download', 'can_request', 'can_invite', 'can_upload',
                     'last_login', 'created_at', 'updated_at',
                 ]);
+                DB::statement('SET FOREIGN_KEY_CHECKS=1;');
                 $count += count($batch);
             }
 
