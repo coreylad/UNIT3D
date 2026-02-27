@@ -39,6 +39,9 @@ class DatabaseMigrationService
     /** Cached result of buildGroupMap() to avoid re-querying on every page */
     private ?array $cachedGroupMap = null;
 
+    /** user_id → source_group_id lookup from pivot table (when no group col on users) */
+    private ?array $userGroupLookup = null;
+
     // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // Connection
     // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -514,6 +517,89 @@ class DatabaseMigrationService
             $this->log('No group mappings resolved — all users will use the fallback User group.');
         }
 
+        // ── 6. If no group column on users, find the user→group pivot table ─
+        // Many trackers (xBtit, TBSource, etc.) store user groups in a
+        // junction/pivot table rather than as a column on users.
+        $userGroupLookup = [];
+        if ($groupCol === null && !empty($map)) {
+            $pivotCandidates = [
+                // table_name => [user_col, group_col]
+                'users_groups'       => [['user_id', 'userid', 'uid'], ['group_id', 'groupid', 'gid']],
+                'user_group'         => [['user_id', 'userid', 'uid'], ['group_id', 'groupid', 'gid']],
+                'users_usergroups'   => [['user_id', 'userid', 'uid'], ['group_id', 'groupid', 'gid', 'usergroup_id']],
+                'user_usergroup'     => [['user_id', 'userid', 'uid'], ['group_id', 'groupid', 'gid', 'usergroup_id']],
+                'xbt_users_groups'   => [['user_id', 'userid', 'uid'], ['group_id', 'groupid', 'gid']],
+                'tsf_users_groups'   => [['user_id', 'userid', 'uid'], ['group_id', 'groupid', 'gid']],
+            ];
+
+            // Also check if the discovered groups table itself has user_id (acts as pivot)
+            if ($sourceGroupsTable !== null && !isset($pivotCandidates[$sourceGroupsTable])) {
+                // Already loaded its rows above — check if any row has a user_id column
+                $firstRow = $sourceGroups[0] ?? [];
+                if (isset($firstRow['user_id']) || isset($firstRow['userid']) || isset($firstRow['uid'])) {
+                    $pivotCandidates = [$sourceGroupsTable => [['user_id', 'userid', 'uid'], ['group_id', 'groupid', 'gid']]] + $pivotCandidates;
+                }
+            }
+
+            foreach ($pivotCandidates as $pivotTable => $colSets) {
+                $foundTable = $this->tryResolveSourceTable([$pivotTable], $config);
+                if ($foundTable === null) {
+                    continue;
+                }
+
+                // Discover actual column names in this pivot table
+                try {
+                    $pivotCols = $this->sourceColumn(
+                        'SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?',
+                        [$config['database'], $foundTable]
+                    );
+
+                    $userCol  = null;
+                    $groupCol2 = null;
+                    foreach ($colSets[0] as $c) {
+                        if (in_array($c, $pivotCols, true)) { $userCol = $c; break; }
+                    }
+                    foreach ($colSets[1] as $c) {
+                        if (in_array($c, $pivotCols, true)) { $groupCol2 = $c; break; }
+                    }
+
+                    if ($userCol && $groupCol2) {
+                        $this->log("User→group pivot table found: `{$foundTable}` ({$userCol}, {$groupCol2})");
+                        $pivotRows = $this->sourceQuery(
+                            "SELECT `{$userCol}` AS uid, `{$groupCol2}` AS gid FROM `{$foundTable}`"
+                        );
+                        foreach ($pivotRows as $pr) {
+                            // Keep the highest-privilege group (lowest id often = more privileged in many trackers,
+                            // but we'll just take the first non-1 match or the first one)
+                            $uid = (int) $pr['uid'];
+                            $gid = (int) $pr['gid'];
+                            if (!isset($userGroupLookup[$uid])) {
+                                $userGroupLookup[$uid] = $gid;
+                            } else {
+                                // Prefer higher group id as it's often more privileged (admin=6, mod=5...)
+                                // But actually prefer the one that maps to a non-User group
+                                $existingDest = $map[$userGroupLookup[$uid]] ?? $fallbackId;
+                                $newDest      = $map[$gid] ?? $fallbackId;
+                                if ($existingDest === $fallbackId && $newDest !== $fallbackId) {
+                                    $userGroupLookup[$uid] = $gid;
+                                }
+                            }
+                        }
+                        $this->log("Pivot lookup built: " . count($userGroupLookup) . " user→group entries");
+                        break; // found, stop looking
+                    }
+                } catch (\Throwable $e) {
+                    $this->log("Error reading pivot `{$foundTable}`: " . $e->getMessage());
+                }
+            }
+
+            if (empty($userGroupLookup)) {
+                $this->log('No user→group pivot table found — will fall back to User group for all.');
+            }
+        }
+
+        $this->userGroupLookup = !empty($userGroupLookup) ? $userGroupLookup : null;
+
         // Store the resolved group column so migrateUsers can use it
         $this->resolvedGroupCol = $groupCol;
 
@@ -542,6 +628,7 @@ class DatabaseMigrationService
             $count = 0;
             $batch = [];
             $batchSize = 50;
+            $unmappedCount = 0;
 
             foreach ($users as $user) {  // generator — one row at a time
                 try {
@@ -549,15 +636,24 @@ class DatabaseMigrationService
                     $rawPass  = $user['password'] ?? $user['passwd'] ?? $user['pass_hash'] ?? $user['user_password'] ?? null;
                     $password = !empty($rawPass) ? $rawPass : bcrypt(bin2hex(random_bytes(16)));
 
-                    // Use the column discovered by buildGroupMap, with fallback chain
-                    $srcGroupId  = (int) (
-                        ($groupCol !== null ? ($user[$groupCol] ?? null) : null)
-                        ?? $user['group_id'] ?? $user['class'] ?? $user['rank'] ?? $user['role_id'] ?? 0
-                    );
+                    // Use the column discovered by buildGroupMap, or the pivot lookup
+                    $srcGroupId = null;
+                    if ($groupCol !== null && isset($user[$groupCol])) {
+                        $srcGroupId = (int) $user[$groupCol];
+                    } elseif ($this->userGroupLookup !== null) {
+                        $uid = (int) $user['id'];
+                        $srcGroupId = $this->userGroupLookup[$uid] ?? null;
+                    }
+                    // Final fallback chain if neither pivot nor column worked
+                    if ($srcGroupId === null) {
+                        $srcGroupId = (int) ($user['group_id'] ?? $user['class'] ?? $user['rank'] ?? $user['role_id'] ?? 0);
+                    }
                     $destGroupId = $groupMap[$srcGroupId] ?? $fallbackGroupId;
-                    if (!isset($groupMap[$srcGroupId]) && $count < 5) {
-                        $col = $groupCol ?? 'group_id';
-                        $this->log("  User #{$user['id']} src {$col}={$srcGroupId} not in map → fallback group {$fallbackGroupId}");
+                    if (!isset($groupMap[$srcGroupId])) {
+                        $unmappedCount++;
+                        if ($unmappedCount <= 3) {
+                            $this->log("  User #{$user['id']} srcGroup={$srcGroupId} not in map → fallback group {$fallbackGroupId}");
+                        }
                     }
 
                     // Handle date fields safely — NULL or invalid dates/timestamps become null
@@ -635,7 +731,7 @@ class DatabaseMigrationService
                 $count += count($batch);
             }
 
-            $this->log("User migration completed: {$count} users migrated");
+            $this->log("User migration completed: {$count} users migrated" . ($unmappedCount > 0 ? " ({$unmappedCount} used fallback group)" : ' (all groups matched)'));
 
             return ['success' => true, 'count' => $count, 'done' => $fetched < $limit, 'logs' => $this->migrationLog];
         } catch (\Throwable $e) {
