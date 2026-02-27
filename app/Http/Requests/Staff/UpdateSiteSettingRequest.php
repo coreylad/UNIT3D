@@ -36,10 +36,10 @@ class UpdateSiteSettingRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // Branding
-            'title' => ['required', 'string', 'max:100'],
-            'sub_title' => ['required', 'string', 'max:200'],
-            'meta_description' => ['required', 'string', 'max:500'],
+            // Branding (sometimes: only validated when field is present in the form)
+            'title' => ['sometimes', 'required', 'string', 'max:100'],
+            'sub_title' => ['sometimes', 'required', 'string', 'max:200'],
+            'meta_description' => ['sometimes', 'required', 'string', 'max:500'],
             'login_message' => ['nullable', 'string', 'max:1000'],
             'header_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,gif,webp', 'max:2048'],
             'remove_header_image' => ['nullable', 'boolean'],
