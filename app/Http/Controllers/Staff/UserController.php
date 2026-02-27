@@ -75,8 +75,14 @@ class UserController extends Controller
         $validated = $request->validated();
         $validated['password']          = Hash::make($validated['password']);
         $validated['email_verified_at'] = now();
+        $validated['passkey']           = md5(random_bytes(60));
+        $validated['rsskey']            = md5(random_bytes(60));
 
         $user = User::create($validated);
+
+        $user->passkeys()->create(['content' => $user->passkey]);
+        $user->rsskeys()->create(['content' => $user->rsskey]);
+        $user->emailUpdates()->create();
 
         Unit3dAnnounce::addUser($user);
 
