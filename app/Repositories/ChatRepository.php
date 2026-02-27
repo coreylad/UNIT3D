@@ -218,9 +218,14 @@ class ChatRepository
         if ($bot) {
             $this->message(User::SYSTEM_USER_ID, $this->systemChatroom(), $message, null, $bot);
         } else {
-            $systemBotId = Bot::where('command', 'systembot')->first()->id;
+            $systemBot = Bot::where('command', 'systembot')->first()
+                ?? Bot::where('is_systembot', true)->first();
 
-            $this->message(User::SYSTEM_USER_ID, $this->systemChatroom(), $message, null, $systemBotId);
+            if ($systemBot === null) {
+                return $this;
+            }
+
+            $this->message(User::SYSTEM_USER_ID, $this->systemChatroom(), $message, null, $systemBot->id);
         }
 
         return $this;
