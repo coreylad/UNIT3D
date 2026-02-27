@@ -126,7 +126,26 @@ final class AnnounceController extends Controller
                 $response = $this->generateWarningAnnounceResponse($torrent, new TrackerException(164, [':max' => $group->download_slots]));
             }
         } catch (TrackerException $exception) {
-            $response = $this->generateFailedAnnounceResponse($exception);
+            // rTorrent (and some other clients) aggressively retry on failure
+            // responses, ignoring interval / min interval — which creates an
+            // infinite loop of rapid announces for error 162 (min interval
+            // violation).  Return a valid response with 0 peers instead so
+            // the client respects the timing and backs off properly.
+            if ($exception->getCode() === 162 && isset($torrent)) {
+                $response = 'd8:completei'
+                    .$torrent->seeders
+                    .'e10:downloadedi'
+                    .$torrent->times_completed
+                    .'e10:incompletei'
+                    .$torrent->leechers
+                    .'e8:intervali'
+                    .random_int(self::MIN, self::MAX)
+                    .'e12:min intervali'
+                    .random_int(intdiv(self::MIN * 95, 100), self::MIN)
+                    .'e5:peers0:e';
+            } else {
+                $response = $this->generateFailedAnnounceResponse($exception);
+            }
         } catch (Exception) {
             // spell:disable-next-line
             $response = 'd14:failure reason21:Internal Server Error8:intervali5400e12:min intervali5400ee';
