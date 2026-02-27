@@ -504,6 +504,14 @@ main > div > article {
     padding: 0;
 }
 
+/* Prevent any block content from escaping the 1140 px column */
+main > article,
+main > div > article {
+    width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
+}
+
 .sidebar2,
 main > article,
 .sidebar2 > div,
