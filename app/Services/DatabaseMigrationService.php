@@ -36,6 +36,9 @@ class DatabaseMigrationService
     /** Group column name discovered in the source users table */
     private ?string $resolvedGroupCol = null;
 
+    /** Cached result of buildGroupMap() to avoid re-querying on every page */
+    private ?array $cachedGroupMap = null;
+
     // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // Connection
     // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -335,30 +338,32 @@ class DatabaseMigrationService
         // ── 2. Keyword → UNIT3D group id table ───────────────────────────
         // Ordered longest-first so "power user" matches before "user"
         $keywordRules = [
-            ['keywords' => ['sysop', 'sys op', 'root'],                       'slug' => 'administrator'],
-            ['keywords' => ['owner', 'founder'],                               'slug' => 'owner'],
+            ['keywords' => ['sysop', 'sys op', 'root', 'siteop'],              'slug' => 'administrator'],
+            ['keywords' => ['owner', 'founder', 'co-owner', 'coowner'],       'slug' => 'owner'],
             ['keywords' => ['super admin', 'superadmin'],                      'slug' => 'administrator'],
-            ['keywords' => ['admin', 'administrator', 'staff'],                'slug' => 'administrator'],
-            ['keywords' => ['torrent mod', 'torrent moderator'],               'slug' => 'torrent-moderator'],
+            ['keywords' => ['admin', 'administrator', 'staff admin'],          'slug' => 'administrator'],
+            ['keywords' => ['torrent mod', 'torrent moderator', 'torrentmod'], 'slug' => 'torrent-moderator'],
+            ['keywords' => ['forum mod', 'forum moderator', 'forummod'],      'slug' => 'moderator'],
             ['keywords' => ['super mod', 'supermod', 'senior mod', 'smod'],   'slug' => 'moderator'],
-            ['keywords' => ['mod', 'moderator', 'modo'],                       'slug' => 'moderator'],
-            ['keywords' => ['encoder', 'internal'],                            'slug' => 'uploader'],
-            ['keywords' => ['uploader'],                                       'slug' => 'uploader'],
-            ['keywords' => ['trustee', 'trusted'],                             'slug' => 'trustee'],
-            ['keywords' => ['ban', 'banned'],                                  'slug' => 'banned'],
-            ['keywords' => ['disabled', 'suspended'],                          'slug' => 'disabled'],
-            ['keywords' => ['pruned', 'deleted', 'removed'],                   'slug' => 'pruned'],
-            ['keywords' => ['validating', 'pending', 'unvalidated', 'inactive', 'await'], 'slug' => 'validating'],
-            ['keywords' => ['insane'],                                          'slug' => 'insaneuser'],
-            ['keywords' => ['extreme'],                                         'slug' => 'extremeuser'],
+            ['keywords' => ['mod', 'moderator', 'modo', 'global mod'],        'slug' => 'moderator'],
+            ['keywords' => ['staff'],                                          'slug' => 'moderator'],
+            ['keywords' => ['encoder', 'internal', 'team'],                    'slug' => 'uploader'],
+            ['keywords' => ['uploader', 'upload'],                             'slug' => 'uploader'],
+            ['keywords' => ['trustee', 'trusted', 'trusted user'],            'slug' => 'trustee'],
+            ['keywords' => ['ban', 'banned', 'suspended'],                    'slug' => 'banned'],
+            ['keywords' => ['disabled', 'deactivated', 'locked'],             'slug' => 'disabled'],
+            ['keywords' => ['pruned', 'deleted', 'removed', 'purged'],        'slug' => 'pruned'],
+            ['keywords' => ['validating', 'pending', 'unvalidated', 'inactive', 'unconfirmed', 'awaiting', 'not confirmed', 'parked'], 'slug' => 'validating'],
+            ['keywords' => ['insane', 'insaneuser'],                           'slug' => 'insaneuser'],
+            ['keywords' => ['extreme', 'extremeuser'],                         'slug' => 'extremeuser'],
             ['keywords' => ['super user', 'superuser'],                        'slug' => 'superuser'],
-            ['keywords' => ['power user', 'poweruser', 'powerpeer'],          'slug' => 'poweruser'],
-            ['keywords' => ['veteran'],                                        'slug' => 'veteran'],
-            ['keywords' => ['seeder'],                                         'slug' => 'seeder'],
+            ['keywords' => ['power user', 'poweruser', 'powerpeer', 'elite'], 'slug' => 'poweruser'],
+            ['keywords' => ['veteran', 'vet'],                                 'slug' => 'veteran'],
+            ['keywords' => ['seeder', 'top seeder'],                           'slug' => 'seeder'],
             ['keywords' => ['archivist'],                                      'slug' => 'archivist'],
-            ['keywords' => ['vip'],                                            'slug' => 'vip'],
+            ['keywords' => ['vip', 'donator', 'donor', 'supporter', 'premium'], 'slug' => 'vip'],
             ['keywords' => ['leech', 'leecher'],                               'slug' => 'leech'],
-            ['keywords' => ['user', 'member', 'registered'],                   'slug' => 'user'],
+            ['keywords' => ['user', 'member', 'registered', 'normal', 'default', 'regular', 'guest', 'basic'], 'slug' => 'user'],
         ];
 
         // Numeric class → UNIT3D slug (common TBDev/xbt/UNIT3D-classic ordering)
@@ -383,11 +388,23 @@ class DatabaseMigrationService
             if ($bySlug->has($lower)) {
                 return $bySlug->get($lower)->id;
             }
-            // Exact name match
+            // Exact name match (case-insensitive)
             if ($byName->has($lower)) {
                 return $byName->get($lower)->id;
             }
-            // Longest keyword first
+            // Slugified match: "Power User" → "power-user"
+            $slugified = preg_replace('/[^a-z0-9]+/', '-', $lower);
+            $slugified = trim($slugified, '-');
+            if ($bySlug->has($slugified)) {
+                return $bySlug->get($slugified)->id;
+            }
+            // Also try without separator: "poweruser"
+            $compact = str_replace([' ', '-', '_'], '', $lower);
+            $compactSlug = $bySlug->first(fn ($g) => str_replace('-', '', $g->slug) === $compact);
+            if ($compactSlug) {
+                return $compactSlug->id;
+            }
+            // Keyword substring match (rules are ordered longest-first)
             foreach ($keywordRules as $rule) {
                 foreach ($rule['keywords'] as $kw) {
                     if (str_contains($lower, $kw)) {
@@ -440,7 +457,8 @@ class DatabaseMigrationService
         // ── 4. Try to find a named groups table in the source DB ─────────
         $sourceGroupsTable = $this->tryResolveSourceTable(
             ['groups', 'user_groups', 'member_groups', 'permissions', 'usergroups',
-             'ranks', 'classes', 'user_classes', 'roles', 'user_roles'],
+             'ranks', 'classes', 'user_classes', 'roles', 'user_roles',
+             'tsf_groups', 'tsf_user_groups', 'tsf_classes', 'tsf_roles'],
             $config
         );
 
@@ -515,8 +533,11 @@ class DatabaseMigrationService
             $users   = $this->sourceQuery("SELECT * FROM users ORDER BY id LIMIT {$limit} OFFSET {$offset}");
             $fetched = count($users);
 
-            // Build group map: source_group_id => unit3d_group_id
-            ['map' => $groupMap, 'fallback' => $fallbackGroupId, 'groupCol' => $groupCol] = $this->buildGroupMap($sourceConfig);
+            // Build group map once; cache for subsequent paginated calls
+            if ($this->cachedGroupMap === null) {
+                $this->cachedGroupMap = $this->buildGroupMap($sourceConfig);
+            }
+            ['map' => $groupMap, 'fallback' => $fallbackGroupId, 'groupCol' => $groupCol] = $this->cachedGroupMap;
 
             $count = 0;
             $batch = [];
@@ -584,7 +605,14 @@ class DatabaseMigrationService
                     ];
 
                     if (count($batch) >= $batchSize) {
-                        DB::table('users')->insertOrIgnore($batch);
+                        DB::table('users')->upsert($batch, ['id'], [
+                            'username', 'email', 'password', 'passkey', 'rsskey',
+                            'group_id', 'uploaded', 'downloaded', 'seedbonus',
+                            'fl_tokens', 'invites', 'hitandruns',
+                            'image', 'title', 'about', 'signature',
+                            'can_chat', 'can_download', 'can_request', 'can_invite', 'can_upload',
+                            'last_login', 'created_at', 'updated_at',
+                        ]);
                         $count += count($batch);
                         $batch = [];
                     }
@@ -596,7 +624,14 @@ class DatabaseMigrationService
             }
 
             if (!empty($batch)) {
-                DB::table('users')->insertOrIgnore($batch);
+                DB::table('users')->upsert($batch, ['id'], [
+                    'username', 'email', 'password', 'passkey', 'rsskey',
+                    'group_id', 'uploaded', 'downloaded', 'seedbonus',
+                    'fl_tokens', 'invites', 'hitandruns',
+                    'image', 'title', 'about', 'signature',
+                    'can_chat', 'can_download', 'can_request', 'can_invite', 'can_upload',
+                    'last_login', 'created_at', 'updated_at',
+                ]);
                 $count += count($batch);
             }
 
