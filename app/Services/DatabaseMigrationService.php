@@ -213,6 +213,37 @@ class DatabaseMigrationService
         return array_map(static fn ($row) => reset($row), $rows);
     }
 
+
+    /**
+     * Iterate over a large source table in pages (LIMIT/OFFSET) so we never
+     * load the entire table into PHP memory at once.
+     *
+     * @return \Generator<int, array<string, mixed>>
+     */
+    private function chunkSourceQuery(string $sql, array $params = [], int $chunkSize = 300): \Generator
+    {
+        $offset = 0;
+
+        while (true) {
+            $chunkedSql = "{$sql} LIMIT {$chunkSize} OFFSET {$offset}";
+            $rows       = $this->sourceQuery($chunkedSql, $params);
+
+            if (empty($rows)) {
+                break;
+            }
+
+            foreach ($rows as $row) {
+                yield $row;
+            }
+
+            if (count($rows) < $chunkSize) {
+                break;  // last page fetched
+            }
+
+            $offset += $chunkSize;
+        }
+    }
+
     // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // Public API
     // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -399,7 +430,8 @@ class DatabaseMigrationService
         try {
             $this->ensureConnected($sourceConfig);
 
-            $users = $this->sourceQuery('SELECT * FROM users');
+            // Streamed in chunks — avoids loading all rows into RAM
+            $users = $this->chunkSourceQuery('SELECT * FROM users ORDER BY id', [], 300);
 
             // Build group map: source_group_id => unit3d_group_id
             ['map' => $groupMap, 'fallback' => $fallbackGroupId] = $this->buildGroupMap($sourceConfig);
@@ -408,7 +440,7 @@ class DatabaseMigrationService
             $batch = [];
             $batchSize = 50;
 
-            foreach ($users as $user) {
+            foreach ($users as $user) {  // generator — one row at a time
                 try {
                     // Support 'password', 'passwd', 'pass_hash', 'user_password', etc.
                     $rawPass  = $user['password'] ?? $user['passwd'] ?? $user['pass_hash'] ?? $user['user_password'] ?? null;
@@ -482,11 +514,11 @@ class DatabaseMigrationService
 
             $this->log("User migration completed: {$count} users migrated");
 
-            return ['success' => true, 'count' => $count];
+            return ['success' => true, 'count' => $count, 'logs' => $this->migrationLog];
         } catch (\Throwable $e) {
             $this->log('User migration failed: ' . $e->getMessage());
 
-            return ['success' => false, 'error' => $e->getMessage()];
+            return ['success' => false, 'error' => $e->getMessage(), 'logs' => $this->migrationLog];
         }
     }
 
@@ -497,13 +529,13 @@ class DatabaseMigrationService
         try {
             $this->ensureConnected($sourceConfig);
 
-            $torrents = $this->sourceQuery('SELECT * FROM torrents');
+            $torrents = $this->chunkSourceQuery('SELECT * FROM torrents ORDER BY id', [], 300);
 
             $count = 0;
             $batch = [];
             $batchSize = 100;
 
-            foreach ($torrents as $torrent) {
+            foreach ($torrents as $torrent) {  // generator
                 try {
                     // Support both 'info_hash' and 'infohash' column names
                     $rawHash  = $torrent['info_hash'] ?? $torrent['infohash'] ?? $torrent['torrent_hash'] ?? null;
@@ -548,11 +580,11 @@ class DatabaseMigrationService
 
             $this->log("Torrent migration completed: {$count} torrents migrated");
 
-            return ['success' => true, 'count' => $count];
+            return ['success' => true, 'count' => $count, 'logs' => $this->migrationLog];
         } catch (\Throwable $e) {
             $this->log('Torrent migration failed: ' . $e->getMessage());
 
-            return ['success' => false, 'error' => $e->getMessage()];
+            return ['success' => false, 'error' => $e->getMessage(), 'logs' => $this->migrationLog];
         }
     }
 
@@ -566,13 +598,13 @@ class DatabaseMigrationService
         try {
             $this->ensureConnected($sourceConfig);
 
-            $peers = $this->sourceQuery('SELECT * FROM peers');
+            $peers = $this->chunkSourceQuery('SELECT * FROM peers ORDER BY userid', [], 500);
 
             $count = 0;
             $batch = [];
             $batchSize = 500;
 
-            foreach ($peers as $peer) {
+            foreach ($peers as $peer) {  // generator
                 try {
                     $peerHash = $peer['infohash'] ?? $peer['info_hash'] ?? $peer['torrent_hash'] ?? null;
                     if ($peerHash === null) {
@@ -608,11 +640,11 @@ class DatabaseMigrationService
 
             $this->log("Peer migration completed: {$count} peers migrated");
 
-            return ['success' => true, 'count' => $count];
+            return ['success' => true, 'count' => $count, 'logs' => $this->migrationLog];
         } catch (\Throwable $e) {
             $this->log('Peer migration failed: ' . $e->getMessage());
 
-            return ['success' => false, 'error' => $e->getMessage()];
+            return ['success' => false, 'error' => $e->getMessage(), 'logs' => $this->migrationLog];
         }
     }
 
@@ -626,13 +658,13 @@ class DatabaseMigrationService
         try {
             $this->ensureConnected($sourceConfig);
 
-            $snatched = $this->sourceQuery('SELECT * FROM snatched');
+            $snatched = $this->chunkSourceQuery('SELECT * FROM snatched ORDER BY userid', [], 500);
 
             $count = 0;
             $batch = [];
             $batchSize = 500;
 
-            foreach ($snatched as $snatch) {
+            foreach ($snatched as $snatch) {  // generator
                 try {
                     $snatchHash = $snatch['infohash'] ?? $snatch['info_hash'] ?? $snatch['torrent_hash'] ?? null;
                     if ($snatchHash === null) {
@@ -665,11 +697,11 @@ class DatabaseMigrationService
 
             $this->log("Snatched migration completed: {$count} records migrated");
 
-            return ['success' => true, 'count' => $count];
+            return ['success' => true, 'count' => $count, 'logs' => $this->migrationLog];
         } catch (\Throwable $e) {
             $this->log('Snatched migration failed: ' . $e->getMessage());
 
-            return ['success' => false, 'error' => $e->getMessage()];
+            return ['success' => false, 'error' => $e->getMessage(), 'logs' => $this->migrationLog];
         }
     }
 
@@ -720,11 +752,11 @@ class DatabaseMigrationService
 
             $this->log("Forum migration completed: {$count} forums migrated");
 
-            return ['success' => true, 'count' => $count];
+            return ['success' => true, 'count' => $count, 'logs' => $this->migrationLog];
         } catch (\Throwable $e) {
             $this->log('Forum migration failed: ' . $e->getMessage());
 
-            return ['success' => false, 'error' => $e->getMessage()];
+            return ['success' => false, 'error' => $e->getMessage(), 'logs' => $this->migrationLog];
         }
     }
 
@@ -785,11 +817,11 @@ class DatabaseMigrationService
 
             $this->log("Forum threads migration completed: {$count} threads migrated");
 
-            return ['success' => true, 'count' => $count];
+            return ['success' => true, 'count' => $count, 'logs' => $this->migrationLog];
         } catch (\Throwable $e) {
             $this->log('Forum threads migration failed: ' . $e->getMessage());
 
-            return ['success' => false, 'error' => $e->getMessage()];
+            return ['success' => false, 'error' => $e->getMessage(), 'logs' => $this->migrationLog];
         }
     }
 
@@ -843,11 +875,11 @@ class DatabaseMigrationService
 
             $this->log("Forum posts migration completed: {$count} posts migrated");
 
-            return ['success' => true, 'count' => $count];
+            return ['success' => true, 'count' => $count, 'logs' => $this->migrationLog];
         } catch (\Throwable $e) {
             $this->log('Forum posts migration failed: ' . $e->getMessage());
 
-            return ['success' => false, 'error' => $e->getMessage()];
+            return ['success' => false, 'error' => $e->getMessage(), 'logs' => $this->migrationLog];
         }
     }
 

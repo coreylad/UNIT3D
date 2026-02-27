@@ -161,14 +161,18 @@ class MigrationController extends Controller
      */
     public function start(): JsonResponse
     {
+        // Large imports can exhaust PHP defaults — override for this request only
+        @ini_set('memory_limit', '-1');
+        @set_time_limit(0);
+
         try {
             $config = request()->validate([
-                'host' => ['required', 'string'],
-                'port' => ['required', 'integer'],
+                'host'     => ['required', 'string'],
+                'port'     => ['required', 'integer'],
                 'username' => ['required', 'string'],
                 'password' => ['required', 'string'],
                 'database' => ['required', 'string'],
-                'tables' => ['required', 'array'],
+                'tables'   => ['required', 'array'],
             ]);
 
             $tables = $config['tables'];
@@ -176,50 +180,58 @@ class MigrationController extends Controller
 
             $results = [
                 'success' => true,
-                'data' => [],
+                'data'    => [],
             ];
 
-            // Backup database before migration
-            $this->createBackup();
+            // Each table is wrapped independently so one failure cannot crash the whole request
+            $tableMap = [
+                'users'         => fn () => $this->migrationService->migrateUsers($config),
+                'torrents'      => fn () => $this->migrationService->migrateTorrents($config),
+                'peers'         => fn () => $this->migrationService->migratePeers($config),
+                'snatched'      => fn () => $this->migrationService->migrateSnatched($config),
+                'forums'        => fn () => $this->migrationService->migrateForums($config),
+                'forum_threads' => fn () => $this->migrationService->migrateForumThreads($config),
+                'forum_posts'   => fn () => $this->migrationService->migrateForumPosts($config),
+            ];
 
-            // Migrate selected tables
-            if (in_array('users', $tables)) {
-                $results['data']['users'] = $this->migrationService->migrateUsers($config);
-            }
+            foreach ($tableMap as $table => $migrateFn) {
+                if (!in_array($table, $tables)) {
+                    continue;
+                }
 
-            if (in_array('torrents', $tables)) {
-                $results['data']['torrents'] = $this->migrationService->migrateTorrents($config);
-            }
-
-            if (in_array('peers', $tables)) {
-                $results['data']['peers'] = $this->migrationService->migratePeers($config);
-            }
-
-            if (in_array('snatched', $tables)) {
-                $results['data']['snatched'] = $this->migrationService->migrateSnatched($config);
-            }
-
-            if (in_array('forums', $tables)) {
-                $results['data']['forums'] = $this->migrationService->migrateForums($config);
-            }
-
-            if (in_array('forum_threads', $tables)) {
-                $results['data']['forum_threads'] = $this->migrationService->migrateForumThreads($config);
-            }
-
-            if (in_array('forum_posts', $tables)) {
-                $results['data']['forum_posts'] = $this->migrationService->migrateForumPosts($config);
+                try {
+                    Log::info("Migration: starting {$table}");
+                    $result = $migrateFn();
+                    $results['data'][$table] = $result;
+                    Log::info("Migration: completed {$table}", ['result' => $result]);
+                } catch (\Throwable $e) {
+                    $msg = $this->describeThrowable($e);
+                    Log::error("Migration: {$table} threw: {$msg}");
+                    $results['data'][$table] = [
+                        'success' => false,
+                        'error'   => $msg,
+                        'logs'    => $this->migrationService->getLogs(),
+                    ];
+                    // Keep going — migrate the remaining tables
+                }
             }
 
             $this->migrationService->closeConnection();
 
+            // If every attempted table failed, mark overall success = false
+            $anySuccess = collect($results['data'])->contains(fn ($r) => ($r['success'] ?? false) === true);
+            if (!$anySuccess && !empty($results['data'])) {
+                $results['success'] = false;
+            }
+
             return response()->json($results);
         } catch (\Throwable $e) {
-            Log::error('Migration failed: ' . $e->getMessage());
+            Log::error('Migration start() failed: ' . $e->getMessage());
 
             return response()->json([
                 'success' => false,
                 'message' => $this->describeThrowable($e),
+                'logs'    => $this->migrationService->getLogs(),
             ], 200);
         }
     }

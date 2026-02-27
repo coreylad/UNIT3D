@@ -140,12 +140,25 @@
                 {{-- Completed Section --}}
                 <section x-show="showCompleted" x-cloak>
                     <div class="migration-panel__complete-box">
-                        <h4>✅ {{ __('migration.migration-completed') }}</h4>
-                        <ul>
-                            <template x-for="(result, table) in completionSummary" :key="table">
-                                <li x-html="result.success ? `✅ ${table}: ${result.count} records migrated` : `❌ ${table}: ${result.error}`"></li>
-                            </template>
-                        </ul>
+                        <h4 x-text="migrationHadErrors ? '⚠️ Migration finished with errors' : '✅ {{ __('migration.migration-completed') }}'"></h4>
+                        <template x-for="(result, table) in completionSummary" :key="table">
+                            <div style="margin-bottom:1rem;">
+                                <div x-html="result.success
+                                    ? `<strong style='color:hsl(140,55%,60%)'>✅ ${table}:</strong> ${(result.count ?? 0).toLocaleString()} records migrated`
+                                    : `<strong style='color:hsl(4,70%,62%)'>❌ ${table}:</strong> ${result.error ?? 'Unknown error'}`">
+                                </div>
+                                <template x-if="result.logs && result.logs.length">
+                                    <details style="margin-top:0.4rem;">
+                                        <summary style="cursor:pointer;font-size:0.78rem;opacity:0.6;">Show logs (<span x-text="result.logs.length"></span> entries)</summary>
+                                        <div style="max-height:200px;overflow-y:auto;font-family:monospace;font-size:0.72rem;line-height:1.5;padding:0.5rem;background:rgba(0,0,0,0.3);border-radius:3px;margin-top:0.3rem;word-break:break-all;">
+                                            <template x-for="(entry, i) in result.logs" :key="i">
+                                                <div x-text="entry" :style="entry.includes('failed') || entry.includes('Error') ? 'color:hsl(4,70%,65%)' : 'color:hsl(210,15%,70%)'"></div>
+                                            </template>
+                                        </div>
+                                    </details>
+                                </template>
+                            </div>
+                        </template>
                     </div>
 
                     <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
@@ -177,6 +190,7 @@
                 showSummary: false,
                 showProgress: false,
                 showCompleted: false,
+                migrationHadErrors: false,
                 summaryData: {},
                 selectedTables: [],
                 progress: 0,
@@ -305,6 +319,7 @@
 
                     this.showSummary = false;
                     this.showProgress = true;
+                    this.migrationHadErrors = false;
                     this.migrationLogs = '<p style="color:hsl(38,92%,60%);">⏳ {{ __('common.loading') }}...</p>';
 
                     const formData = {
@@ -318,16 +333,44 @@
                             formData
                         );
 
-                        if (data.success) {
-                            this.completionSummary = data.data;
-                            this.progress = 100;
-                            this.migrationLogs = '';
-                            this.showProgress = false;
-                            this.showCompleted = true;
-                        } else {
-                            this.migrationLogs = `<div style="color:hsl(4deg,70%,62%);">❌ Error: ${data.message}</div>`;
+                        // Build a running log in the progress area
+                        let logHtml = '';
+                        if (data.data) {
+                            for (const [table, result] of Object.entries(data.data)) {
+                                if (result.success) {
+                                    logHtml += `<div style="color:hsl(140,55%,60%)">✅ ${table}: ${(result.count ?? 0).toLocaleString()} records</div>`;
+                                } else {
+                                    logHtml += `<div style="color:hsl(4,70%,62%)">❌ ${table}: ${result.error ?? 'error'}</div>`;
+                                    this.migrationHadErrors = true;
+                                }
+                                // Show first 10 log lines per table
+                                if (result.logs && result.logs.length) {
+                                    result.logs.slice(-10).forEach(entry => {
+                                        const colour = entry.includes('failed') || entry.includes('Error')
+                                            ? 'hsl(4,70%,62%)' : 'hsl(210,15%,60%)';
+                                        logHtml += `<div style="font-size:0.72rem;color:${colour};padding-left:1rem">${entry}</div>`;
+                                    });
+                                }
+                            }
                         }
+                        // Top-level error (entire request failed)
+                        if (!data.success && data.message) {
+                            logHtml += `<div style="color:hsl(4,70%,62%);margin-top:0.5rem"><strong>Fatal:</strong> ${data.message}</div>`;
+                            if (data.logs && data.logs.length) {
+                                data.logs.forEach(entry => {
+                                    logHtml += `<div style="font-size:0.72rem;color:hsl(4,60%,55%);padding-left:1rem">${entry}</div>`;
+                                });
+                            }
+                            this.migrationHadErrors = true;
+                        }
+
+                        this.migrationLogs = logHtml || '<div style="color:hsl(210,15%,60%)">No log output.</div>';
+                        this.completionSummary = data.data ?? {};
+                        this.progress = 100;
+                        this.showProgress = false;
+                        this.showCompleted = true;
                     } catch (error) {
+                        this.migrationHadErrors = true;
                         this.migrationLogs = `<div style="color:hsl(4deg,70%,62%);">❌ Error: ${error.message}</div>`;
                     }
                 },
@@ -344,6 +387,7 @@
                     this.showSummary = false;
                     this.showProgress = false;
                     this.showCompleted = false;
+                    this.migrationHadErrors = false;
                     this.summaryData = {};
                     this.selectedTables = [];
                     this.progress = 0;
