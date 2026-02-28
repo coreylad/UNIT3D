@@ -617,10 +617,13 @@ main > article,
 }
 
 /* ── Floating labels — background masking ──────────────────────────────── */
-/* Set the bg directly on the label so it always masks the input border when
-   elevated, regardless of what ancestors have as their background.           */
+/* When labels float to top:-5px they straddle the input border and need an
+   opaque background to mask it. Use !important to guarantee the override
+   wins regardless of source order, and add vertical padding so the opaque
+   band is definitely taller than any 1–2 px border.                        */
 .form__label--floating {
-    background-color: var(--cc-bg-card);
+    background-color: var(--cc-bg-card) !important;
+    padding-block: 3px;
 }
 
 /* ── Top nav ────────────────────────────────────────────────────────────── */
@@ -1139,7 +1142,7 @@ main.page__staff-dashboard--index {
 
 /* Chatbox lives outside any panel__body, so the opaque label bg must match. */
 .chatroom__new-message .form__label--floating {
-    background-color: var(--cc-bg-main);
+    background-color: var(--cc-bg-main) !important;
 }
 
 /* Keep floating labels INSIDE textareas when empty & unfocused.

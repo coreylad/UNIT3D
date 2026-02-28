@@ -40,7 +40,7 @@
 
 @section('page', 'page__torrent--create')
 
-@section('styles')
+@section('stylesheets')
     <style>
         /* Scoped ONLY to the upload page - do not touch theme globals */
         .page__torrent--create .upload-section {
