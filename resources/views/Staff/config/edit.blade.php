@@ -45,7 +45,7 @@
                                             <option value="0" {{ !$nestedValue ? 'selected' : '' }}>Disabled</option>
                                         </select>
                                     @else
-                                        <input type="text" name="value[{{ $nestedKey }}]" value="{{ is_array($nestedValue) ? json_encode($nestedValue) : $nestedValue }}" class="form__input" />
+                                        <input type="text" name="value[{{ $nestedKey }}]" value="{{ e(is_array($nestedValue) ? json_encode($nestedValue) : $nestedValue) }}" class="form__input" />
                                     @endif
                                 </div>
                                 
@@ -67,7 +67,7 @@
                                 <option value="0" {{ !$value ? 'selected' : '' }}>Disabled</option>
                             </select>
                         @else
-                            <input type="text" name="value" value="{{ $value }}" class="form__input" />
+                            <input type="text" name="value" value="{{ e($value) }}" class="form__input" />
                         @endif
                     </div>
                     
