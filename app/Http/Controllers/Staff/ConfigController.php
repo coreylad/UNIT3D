@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Staff;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Artisan;
 
 class ConfigController extends Controller
 {
@@ -154,10 +155,66 @@ class ConfigController extends Controller
             'value' => ['required'],
         ]);
 
-        // This is a simple update - for production, consider using a ConfigManager service
-        // that properly handles nested array updates and file writing
-        // For now, we'll store in cache or environment
-        config(["{$tool}.{$key}" => $data['value']]);
+        $filename = $tool . '.php';
+        $path = config_path($filename);
+        if (! File::exists($path)) {
+            abort(404);
+        }
+
+        // Load existing config array
+        $config = include $path;
+        if (! is_array($config)) {
+            $config = [];
+        }
+
+        $incoming = $data['value'];
+
+        // Helper to coerce types
+        $coerce = function ($val) {
+            if (is_array($val)) return $val;
+            if ($val === '1' || $val === 1) return 1;
+            if ($val === '0' || $val === 0) return 0;
+            $lower = strtolower((string) $val);
+            if ($lower === 'true') return true;
+            if ($lower === 'false') return false;
+            // JSON array/object
+            if (is_string($val) && (str_starts_with($val, '{') || str_starts_with($val, '['))) {
+                $decoded = json_decode($val, true);
+                if (json_last_error() === JSON_ERROR_NONE) {
+                    return $decoded;
+                }
+            }
+            // integers
+            if (is_string($val) && ctype_digit($val)) return (int) $val;
+            return $val;
+        };
+
+        // If incoming is an array with nested keys (from forms named value[child])
+        if (is_array($incoming)) {
+            foreach ($incoming as $nestedKey => $nestedValue) {
+                $coerced = $coerce($nestedValue);
+                // ensure parent exists
+                if (! isset($config[$key]) || ! is_array($config[$key])) {
+                    $config[$key] = [];
+                }
+                $config[$key][$nestedKey] = $coerced;
+            }
+        } else {
+            $config[$key] = $coerce($incoming);
+        }
+
+        // Render array back to PHP file (note: this will lose comments and env() wrappers)
+        $export = var_export($config, true);
+        $contents = "<?php\n\ndeclare(strict_types=1);\n\nreturn " . $export . ";\n";
+
+        File::put($path, $contents);
+
+        // Clear config cache so next request picks up changes
+        try {
+            Artisan::call('config:clear');
+        } catch (\Exception $e) {
+            // ignore
+        }
 
         return redirect()->route('staff.config.show', ['tool' => $tool])
             ->with('success', "Configuration updated successfully.");
