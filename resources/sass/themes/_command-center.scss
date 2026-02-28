@@ -943,9 +943,9 @@ main > article,
 
 /* ── Forms ──────────────────────────────────────────────────────────────── */
 
-.form                       { gap: 6px; padding-top: 6px; }
-.form__group--horizontal    { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 6px; }
-.form__group--short-horizontal { grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 6px; }
+.form                       { padding-top: 6px; }
+.form__group--horizontal    { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+.form__group--short-horizontal { grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); }
 .form__label                { font-size: 12px; }
 
 
