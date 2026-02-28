@@ -42,6 +42,9 @@ class DatabaseMigrationService
     /** user_id → source_group_id lookup from pivot table (when no group col on users) */
     private ?array $userGroupLookup = null;
 
+    /** Cached source category_id → UNIT3D category_id map */
+    private ?array $cachedCategoryMap = null;
+
     // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // Connection
     // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -323,7 +326,10 @@ class DatabaseMigrationService
      *       - keyword match (admin, mod, banned, owner, uploader, validated, disabled, pruned)
      *  4. Unmapped source groups fall back to the UNIT3D "User" group.
      */
-    private function buildGroupMap(array $config): array
+    /**
+     * @param  array<int|string, int>  $userOverrides  srcGroupId => unit3dGroupId
+     */
+    private function buildGroupMap(array $config, array $userOverrides = []): array
     {
         // ── 1. Load all UNIT3D destination groups ────────────────────────
         $unit3dGroups = DB::table('groups')
@@ -341,22 +347,27 @@ class DatabaseMigrationService
         // ── 2. Keyword → UNIT3D group id table ───────────────────────────
         // Ordered longest-first so "power user" matches before "user"
         $keywordRules = [
+            // ── Exact staff role matches (longest / most-specific first) ──────
             ['keywords' => ['sysop', 'sys op', 'root', 'siteop'],              'slug' => 'administrator'],
             ['keywords' => ['owner', 'founder', 'co-owner', 'coowner'],       'slug' => 'owner'],
             ['keywords' => ['super admin', 'superadmin'],                      'slug' => 'administrator'],
+            ['keywords' => ['team leader', 'team lead'],                       'slug' => 'administrator'],
+            ['keywords' => ['security team', 'sec team'],                      'slug' => 'administrator'],
             ['keywords' => ['admin', 'administrator', 'staff admin'],          'slug' => 'administrator'],
+            ['keywords' => ['technical team', 'tech team'],                    'slug' => 'moderator'],
             ['keywords' => ['torrent mod', 'torrent moderator', 'torrentmod'], 'slug' => 'torrent-moderator'],
             ['keywords' => ['forum mod', 'forum moderator', 'forummod'],      'slug' => 'moderator'],
             ['keywords' => ['super mod', 'supermod', 'senior mod', 'smod'],   'slug' => 'moderator'],
             ['keywords' => ['mod', 'moderator', 'modo', 'global mod'],        'slug' => 'moderator'],
             ['keywords' => ['staff'],                                          'slug' => 'moderator'],
-            ['keywords' => ['encoder', 'internal', 'team'],                    'slug' => 'uploader'],
+            // ── Upload / content staff ────────────────────────────────────────
+            ['keywords' => ['site artist', 'artist'],                          'slug' => 'uploader'],
+            ['keywords' => ['encoder', 'internal'],                            'slug' => 'uploader'],
             ['keywords' => ['uploader', 'upload'],                             'slug' => 'uploader'],
+            // ── Elevated users ────────────────────────────────────────────────
             ['keywords' => ['trustee', 'trusted', 'trusted user'],            'slug' => 'trustee'],
-            ['keywords' => ['ban', 'banned', 'suspended'],                    'slug' => 'banned'],
-            ['keywords' => ['disabled', 'deactivated', 'locked'],             'slug' => 'disabled'],
-            ['keywords' => ['pruned', 'deleted', 'removed', 'purged'],        'slug' => 'pruned'],
-            ['keywords' => ['validating', 'pending', 'unvalidated', 'inactive', 'unconfirmed', 'awaiting', 'not confirmed', 'parked'], 'slug' => 'validating'],
+            ['keywords' => ['beta test', 'beta tester', 'beta'],              'slug' => 'poweruser'],
+            ['keywords' => ['ex vip', 'exvip', 'former vip', 'ex-vip'],      'slug' => 'poweruser'],
             ['keywords' => ['insane', 'insaneuser'],                           'slug' => 'insaneuser'],
             ['keywords' => ['extreme', 'extremeuser'],                         'slug' => 'extremeuser'],
             ['keywords' => ['super user', 'superuser'],                        'slug' => 'superuser'],
@@ -364,7 +375,14 @@ class DatabaseMigrationService
             ['keywords' => ['veteran', 'vet'],                                 'slug' => 'veteran'],
             ['keywords' => ['seeder', 'top seeder'],                           'slug' => 'seeder'],
             ['keywords' => ['archivist'],                                      'slug' => 'archivist'],
+            // ── Donor / VIP tiers ─────────────────────────────────────────────
+            ['keywords' => ['btc', 'bitcoin', 'crypto', 'legend'],            'slug' => 'vip'],
             ['keywords' => ['vip', 'donator', 'donor', 'supporter', 'premium'], 'slug' => 'vip'],
+            // ── Restricted / lifecycle ────────────────────────────────────────
+            ['keywords' => ['ban', 'banned', 'suspended'],                    'slug' => 'banned'],
+            ['keywords' => ['disabled', 'deactivated', 'locked'],             'slug' => 'disabled'],
+            ['keywords' => ['pruned', 'deleted', 'removed', 'purged'],        'slug' => 'pruned'],
+            ['keywords' => ['validating', 'pending', 'unvalidated', 'inactive', 'unconfirmed', 'awaiting', 'not confirmed', 'parked'], 'slug' => 'validating'],
             ['keywords' => ['leech', 'leecher'],                               'slug' => 'leech'],
             ['keywords' => ['user', 'member', 'registered', 'normal', 'default', 'regular', 'guest', 'basic'], 'slug' => 'user'],
         ];
@@ -421,7 +439,7 @@ class DatabaseMigrationService
 
         // ── 3. Discover the group column used in the source users table ──
         // We ask the DB directly rather than guessing
-        $groupColCandidates = ['group_id', 'class', 'rank', 'role_id', 'permission_id', 'user_class', 'level'];
+        $groupColCandidates = ['usergroup', 'group_id', 'class', 'rank', 'role_id', 'permission_id', 'user_class', 'level'];
         $groupCol           = null;
 
         try {
@@ -603,13 +621,58 @@ class DatabaseMigrationService
         // Store the resolved group column so migrateUsers can use it
         $this->resolvedGroupCol = $groupCol;
 
+        // ── 7. Apply user-supplied overrides (highest priority) ───────────────
+        if (!empty($userOverrides)) {
+            foreach ($userOverrides as $srcId => $destId) {
+                $map[(int) $srcId] = (int) $destId;
+            }
+            $this->log('Applied ' . count($userOverrides) . ' user-defined group overrides.');
+        }
+
         return ['map' => $map, 'fallback' => $fallbackId, 'groupCol' => $groupCol];
     }
 
     /**
      * Migrate users from source to destination
      */
-    public function migrateUsers(array $sourceConfig, int $offset = 0, int $limit = 100): array
+    /**
+     * Return all rows from the source tracker's group/rank table.
+     * Used by the migration UI to build the group mapping editor.
+     */
+    public function getSourceGroups(array $config): array
+    {
+        $this->ensureConnected($config);
+
+        $table = $this->tryResolveSourceTable(
+            ['usergroups', 'groups', 'user_groups', 'member_groups', 'permissions', 'ranks', 'classes'],
+            $config
+        );
+
+        if ($table === null) {
+            return [];
+        }
+
+        return $this->sourceQuery("SELECT * FROM `{$table}`");
+    }
+
+    /**
+     * Return a suggested srcGroupId → unit3dGroupId map using the auto-detection
+     * logic in buildGroupMap (no user overrides applied).
+     * Used by the UI to pre-populate the group mapping editor dropdowns.
+     *
+     * @return array<int, int>  srcGroupId => unit3dGroupId
+     */
+    public function getGroupSuggestions(array $config): array
+    {
+        $result = $this->buildGroupMap($config);
+
+        return $result['map'];
+    }
+
+    /**
+     * @param  array<int|string, int>  $groupOverrides  srcGroupId => unit3dGroupId (user-defined overrides)
+     */
+    public function migrateUsers(array $sourceConfig, int $offset = 0, int $limit = 100, array $groupOverrides = []): array
     {
         $this->log("Starting user migration (offset={$offset}, limit={$limit})...");
 
@@ -619,9 +682,11 @@ class DatabaseMigrationService
             $users   = $this->sourceQuery("SELECT * FROM users ORDER BY id LIMIT {$limit} OFFSET {$offset}");
             $fetched = count($users);
 
-            // Build group map once; cache for subsequent paginated calls
+            // Build group map once; cache for subsequent paginated calls.
+            // On the first page, $groupOverrides are applied and stored in the cache
+            // so all subsequent pages use the same resolved map.
             if ($this->cachedGroupMap === null) {
-                $this->cachedGroupMap = $this->buildGroupMap($sourceConfig);
+                $this->cachedGroupMap = $this->buildGroupMap($sourceConfig, $groupOverrides);
             }
             ['map' => $groupMap, 'fallback' => $fallbackGroupId, 'groupCol' => $groupCol] = $this->cachedGroupMap;
 
@@ -630,12 +695,18 @@ class DatabaseMigrationService
             $batchSize = 50;
             $unmappedCount = 0;
 
+            // Handle date fields safely — NULL or invalid dates/timestamps become null
+            $parseDate = static function (mixed $v): ?string {
+                if (empty($v) || $v === '0000-00-00 00:00:00' || $v === '0') {
+                    return null;
+                }
+                // Could be a Unix timestamp (integer) or a date string
+                $ts = is_numeric($v) ? (int) $v : @strtotime((string) $v);
+                return ($ts && $ts > 0) ? date('Y-m-d H:i:s', $ts) : null;
+            };
+
             foreach ($users as $user) {  // generator — one row at a time
                 try {
-                    // Support 'password', 'passwd', 'pass_hash', 'user_password', etc.
-                    $rawPass  = $user['password'] ?? $user['passwd'] ?? $user['pass_hash'] ?? $user['user_password'] ?? null;
-                    $password = !empty($rawPass) ? $rawPass : bcrypt(bin2hex(random_bytes(16)));
-
                     // Use the column discovered by buildGroupMap, or the pivot lookup
                     $srcGroupId = null;
                     if ($groupCol !== null && isset($user[$groupCol])) {
@@ -646,7 +717,7 @@ class DatabaseMigrationService
                     }
                     // Final fallback chain if neither pivot nor column worked
                     if ($srcGroupId === null) {
-                        $srcGroupId = (int) ($user['group_id'] ?? $user['class'] ?? $user['rank'] ?? $user['role_id'] ?? 0);
+                        $srcGroupId = (int) ($user['usergroup'] ?? $user['group_id'] ?? $user['class'] ?? $user['rank'] ?? $user['role_id'] ?? 0);
                     }
                     $destGroupId = $groupMap[$srcGroupId] ?? $fallbackGroupId;
                     if (!isset($groupMap[$srcGroupId])) {
@@ -656,59 +727,87 @@ class DatabaseMigrationService
                         }
                     }
 
-                    // Handle date fields safely — NULL or invalid dates/timestamps become null
-                    $parseDate = static function (mixed $v): ?string {
-                        if (empty($v) || $v === '0000-00-00 00:00:00' || $v === '0') {
-                            return null;
-                        }
-                        // Could be a Unix timestamp (integer) or a date string
-                        $ts = is_numeric($v) ? (int) $v : @strtotime((string) $v);
-                        return ($ts && $ts > 0) ? date('Y-m-d H:i:s', $ts) : null;
-                    };
+                    // TSSE legacy password bridge:
+                    // passhash = md5(secret + plaintext + secret) — do NOT rehash here.
+                    // Set password to '!' (impossible bcrypt match) and store the raw
+                    // MD5 hash + secret so FortifyServiceProvider can rehash on first login.
+                    $legacyPasshash = $user['passhash'] ?? null;
+                    $legacySecret   = $user['secret']   ?? null;
+                    $isLegacy       = $legacyPasshash !== null && $legacySecret !== null;
+
+                    // TSSE email verification: status='confirmed' → verified, 'pending' → null
+                    $emailVerifiedAt = ($user['status'] ?? 'pending') === 'confirmed'
+                        ? now()->toDateTimeString()
+                        : null;
+
+                    // TSSE donor flag stored as 'yes'/'no'
+                    $isDonor = ($user['donor'] ?? 'no') === 'yes' ? 1 : 0;
 
                     $batch[] = [
                         // Identity
-                        'id'          => (int) $user['id'],
-                        'username'    => (string) ($user['username'] ?? $user['user_name'] ?? $user['name'] ?? 'user_' . $user['id']),
-                        'email'       => (string) ($user['email'] ?? $user['email_address'] ?? $user['mail'] ?? ''),
-                        'password'    => $password,
-                        'passkey'     => (string) ($user['passkey'] ?? $user['torrent_pass'] ?? $user['announce_key'] ?? bin2hex(random_bytes(16))),
-                        'rsskey'      => (string) ($user['rsskey'] ?? $user['rss_key'] ?? $user['feed_key'] ?? bin2hex(random_bytes(16))),
-                        // Group (mapped from source)
-                        'group_id'    => $destGroupId,
+                        'id'       => (int) $user['id'],
+                        'username' => (string) ($user['username'] ?? $user['user_name'] ?? $user['name'] ?? 'user_' . $user['id']),
+                        'email'    => (string) ($user['email'] ?? $user['email_address'] ?? $user['mail'] ?? ''),
+
+                        // Auth — legacy bridge; real password written on first successful login
+                        'password'        => '!',
+                        'legacy_passhash' => $legacyPasshash,
+                        'legacy_secret'   => $legacySecret,
+                        'legacy'          => $isLegacy,
+
+                        // Torrent passkey — TSSE uses torrent_pass
+                        'passkey' => (string) ($user['torrent_pass'] ?? $user['passkey'] ?? $user['announce_key'] ?? bin2hex(random_bytes(16))),
+                        'rsskey'  => (string) ($user['rsskey'] ?? $user['rss_key'] ?? $user['feed_key'] ?? bin2hex(random_bytes(16))),
+
+                        // Group (mapped from source usergroup)
+                        'group_id' => $destGroupId,
+
                         // Stats
-                        'uploaded'    => (int) ($user['uploaded'] ?? $user['upload'] ?? 0),
-                        'downloaded'  => (int) ($user['downloaded'] ?? $user['download'] ?? 0),
-                        'seedbonus'   => (float) ($user['seedbonus'] ?? $user['bonus'] ?? $user['points'] ?? 0),
-                        'fl_tokens'   => (int) ($user['fl_tokens'] ?? $user['freelech_tokens'] ?? 0),
-                        'invites'     => (int) ($user['invites'] ?? 0),
-                        'hitandruns'  => (int) ($user['hitandruns'] ?? $user['hnr'] ?? 0),
-                        // Profile
-                        'image'       => $user['image'] ?? $user['avatar'] ?? $user['profile_pic'] ?? null,
-                        'title'       => $user['title'] ?? $user['custom_title'] ?? null,
-                        'about'       => $user['about'] ?? $user['profile'] ?? $user['bio'] ?? null,
-                        'signature'   => $user['signature'] ?? $user['sig'] ?? null,
-                        // Permissions (nullable in UNIT3D — null inherits from group)
-                        'can_chat'     => isset($user['can_chat'])     ? (int) (bool) $user['can_chat']     : null,
-                        'can_download' => isset($user['can_download'])  ? (int) (bool) $user['can_download'] : 1,
-                        'can_request'  => isset($user['can_request'])   ? (int) (bool) $user['can_request']  : null,
-                        'can_invite'   => isset($user['can_invite'])    ? (int) (bool) $user['can_invite']   : null,
-                        'can_upload'   => isset($user['can_upload'])    ? (int) (bool) $user['can_upload']   : null,
-                        // Timestamps
+                        'uploaded'   => (int) ($user['uploaded'] ?? $user['upload'] ?? 0),
+                        'downloaded' => (int) ($user['downloaded'] ?? $user['download'] ?? 0),
+                        'seedbonus'  => (float) ($user['seedbonus'] ?? $user['bonus'] ?? $user['points'] ?? 0),
+                        'fl_tokens'  => (int) ($user['fl_tokens'] ?? $user['freelech_tokens'] ?? 0),
+                        'invites'    => (int) ($user['invites'] ?? 0),
+                        'hitandruns' => (int) ($user['hitandruns'] ?? $user['hnr'] ?? 0),
+
+                        // Profile — TSSE stores bio in `page`
+                        'image'     => $user['avatar'] ?? $user['image'] ?? $user['profile_pic'] ?? null,
+                        'title'     => $user['title'] ?? $user['custom_title'] ?? null,
+                        'about'     => $user['page'] ?? $user['about'] ?? $user['profile'] ?? $user['bio'] ?? null,
+                        'signature' => $user['signature'] ?? $user['sig'] ?? null,
+
+                        // Donor status
+                        'is_donor' => $isDonor,
+
+                        // Permissions — TSSE uses can_leech for download permission
+                        'can_chat'     => isset($user['can_chat'])    ? (int) (bool) $user['can_chat']    : null,
+                        'can_download' => isset($user['can_leech'])   ? (int) (bool) $user['can_leech']   : (isset($user['can_download']) ? (int) (bool) $user['can_download'] : 1),
+                        'can_request'  => isset($user['can_request']) ? (int) (bool) $user['can_request'] : null,
+                        'can_invite'   => isset($user['can_invite'])  ? (int) (bool) $user['can_invite']  : null,
+                        'can_upload'   => isset($user['can_upload'])  ? (int) (bool) $user['can_upload']  : null,
+
+                        // Email verification
+                        'email_verified_at' => $emailVerifiedAt,
+
+                        // Timestamps — TSSE uses `added` for registration, `last_access` for activity
                         'last_login'  => $parseDate($user['last_login'] ?? $user['lastvisit'] ?? $user['last_seen'] ?? null),
-                        'created_at'  => $parseDate($user['registered'] ?? $user['created_at'] ?? $user['joindate'] ?? $user['join_date'] ?? null) ?? now(),
+                        'last_action' => $parseDate($user['last_access'] ?? $user['last_action'] ?? null),
+                        'created_at'  => $parseDate($user['added'] ?? $user['registered'] ?? $user['created_at'] ?? $user['joindate'] ?? $user['join_date'] ?? null) ?? now(),
                         'updated_at'  => now(),
                     ];
 
                     if (count($batch) >= $batchSize) {
                         DB::statement('SET FOREIGN_KEY_CHECKS=0;');
                         DB::table('users')->upsert($batch, ['id'], [
-                            'username', 'email', 'password', 'passkey', 'rsskey',
+                            'username', 'email',
+                            'password', 'legacy_passhash', 'legacy_secret', 'legacy',
+                            'passkey', 'rsskey',
                             'group_id', 'uploaded', 'downloaded', 'seedbonus',
                             'fl_tokens', 'invites', 'hitandruns',
                             'image', 'title', 'about', 'signature',
+                            'is_donor',
                             'can_chat', 'can_download', 'can_request', 'can_invite', 'can_upload',
-                            'last_login', 'created_at', 'updated_at',
+                            'email_verified_at', 'last_login', 'last_action', 'created_at', 'updated_at',
                         ]);
                         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
                         $count += count($batch);
@@ -724,12 +823,15 @@ class DatabaseMigrationService
             if (!empty($batch)) {
                 DB::statement('SET FOREIGN_KEY_CHECKS=0;');
                 DB::table('users')->upsert($batch, ['id'], [
-                    'username', 'email', 'password', 'passkey', 'rsskey',
+                    'username', 'email',
+                    'password', 'legacy_passhash', 'legacy_secret', 'legacy',
+                    'passkey', 'rsskey',
                     'group_id', 'uploaded', 'downloaded', 'seedbonus',
                     'fl_tokens', 'invites', 'hitandruns',
                     'image', 'title', 'about', 'signature',
+                    'is_donor',
                     'can_chat', 'can_download', 'can_request', 'can_invite', 'can_upload',
-                    'last_login', 'created_at', 'updated_at',
+                    'email_verified_at', 'last_login', 'last_action', 'created_at', 'updated_at',
                 ]);
                 DB::statement('SET FOREIGN_KEY_CHECKS=1;');
                 $count += count($batch);
@@ -745,6 +847,106 @@ class DatabaseMigrationService
         }
     }
 
+    /**
+     * Build a map of source category IDs → UNIT3D category IDs.
+     * Matches by name (exact → partial → keyword → fallback to first UNIT3D category).
+     */
+    private function buildCategoryMap(array $config): array
+    {
+        if ($this->cachedCategoryMap !== null) {
+            return $this->cachedCategoryMap;
+        }
+
+        // Load source categories
+        $sourceCategories = [];
+
+        try {
+            $rows = $this->sourceQuery('SELECT id, name FROM categories ORDER BY id');
+
+            foreach ($rows as $row) {
+                $sourceCategories[(int) $row['id']] = strtolower(trim((string) ($row['name'] ?? '')));
+            }
+        } catch (\Throwable $e) {
+            $this->log('buildCategoryMap: could not read source categories — ' . $e->getMessage());
+        }
+
+        // Load UNIT3D categories (name → id, lowercase)
+        $unit3dCategories = DB::table('categories')
+            ->get(['id', 'name'])
+            ->mapWithKeys(fn ($c) => [strtolower(trim($c->name)) => (int) $c->id])
+            ->all();
+
+        $fallbackId = (int) (DB::table('categories')->value('id') ?? 1);
+
+        $map = [];
+
+        foreach ($sourceCategories as $srcId => $srcName) {
+            // 1. Exact name match
+            if (isset($unit3dCategories[$srcName])) {
+                $map[$srcId] = $unit3dCategories[$srcName];
+
+                continue;
+            }
+
+            // 2. Partial match — source name contains unit3d name or vice versa
+            $matched = null;
+
+            foreach ($unit3dCategories as $u3dName => $u3dId) {
+                if (str_contains($srcName, $u3dName) || str_contains($u3dName, $srcName)) {
+                    $matched = $u3dId;
+
+                    break;
+                }
+            }
+
+            if ($matched !== null) {
+                $map[$srcId] = $matched;
+
+                continue;
+            }
+
+            // 3. Keyword-based fallback
+            $keyword = match (true) {
+                str_contains($srcName, 'movie') || str_contains($srcName, 'film')
+                    || str_contains($srcName, '4k') || str_contains($srcName, 'uhd')
+                    || str_contains($srcName, 'bluray') || str_contains($srcName, 'blu-ray') => 'movie',
+                str_contains($srcName, 'tv show') || str_contains($srcName, 'tv pack')
+                    || str_contains($srcName, 'episode') || str_contains($srcName, 'series')
+                    || str_contains($srcName, 'season') => 'tv show',
+                str_contains($srcName, 'music') || str_contains($srcName, 'album')
+                    || str_contains($srcName, 'discograph') => 'music',
+                str_contains($srcName, 'anime') => 'anime',
+                str_contains($srcName, 'ebook') || str_contains($srcName, 'e-book')
+                    || str_contains($srcName, 'comic') || str_contains($srcName, 'audiobook') => 'ebook',
+                str_contains($srcName, 'game') || str_contains($srcName, 'xbox')
+                    || str_contains($srcName, 'playstation') || str_contains($srcName, 'nintendo') => 'game',
+                str_contains($srcName, 'app') || str_contains($srcName, 'software') => 'software',
+                str_contains($srcName, 'sport') || str_contains($srcName, 'fitness') => 'sport',
+                default => null,
+            };
+
+            if ($keyword !== null) {
+                foreach ($unit3dCategories as $u3dName => $u3dId) {
+                    if (str_contains($u3dName, $keyword)) {
+                        $map[$srcId] = $u3dId;
+
+                        break;
+                    }
+                }
+            }
+
+            if (!isset($map[$srcId])) {
+                $map[$srcId] = $fallbackId;
+            }
+        }
+
+        $this->log('buildCategoryMap: mapped ' . count($map) . ' source categories');
+
+        $this->cachedCategoryMap = $map;
+
+        return $map;
+    }
+
     public function migrateTorrents(array $sourceConfig, int $offset = 0, int $limit = 500): array
     {
         $this->log("Starting torrent migration (offset={$offset}, limit={$limit})...");
@@ -752,59 +954,148 @@ class DatabaseMigrationService
         try {
             $this->ensureConnected($sourceConfig);
 
-            $torrents = $this->sourceQuery("SELECT * FROM torrents ORDER BY id LIMIT {$limit} OFFSET {$offset}");
-            $fetched  = count($torrents);
+            // Build category map once per migration run (cached after first call)
+            $categoryMap   = $this->buildCategoryMap($sourceConfig);
+            $fallbackCatId = (int) (DB::table('categories')->value('id') ?? 1);
+            $defaultTypeId = (int) (DB::table('types')->value('id') ?? 3);
+            $announceUrl   = rtrim(config('app.url'), '/') . '/announce/PASSKEY';
 
-            $count = 0;
-            $batch = [];
+            $torrents = $this->sourceQuery(
+                "SELECT id, info_hash, name, filename, descr, category, size, added,
+                        numfiles, leechers, seeders, times_completed, hits,
+                        visible, banned, owner, free, anonymous, sticky
+                 FROM torrents
+                 WHERE banned = 'no'
+                 ORDER BY id
+                 LIMIT {$limit} OFFSET {$offset}"
+            );
+
+            $fetched   = count($torrents);
+            $count     = 0;
+            $skipped   = 0;
+            $batch     = [];
             $batchSize = 100;
 
-            foreach ($torrents as $torrent) {  // generator
-                try {
-                    // Support both 'info_hash' and 'infohash' column names
-                    $rawHash  = $torrent['info_hash'] ?? $torrent['infohash'] ?? $torrent['torrent_hash'] ?? null;
-                    $infohash = $rawHash !== null ? strtolower($rawHash) : null;
+            $parseDate = static function (?string $value): ?string {
+                if ($value === null || $value === '' || $value === '0000-00-00 00:00:00') {
+                    return null;
+                }
 
-                    if ($infohash === null) {
+                try {
+                    return (new \DateTime($value))->format('Y-m-d H:i:s');
+                } catch (\Throwable) {
+                    return null;
+                }
+            };
+
+            foreach ($torrents as $torrent) {
+                try {
+                    // Skip invisible torrents (banned already filtered in SQL)
+                    if (($torrent['visible'] ?? 'yes') === 'no') {
+                        $skipped++;
+
                         continue;
                     }
 
-                    $existing = DB::table('torrents')->where('infohash', $infohash)->first();
+                    // TSSE stores info_hash as BINARY(20) — convert to 40-char hex string
+                    $rawHash = $torrent['info_hash'] ?? null;
 
-                    if (!$existing) {
-                        $batch[] = [
-                            'name'        => $torrent['name'] ?? $torrent['torrent_name'] ?? 'Unknown',
-                            'category_id' => $this->mapCategory((int) ($torrent['category'] ?? $torrent['cat_id'] ?? $torrent['category_id'] ?? 0)),
-                            'description' => $torrent['description'] ?? $torrent['details'] ?? $torrent['torrent_description'] ?? '',
-                            'infohash'    => $infohash,
-                            'size'        => $torrent['size'] ?? 0,
-                            'leechers'    => $torrent['leechers'] ?? 0,
-                            'seeders'     => $torrent['seeders'] ?? 0,
-                            'views'       => 0,
-                            'downloads'   => 0,
-                            'created_at'  => now(),
-                            'updated_at'  => now(),
-                        ];
+                    if ($rawHash === null || $rawHash === '') {
+                        $skipped++;
 
-                        if (count($batch) >= $batchSize) {
-                            DB::table('torrents')->insert($batch);
-                            $count += count($batch);
-                            $batch = [];
-                        }
+                        continue;
+                    }
+
+                    $infoHash = (strlen($rawHash) === 40 && ctype_xdigit($rawHash))
+                        ? strtolower($rawHash)
+                        : strtolower(bin2hex($rawHash));
+
+                    if (strlen($infoHash) !== 40) {
+                        $this->log("Skipping torrent id={$torrent['id']}: invalid info_hash");
+                        $skipped++;
+
+                        continue;
+                    }
+
+                    $srcCatId   = (int) ($torrent['category'] ?? 0);
+                    $categoryId = $categoryMap[$srcCatId] ?? $fallbackCatId;
+
+                    $name = (string) ($torrent['name'] ?? 'Unknown');
+                    $slug = \Illuminate\Support\Str::slug($name) ?: ('torrent-' . $torrent['id']);
+
+                    $batch[] = [
+                        'id'              => (int) $torrent['id'],
+                        'name'            => $name,
+                        'slug'            => $slug,
+                        'description'     => (string) ($torrent['descr'] ?? ''),
+                        'info_hash'       => $infoHash,
+                        'file_name'       => (string) ($torrent['filename'] ?? ($slug . '.torrent')),
+                        'num_file'        => max(1, (int) ($torrent['numfiles'] ?? 1)),
+                        'size'            => (float) ($torrent['size'] ?? 0),
+                        'leechers'        => max(0, (int) ($torrent['leechers'] ?? 0)),
+                        'seeders'         => max(0, (int) ($torrent['seeders'] ?? 0)),
+                        'times_completed' => max(0, (int) ($torrent['times_completed'] ?? 0)),
+                        'category_id'     => $categoryId,
+                        'type_id'         => $defaultTypeId,
+                        'announce'        => $announceUrl,
+                        'user_id'         => max(1, (int) ($torrent['owner'] ?? 1)),
+                        'imdb'            => '0',
+                        'tvdb'            => '0',
+                        'tmdb'            => '0',
+                        'mal'             => '0',
+                        'igdb'            => '0',
+                        'free'            => ($torrent['free'] ?? 'no') === 'yes' ? 1 : 0,
+                        'anon'            => ($torrent['anonymous'] ?? 'no') === 'yes' ? 1 : 0,
+                        'sticky'          => ($torrent['sticky'] ?? 'no') === 'yes' ? 1 : 0,
+                        'featured'        => ($torrent['sticky'] ?? 'no') === 'yes' ? 1 : 0,
+                        'status'          => 1, // ModerationStatus::APPROVED
+                        'moderated_at'    => now()->toDateTimeString(),
+                        'moderated_by'    => 1,
+                        'stream'          => 0,
+                        'doubleup'        => 0,
+                        'highspeed'       => 0,
+                        'sd'              => 0,
+                        'internal'        => 0,
+                        'created_at'      => $parseDate($torrent['added'] ?? null) ?? now()->toDateTimeString(),
+                        'updated_at'      => now()->toDateTimeString(),
+                    ];
+
+                    if (count($batch) >= $batchSize) {
+                        DB::table('torrents')->upsert($batch, ['id'], [
+                            'name', 'slug', 'description', 'info_hash', 'file_name',
+                            'num_file', 'size', 'leechers', 'seeders', 'times_completed',
+                            'category_id', 'type_id', 'announce', 'user_id', 'free',
+                            'anon', 'sticky', 'featured', 'status', 'moderated_at',
+                            'moderated_by', 'created_at', 'updated_at',
+                        ]);
+                        $count += count($batch);
+                        $batch  = [];
                     }
                 } catch (\Throwable $e) {
-                    $this->log("Error migrating torrent {$torrent['name']}: " . $e->getMessage());
+                    $this->log("Error on torrent id={$torrent['id']}: " . $e->getMessage());
                 }
             }
 
             if (!empty($batch)) {
-                DB::table('torrents')->insert($batch);
+                DB::table('torrents')->upsert($batch, ['id'], [
+                    'name', 'slug', 'description', 'info_hash', 'file_name',
+                    'num_file', 'size', 'leechers', 'seeders', 'times_completed',
+                    'category_id', 'type_id', 'announce', 'user_id', 'free',
+                    'anon', 'sticky', 'featured', 'status', 'moderated_at',
+                    'moderated_by', 'created_at', 'updated_at',
+                ]);
                 $count += count($batch);
             }
 
-            $this->log("Torrent migration completed: {$count} torrents migrated");
+            $this->log("Torrent migration: {$count} upserted, {$skipped} skipped (offset={$offset})");
 
-            return ['success' => true, 'count' => $count, 'done' => $fetched < $limit, 'logs' => $this->migrationLog];
+            return [
+                'success' => true,
+                'count'   => $count,
+                'skipped' => $skipped,
+                'done'    => $fetched < $limit,
+                'logs'    => $this->migrationLog,
+            ];
         } catch (\Throwable $e) {
             $this->log('Torrent migration failed: ' . $e->getMessage());
 
@@ -1160,20 +1451,6 @@ class DatabaseMigrationService
     // Private helpers
     // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-    /**
-     * Map category from source to destination
-     */
-    private function mapCategory(int $sourceCategory): int
-    {
-        return match ($sourceCategory) {
-            1 => 1,
-            2 => 2,
-            3 => 3,
-            4 => 4,
-            5 => 5,
-            default => 6,
-        };
-    }
 
     /**
      * Resolve which table name to use on the SOURCE database.

@@ -80,6 +80,9 @@ use AllowDynamicProperties;
  * @property \Illuminate\Support\Carbon|null $deleted_at
  * @property int                             $own_flushes
  * @property string|null                     $email_verified_at
+ * @property string|null                     $legacy_passhash
+ * @property string|null                     $legacy_secret
+ * @property bool                            $legacy
  */
 #[AllowDynamicProperties]
 final class User extends Authenticatable implements MustVerifyEmail
@@ -108,6 +111,8 @@ final class User extends Authenticatable implements MustVerifyEmail
         'two_factor_secret',
         'two_factor_recovery_codes',
         'two_factor_confirmed_at',
+        'legacy_passhash',
+        'legacy_secret',
     ];
 
     /**
@@ -151,6 +156,7 @@ final class User extends Authenticatable implements MustVerifyEmail
             'can_chat'                => 'bool',
             'is_donor'                => 'bool',
             'is_lifetime'             => 'bool',
+            'legacy'                  => 'bool',
         ];
     }
 

@@ -19,6 +19,7 @@ namespace App\Http\Controllers\Staff;
 use App\Services\DatabaseMigrationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class MigrationController extends Controller
@@ -127,6 +128,41 @@ class MigrationController extends Controller
     }
 
     /**
+     * Return the source tracker's groups and UNIT3D groups with auto-suggested mapping.
+     * Used by the migration UI group-mapping editor.
+     */
+    public function getGroups(): JsonResponse
+    {
+        try {
+            $config = request()->validate([
+                'host'     => ['required', 'string'],
+                'port'     => ['required', 'integer'],
+                'username' => ['required', 'string'],
+                'password' => ['required', 'string'],
+                'database' => ['required', 'string'],
+            ]);
+
+            $sourceGroups = $this->migrationService->getSourceGroups($config);
+            $suggestions  = $this->migrationService->getGroupSuggestions($config);
+            $unit3dGroups = DB::table('groups')->orderBy('level', 'desc')->get(['id', 'name', 'slug'])->toArray();
+
+            return response()->json([
+                'success'      => true,
+                'sourceGroups' => $sourceGroups,
+                'unit3dGroups' => $unit3dGroups,
+                'suggestions'  => $suggestions,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('getGroups failed: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => $this->describeThrowable($e),
+            ], 200);
+        }
+    }
+
+    /**
      * Get migration summary
      */
     public function getSummary(): JsonResponse
@@ -167,18 +203,20 @@ class MigrationController extends Controller
 
         try {
             $config = request()->validate([
-                'host'     => ['required', 'string'],
-                'port'     => ['required', 'integer'],
-                'username' => ['required', 'string'],
-                'password' => ['required', 'string'],
-                'database' => ['required', 'string'],
-                'tables'   => ['required', 'array'],
+                'host'      => ['required', 'string'],
+                'port'      => ['required', 'integer'],
+                'username'  => ['required', 'string'],
+                'password'  => ['required', 'string'],
+                'database'  => ['required', 'string'],
+                'tables'    => ['required', 'array'],
+                'group_map' => ['nullable', 'array'],
             ]);
 
-            $tables   = $config['tables'];
-            $offset   = (int) request()->input('offset', 0);
-            $pageSize = max(10, min(2000, (int) request()->input('page_size', 100)));
-            unset($config['tables']);
+            $tables     = $config['tables'];
+            $groupMap   = array_map('intval', $config['group_map'] ?? []);
+            $offset     = (int) request()->input('offset', 0);
+            $pageSize   = max(10, min(2000, (int) request()->input('page_size', 100)));
+            unset($config['tables'], $config['group_map']);
 
             $results = [
                 'success' => true,
@@ -187,7 +225,7 @@ class MigrationController extends Controller
 
             // Each table is wrapped independently so one failure cannot crash the whole request
             $tableMap = [
-                'users'         => fn () => $this->migrationService->migrateUsers($config, $offset, $pageSize),
+                'users'         => fn () => $this->migrationService->migrateUsers($config, $offset, $pageSize, $groupMap),
                 'torrents'      => fn () => $this->migrationService->migrateTorrents($config, $offset, $pageSize),
                 'peers'         => fn () => $this->migrationService->migratePeers($config, $offset, $pageSize),
                 'snatched'      => fn () => $this->migrationService->migrateSnatched($config, $offset, $pageSize),

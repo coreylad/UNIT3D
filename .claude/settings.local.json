@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -n \"CREATE TABLE \\\\`users\\\\`\" d:/UNIT3D/TSSEDB.sql)",
+      "Bash(xargs grep -l \"announce\")"
+    ]
+  }
+}

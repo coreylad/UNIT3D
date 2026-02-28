@@ -85,6 +85,64 @@
                     </div>
                 </section>
 
+                {{-- Group Mapping Section --}}
+                <section x-show="showGroupMapping" x-cloak>
+                    <h3 style="margin-bottom: 0.4rem;">{{ __('migration.group-mapping') }}</h3>
+                    <p style="font-size:0.82rem;opacity:0.6;margin-bottom:1rem;">{{ __('migration.group-mapping-hint') }}</p>
+
+                    <template x-if="groupMappingError">
+                        <div class="migration-panel__status migration-panel__status--error" style="margin-bottom:1rem;">
+                            <p x-text="groupMappingError" style="margin:0;"></p>
+                        </div>
+                    </template>
+
+                    <template x-if="loadingGroups">
+                        <p style="font-size:0.85rem;opacity:0.6;">⏳ {{ __('common.loading') }}...</p>
+                    </template>
+
+                    <template x-if="!loadingGroups && sourceGroups.length > 0">
+                        <div class="data-table-wrapper">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">{{ __('migration.source-group') }}</th>
+                                        <th scope="col">→</th>
+                                        <th scope="col">{{ __('migration.unit3d-group') }}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template x-for="sg in sourceGroups" :key="sg.gid ?? sg.id ?? sg.gid">
+                                        <tr>
+                                            <td>
+                                                <span x-text="sg.title ?? sg.name ?? sg.group_name ?? '?'"></span>
+                                                <span style="font-size:0.72rem;opacity:0.45;margin-left:0.4em;" x-text="'#' + (sg.gid ?? sg.id ?? '')"></span>
+                                            </td>
+                                            <td style="color:var(--color-accent,hsl(38,92%,60%));font-weight:700;">→</td>
+                                            <td>
+                                                <select
+                                                    class="form__input"
+                                                    style="padding: 0.25rem 0.5rem; font-size: 0.82rem;"
+                                                    @change="groupMap[sg.gid ?? sg.id] = parseInt($el.value)"
+                                                    :value="groupMap[sg.gid ?? sg.id] ?? ''"
+                                                >
+                                                    <option value="">— {{ __('migration.group-unassigned') }} —</option>
+                                                    <template x-for="ug in unit3dGroups" :key="ug.id">
+                                                        <option
+                                                            :value="ug.id"
+                                                            :selected="(groupMap[sg.gid ?? sg.id] ?? null) === ug.id"
+                                                            x-text="ug.name"
+                                                        ></option>
+                                                    </template>
+                                                </select>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </template>
+                </section>
+
                 {{-- Migration Summary Section --}}
                 <section x-show="showSummary" x-cloak>
                     <h3 style="margin-bottom: 1rem;">{{ __('migration.migration-status') }}</h3>
@@ -187,6 +245,12 @@
                 connectionStatus: false,
                 connectionSuccess: false,
                 connectionMessage: '',
+                showGroupMapping: false,
+                loadingGroups: false,
+                groupMappingError: null,
+                sourceGroups: [],
+                unit3dGroups: [],
+                groupMap: {},
                 showSummary: false,
                 showProgress: false,
                 showCompleted: false,
@@ -285,6 +349,7 @@
                         if (data.success) {
                             this.summaryData = data.data;
                             this.showSummary = true;
+                            await this.loadGroups();
                         } else {
                             this.connectionSuccess = false;
                             this.connectionMessage = '❌ {{ __('common.error') }}: ' + data.message;
@@ -292,6 +357,46 @@
                     } catch (error) {
                         this.connectionSuccess = false;
                         this.connectionMessage = '❌ {{ __('common.error') }}: ' + error.message;
+                    }
+                },
+
+                async loadGroups() {
+                    this.loadingGroups    = true;
+                    this.showGroupMapping = true;
+                    this.groupMappingError = null;
+
+                    try {
+                        const data = await this._fetchJson(
+                            '{{ route('staff.migrations.get-groups') }}',
+                            this.form
+                        );
+
+                        if (!data.success) {
+                            this.groupMappingError = data.message ?? '{{ __('common.error') }}';
+                            return;
+                        }
+
+                        this.unit3dGroups = data.unit3dGroups ?? [];
+
+                        // Normalise source groups — TSSE uses `gid`, others use `id`
+                        this.sourceGroups = (data.sourceGroups ?? []).map(sg => ({
+                            ...sg,
+                            gid: sg.gid ?? sg.id ?? 0,
+                        }));
+
+                        // Pre-fill groupMap from auto-suggestions
+                        const suggestions = data.suggestions ?? {};
+                        this.groupMap = {};
+                        this.sourceGroups.forEach(sg => {
+                            const sid = sg.gid ?? sg.id;
+                            if (suggestions[sid] !== undefined) {
+                                this.groupMap[sid] = suggestions[sid];
+                            }
+                        });
+                    } catch (error) {
+                        this.groupMappingError = error.message;
+                    } finally {
+                        this.loadingGroups = false;
                     }
                 },
 
@@ -317,9 +422,10 @@
                         return;
                     }
 
-                    this.showSummary  = false;
-                    this.showProgress = true;
-                    this.showCompleted = false;
+                    this.showSummary      = false;
+                    this.showGroupMapping = false;
+                    this.showProgress     = true;
+                    this.showCompleted    = false;
                     this.migrationHadErrors = false;
                     this.completionSummary  = {};
                     this.migrationLogs = '';
@@ -348,7 +454,7 @@
                             try {
                                 const data = await this._fetchJson(
                                     '{{ route('staff.migrations.start') }}',
-                                    { ...this.form, tables: [table], offset, page_size: pageSize }
+                                    { ...this.form, tables: [table], offset, page_size: pageSize, group_map: this.groupMap }
                                 );
 
                                 const result = data.data?.[table] ?? (data.success === false
@@ -410,6 +516,12 @@
                         database: '',
                     };
                     this.connectionStatus = false;
+                    this.showGroupMapping  = false;
+                    this.loadingGroups     = false;
+                    this.groupMappingError = null;
+                    this.sourceGroups      = [];
+                    this.unit3dGroups      = [];
+                    this.groupMap          = {};
                     this.showSummary = false;
                     this.showProgress = false;
                     this.showCompleted = false;

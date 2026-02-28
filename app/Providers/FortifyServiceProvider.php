@@ -172,7 +172,21 @@ class FortifyServiceProvider extends ServiceProvider
                 ]);
             }
 
-            $password = Hash::check($request->password, $user->password);
+            if ($user->legacy === true) {
+                $expected = md5($user->legacy_secret . $request->password . $user->legacy_secret);
+                $password = hash_equals($expected, (string) $user->legacy_passhash);
+
+                if ($password === true) {
+                    $user->forceFill([
+                        'password'        => Hash::make($request->password),
+                        'legacy'          => false,
+                        'legacy_passhash' => null,
+                        'legacy_secret'   => null,
+                    ])->save();
+                }
+            } else {
+                $password = Hash::check($request->password, $user->password);
+            }
 
             if ($password === false) {
                 defer(function () use ($user, $request): void {
