@@ -448,6 +448,7 @@
                         let tableTotal     = 0;
                         let tableDone      = false;
                         let tableSucceeded = true;
+                        let tableError     = null;
                         const tableLogs    = [];
 
                         while (!tableDone) {
@@ -476,8 +477,9 @@
 
                                 if (!result.success) {
                                     tableSucceeded = false;
+                                    tableError = result.error ?? 'Unknown error';
                                     this.migrationHadErrors = true;
-                                    this._appendLog(`❌ <strong>${table}</strong> page failed: ${result.error ?? 'Unknown error'}`, 'hsl(4,70%,62%)');
+                                    this._appendLog(`❌ <strong>${table}</strong> page failed: ${tableError}`, 'hsl(4,70%,62%)');
                                     tableDone = true;
                                 } else if (!tableDone) {
                                     this._appendLog(`&nbsp;&nbsp;&nbsp;↻ ${table}: ${tableTotal.toLocaleString()} migrated so far…`, 'hsl(210,12%,55%)', '0.72rem');
@@ -491,7 +493,7 @@
                             }
                         }
 
-                        this.completionSummary[table] = { success: tableSucceeded, count: tableTotal, logs: tableLogs };
+                        this.completionSummary[table] = { success: tableSucceeded, count: tableTotal, logs: tableLogs, error: tableError };
 
                         if (tableSucceeded) {
                             this._appendLog(`✅ <strong>${table}</strong>: ${tableTotal.toLocaleString()} records migrated`, 'hsl(140,55%,60%)');

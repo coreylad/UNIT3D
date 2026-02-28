@@ -940,7 +940,6 @@ class DatabaseMigrationService
             $categoryMap   = $this->buildCategoryMap($sourceConfig);
             $fallbackCatId = (int) (DB::table('categories')->value('id') ?? 1);
             $defaultTypeId = (int) (DB::table('types')->value('id') ?? 3);
-            $announceUrl   = rtrim(config('app.url'), '/') . '/announce/PASSKEY';
 
             $torrents = $this->sourceQuery(
                 "SELECT id, info_hash, name, filename, descr, category, size, added,
@@ -1019,7 +1018,6 @@ class DatabaseMigrationService
                         'times_completed' => max(0, (int) ($torrent['times_completed'] ?? 0)),
                         'category_id'     => $categoryId,
                         'type_id'         => $defaultTypeId,
-                        'announce'        => $announceUrl,
                         'user_id'         => $this->applyUserRemap(max(1, (int) ($torrent['owner'] ?? 1))),
                         'imdb'            => '0',
                         'tvdb'            => '0',
@@ -1092,49 +1090,77 @@ class DatabaseMigrationService
             return 0;
         }
 
-        $ids = array_column($batch, 'id');
+        // Pre-check which IDs, usernames, and emails already exist in UNIT3D
+        $ids       = array_column($batch, 'id');
+        $usernames = array_filter(array_column($batch, 'username'));
+        $emails    = array_filter(array_column($batch, 'email'));
 
         $existingIds = DB::table('users')
             ->whereIn('id', $ids)
-            ->pluck('id')
-            ->flip()
-            ->all();
+            ->pluck('id')->flip()->all();
 
-        $direct   = [];  // insert with original ID
-        $remapped = [];  // insert without ID → auto-assigned
+        $existingUsernames = DB::table('users')
+            ->whereIn('username', $usernames)
+            ->pluck('username')->flip()->all();
+
+        $existingEmails = DB::table('users')
+            ->whereIn('email', $emails)
+            ->pluck('email')->flip()->all();
+
+        $inserted = 0;
+
+        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
 
         foreach ($batch as $row) {
-            if (isset($existingIds[$row['id']])) {
-                $remapped[] = $row;
+            $srcId    = $row['id'];
+            $username = $row['username'] ?? '(unknown)';
+            $email    = $row['email'] ?? '';
+
+            // Skip username/email conflicts up-front with a clear message
+            if (isset($existingUsernames[$username])) {
+                $this->log("Skipped user TSSE #{$srcId} ({$username}): username already exists in UNIT3D");
+                // Track them so downstream FK references still resolve
+                $existingId = DB::table('users')->where('username', $username)->value('id');
+                if ($existingId && $existingId !== $srcId) {
+                    $this->userIdRemap[$srcId] = $existingId;
+                }
+
+                continue;
+            }
+
+            if ($email && isset($existingEmails[$email])) {
+                $this->log("Skipped user TSSE #{$srcId} ({$username}): email already exists in UNIT3D");
+
+                continue;
+            }
+
+            if (isset($existingIds[$srcId])) {
+                // ID conflict → insert without ID so MySQL assigns a new one
+                $rowWithoutId = $row;
+                unset($rowWithoutId['id']);
+
+                try {
+                    $newId = DB::table('users')->insertGetId($rowWithoutId);
+                    $this->userIdRemap[$srcId] = $newId;
+                    $this->log("User ID conflict: TSSE #{$srcId} ({$username}) → UNIT3D #{$newId} (auto-remapped)");
+                    $inserted++;
+                } catch (\Throwable $e) {
+                    $this->log("Failed to insert remapped user TSSE #{$srcId} ({$username}): " . $e->getMessage());
+                }
             } else {
-                $direct[] = $row;
+                // No conflict → insert with original ID preserved
+                try {
+                    DB::table('users')->insert($row);
+                    $inserted++;
+                } catch (\Throwable $e) {
+                    $this->log("Skipped user TSSE #{$srcId} ({$username}): " . $e->getMessage());
+                }
             }
         }
 
-        // Batch-insert non-conflicting users with their original IDs
-        if (!empty($direct)) {
-            DB::statement('SET FOREIGN_KEY_CHECKS=0;');
-            DB::table('users')->insert($direct);
-            DB::statement('SET FOREIGN_KEY_CHECKS=1;');
-        }
+        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
-        // Insert conflicting users one-by-one so we can capture the new auto-assigned ID
-        foreach ($remapped as $row) {
-            $oldId = $row['id'];
-            unset($row['id']);
-
-            try {
-                DB::statement('SET FOREIGN_KEY_CHECKS=0;');
-                $newId = DB::table('users')->insertGetId($row);
-                DB::statement('SET FOREIGN_KEY_CHECKS=1;');
-                $this->userIdRemap[$oldId] = $newId;
-                $this->log("User ID conflict: TSSE #{$oldId} → UNIT3D #{$newId} (auto-remapped)");
-            } catch (\Throwable $e) {
-                $this->log("Failed to insert remapped user TSSE #{$oldId}: " . $e->getMessage());
-            }
-        }
-
-        return count($direct) + count($remapped);
+        return $inserted;
     }
 
     /**
@@ -1189,18 +1215,45 @@ class DatabaseMigrationService
         try {
             $this->ensureConnected($sourceConfig);
 
+            // Abort early if torrents haven't been migrated yet
+            $unit3dTorrentCount = DB::table('torrents')->count();
+            if ($unit3dTorrentCount === 0) {
+                $this->log('WARNING: No torrents found in UNIT3D — migrate torrents first, then re-run peers.');
+
+                return ['success' => false, 'error' => 'No torrents in UNIT3D. Run torrent migration first.', 'done' => true, 'logs' => $this->migrationLog];
+            }
+
             $peers   = $this->sourceQuery("SELECT * FROM peers ORDER BY userid LIMIT {$limit} OFFSET {$offset}");
             $fetched = count($peers);
 
-            $count = 0;
-            $batch = [];
-            $batchSize = 500;
+            $count        = 0;
+            $skipped      = 0;
+            $batch        = [];
+            $batchSize    = 500;
 
-            foreach ($peers as $peer) {  // generator
+            // Build a hex info_hash → torrent_id map for this page in one query
+            $rawHashes = [];
+            foreach ($peers as $peer) {
+                $raw = $peer['infohash'] ?? $peer['info_hash'] ?? $peer['torrent_hash'] ?? null;
+                if ($raw !== null) {
+                    $hex = (strlen($raw) === 40 && ctype_xdigit($raw))
+                        ? strtolower($raw)
+                        : strtolower(bin2hex($raw));
+                    $rawHashes[$hex] = true;
+                }
+            }
+
+            $torrentMap = DB::table('torrents')
+                ->whereIn('info_hash', array_keys($rawHashes))
+                ->pluck('id', 'info_hash')
+                ->all(); // hash → id
+
+            foreach ($peers as $peer) {
                 try {
                     // TSSE peers.infohash is BINARY(20) — convert to hex for lookup
                     $rawHash = $peer['infohash'] ?? $peer['info_hash'] ?? $peer['torrent_hash'] ?? null;
                     if ($rawHash === null) {
+                        $skipped++;
                         continue;
                     }
 
@@ -1208,10 +1261,10 @@ class DatabaseMigrationService
                         ? strtolower($rawHash)
                         : strtolower(bin2hex($rawHash));
 
-                    // Resolve UNIT3D torrent_id from info_hash
-                    $torrentId = DB::table('torrents')->where('info_hash', $infoHash)->value('id');
+                    $torrentId = $torrentMap[$infoHash] ?? null;
                     if ($torrentId === null) {
-                        continue; // torrent not yet migrated — skip peer
+                        $skipped++;
+                        continue; // torrent not migrated — skip peer
                     }
 
                     $srcUserId = (int) ($peer['userid'] ?? $peer['user_id'] ?? 0);
@@ -1246,7 +1299,7 @@ class DatabaseMigrationService
                 $count += count($batch);
             }
 
-            $this->log("Peer migration completed: {$count} peers migrated");
+            $this->log("Peer migration completed: {$count} peers migrated, {$skipped} skipped (torrent not found)");
 
             return ['success' => true, 'count' => $count, 'done' => $fetched < $limit, 'logs' => $this->migrationLog];
         } catch (\Throwable $e) {
@@ -1336,6 +1389,93 @@ class DatabaseMigrationService
             return ['success' => true, 'count' => $count, 'done' => $fetched < $limit, 'logs' => $this->migrationLog];
         } catch (\Throwable $e) {
             $this->log('Snatched migration failed: ' . $e->getMessage());
+
+            return ['success' => false, 'error' => $e->getMessage(), 'done' => true, 'logs' => $this->migrationLog];
+        }
+    }
+
+    /**
+     * Migrate torrent comments from source to UNIT3D's polymorphic comments table.
+     */
+    public function migrateComments(array $sourceConfig, int $offset = 0, int $limit = 100): array
+    {
+        $this->log("Starting comments migration (offset={$offset}, limit={$limit})...");
+
+        try {
+            $this->ensureConnected($sourceConfig);
+
+            // TSSE comments reference torrents by their internal ID.
+            // We join with TSSE torrents to get the info_hash, then resolve to the UNIT3D torrent_id.
+            $rows = $this->sourceQuery(
+                "SELECT c.id, c.text, c.userid, c.added, c.anonymous,
+                        t.info_hash
+                 FROM comments c
+                 LEFT JOIN torrents t ON t.id = c.torrent
+                 LIMIT {$limit} OFFSET {$offset}"
+            );
+            $fetched = count($rows);
+
+            // Build hex hash → UNIT3D torrent_id lookup for this page in one query
+            $rawHashes = [];
+            foreach ($rows as $row) {
+                $raw = $row['info_hash'] ?? null;
+                if ($raw !== null) {
+                    $hex = (strlen($raw) === 40 && ctype_xdigit($raw))
+                        ? strtolower($raw)
+                        : strtolower(bin2hex($raw));
+                    $rawHashes[$hex] = true;
+                }
+            }
+
+            $torrentMap = DB::table('torrents')
+                ->whereIn('info_hash', array_keys($rawHashes))
+                ->pluck('id', 'info_hash')
+                ->all();
+
+            $count   = 0;
+            $skipped = 0;
+            $batch   = [];
+
+            foreach ($rows as $row) {
+                $raw = $row['info_hash'] ?? null;
+                if ($raw === null) {
+                    $skipped++;
+                    continue;
+                }
+
+                $infoHash  = (strlen($raw) === 40 && ctype_xdigit($raw)) ? strtolower($raw) : strtolower(bin2hex($raw));
+                $torrentId = $torrentMap[$infoHash] ?? null;
+                if ($torrentId === null) {
+                    $skipped++;
+                    continue; // torrent not migrated
+                }
+
+                $addedRaw = $row['added'] ?? null;
+                $addedAt  = ($addedRaw && $addedRaw !== '0000-00-00 00:00:00')
+                    ? date('Y-m-d H:i:s', is_numeric($addedRaw) ? (int) $addedRaw : strtotime($addedRaw))
+                    : now()->toDateTimeString();
+
+                $batch[] = [
+                    'content'          => $row['text'] ?? '',
+                    'anon'             => ($row['anonymous'] ?? 0) ? 1 : 0,
+                    'commentable_id'   => $torrentId,
+                    'commentable_type' => 'App\Models\Torrent',
+                    'user_id'          => $this->applyUserRemap((int) ($row['userid'] ?? 0)) ?: null,
+                    'created_at'       => $addedAt,
+                    'updated_at'       => $addedAt,
+                ];
+            }
+
+            if (!empty($batch)) {
+                DB::table('comments')->insert($batch);
+                $count = count($batch);
+            }
+
+            $this->log("Comments migration completed: {$count} inserted, {$skipped} skipped (torrent not found)");
+
+            return ['success' => true, 'count' => $count, 'done' => $fetched < $limit, 'logs' => $this->migrationLog];
+        } catch (\Throwable $e) {
+            $this->log('Comments migration failed: ' . $e->getMessage());
 
             return ['success' => false, 'error' => $e->getMessage(), 'done' => true, 'logs' => $this->migrationLog];
         }

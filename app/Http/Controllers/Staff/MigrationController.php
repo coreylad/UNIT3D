@@ -229,6 +229,7 @@ class MigrationController extends Controller
                 'torrents'      => fn () => $this->migrationService->migrateTorrents($config, $offset, $pageSize),
                 'peers'         => fn () => $this->migrationService->migratePeers($config, $offset, $pageSize),
                 'snatched'      => fn () => $this->migrationService->migrateSnatched($config, $offset, $pageSize),
+                'comments'      => fn () => $this->migrationService->migrateComments($config, $offset, $pageSize),
                 'forums'        => fn () => $this->migrationService->migrateForums($config),
                 'forum_threads' => fn () => $this->migrationService->migrateForumThreads($config),
                 'forum_posts'   => fn () => $this->migrationService->migrateForumPosts($config),
