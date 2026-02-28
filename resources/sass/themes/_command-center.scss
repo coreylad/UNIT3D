@@ -616,7 +616,10 @@ main > article,
     border-left: 3px solid var(--cc-accent);
 }
 
-.panel__action .form__label--floating {
+/* ── Floating labels — background masking ──────────────────────────────── */
+/* Set the bg directly on the label so it always masks the input border when
+   elevated, regardless of what ancestors have as their background.           */
+.form__label--floating {
     background-color: var(--cc-bg-card);
 }
 
@@ -942,15 +945,7 @@ main > article,
 .form__group--short-horizontal { grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 6px; }
 .form__label                { font-size: 12px; }
 
-/* Floating labels use background-color:inherit to mask the input border when
-   elevated. In CC many parents are transparent or rgba-overlay which breaks
-   the chain. Give every form__group an explicit opaque background so labels
-   always inherit a solid colour and can mask borders correctly.
-   Specific contexts that need a different bg override this below
-   (e.g. .chatroom__new-message .form__group → --cc-bg-main). */
-.form__group {
-    background-color: var(--cc-bg-card);
-}
+
 
 .form__fieldset {
     padding: 4px 6px 6px 6px;
@@ -1142,10 +1137,8 @@ main.page__staff-dashboard--index {
 .message-input,
 .message-input > .row { background-color: inherit; }
 
-/* Chatbox: the form__group needs an opaque background so the floating
-   label can mask the textarea border when it rises above it on focus.
-   #frame → .panel-body are all transparent, so inherit = transparent. */
-.chatroom__new-message .form__group {
+/* Chatbox lives outside any panel__body, so the opaque label bg must match. */
+.chatroom__new-message .form__label--floating {
     background-color: var(--cc-bg-main);
 }
 
