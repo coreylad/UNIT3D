@@ -49,6 +49,25 @@ class HomeController extends Controller
         // System Information
         $systemInformation = new SystemInformation();
 
+        // gather list of config tool names (only those configured in ConfigController)
+        $toolConfigs = [
+            'announce' => ['icon' => 'fa-bullhorn', 'label' => 'Announce'],
+            'api-keys' => ['icon' => 'fa-key', 'label' => 'API Keys'],
+            'audit' => ['icon' => 'fa-file-text', 'label' => 'Audit'],
+            'backup' => ['icon' => 'fa-save', 'label' => 'Backup'],
+            'cache' => ['icon' => 'fa-database', 'label' => 'Cache'],
+            'chat' => ['icon' => 'fa-comments', 'label' => 'Chat'],
+            'donation' => ['icon' => 'fa-money-bill', 'label' => 'Donation'],
+            'email-blacklist' => ['icon' => 'fa-ban', 'label' => 'Email Blacklist'],
+            'hitrun' => ['icon' => 'fa-warning', 'label' => 'Hit & Run'],
+            'mail' => ['icon' => 'fa-envelope', 'label' => 'Mail'],
+            'torrent' => ['icon' => 'fa-download', 'label' => 'Torrent'],
+            'unit3d' => ['icon' => 'fa-cog', 'label' => 'Unit3D'],
+        ];
+        $configFiles = collect($toolConfigs)->map(function ($config, $key) {
+            return array_merge(['key' => $key], $config);
+        });
+
         return view('Staff.dashboard.index', [
             'users' => cache()->flexible('dashboard_users', [60 * 5, 60 * 10], fn () => DB::table('users')
                 ->selectRaw('COUNT(*) AS total')
@@ -85,6 +104,7 @@ class HomeController extends Controller
             'basic'                    => $systemInformation->basic(),
             'file_permissions'         => $systemInformation->directoryPermissions(),
             'externalTrackerStats'     => Unit3dAnnounce::getStats(),
+            'configFiles'              => $configFiles,
         ]);
     }
 }

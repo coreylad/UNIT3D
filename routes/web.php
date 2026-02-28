@@ -652,6 +652,14 @@ Route::middleware('language')->group(function (): void {
                 Route::get('/', [App\Http\Controllers\Staff\AnnounceController::class, 'index'])->name('index');
             });
 
+            // Configuration file viewer/editor
+            Route::prefix('config')->name('config.')->middleware('admin')->group(function (): void {
+                Route::get('/', [App\Http\Controllers\Staff\ConfigController::class, 'index'])->name('index');
+                Route::get('/{tool}/edit', [App\Http\Controllers\Staff\ConfigController::class, 'edit'])->name('edit');
+                Route::get('/{tool}', [App\Http\Controllers\Staff\ConfigController::class, 'show'])->name('show');
+                Route::patch('/{tool}/{key}', [App\Http\Controllers\Staff\ConfigController::class, 'update'])->name('update');
+            });
+
             // Apikeys
             Route::prefix('apikeys')->name('apikeys.')->group(function (): void {
                 Route::get('/', [App\Http\Controllers\Staff\ApikeyController::class, 'index'])->name('index');

@@ -43,7 +43,7 @@
                 });
                 window.addEventListener('keydown', e => {
                     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-                    const map = {'1':'overview','2':'links','3':'chat','4':'general','5':'torrents','6':'users','7':'logs'};
+                    const map = {'1':'overview','2':'links','3':'chat','4':'general','5':'torrents','6':'users','7':'logs','8':'config'};
                     if (map[e.key] && !this.cmdOpen) { this.activePanel = map[e.key]; return; }
                     if (e.key === '[') { this.collapsed = !this.collapsed; return; }
                     if (e.key === '/' || ((e.metaKey || e.ctrlKey) && e.key === 'k')) {
@@ -186,6 +186,18 @@
                         <span class="staff-dashboard__nav-shortcut" x-show="!collapsed && {{ $unsolvedReportsCount }} === 0" x-cloak>7</span>
                     </button>
                 </li>
+                <li>
+                    <button
+                        class="staff-dashboard__nav-item"
+                        :class="{ 'staff-dashboard__nav-item--active': activePanel === 'config' }"
+                        x-on:click="activePanel = 'config'"
+                        title="{{ __('staff.config-manager') }}"
+                    >
+                        <i class="{{ config('other.font-awesome') }} fa-cogs"></i>
+                        <span x-show="!collapsed" x-cloak>{{ __('staff.config-manager') }}</span>
+                        <span class="staff-dashboard__nav-shortcut" x-show="!collapsed" x-cloak>8</span>
+                    </button>
+                </li>
             </ul>
             {{-- Sidebar Footer --}}
             <div class="staff-dashboard__sidebar-footer">
@@ -205,7 +217,7 @@
                     <kbd>Ctrl+K</kbd>
                 </button>
                 <div class="staff-dashboard__shortcut-hint" x-show="!collapsed" x-cloak>
-                    <span class="staff-dashboard__hint-key">1–7</span><span>panels</span>
+                    <span class="staff-dashboard__hint-key">1–8</span><span>panels</span>
                     <span class="staff-dashboard__hint-key">[</span><span>collapse</span>
                 </div>
             </div>
@@ -736,6 +748,25 @@
                         <i class="{{ config('other.font-awesome') }} fa-list"></i>
                         <span>Playlist Categories</span>
                     </a>
+                </div>
+            </div>
+
+            {{-- Config Panel --}}
+            <div x-show="activePanel === 'config'" x-cloak>
+                <h2 class="staff-dashboard__panel-title">
+                    <i class="{{ config('other.font-awesome') }} fa-cogs"></i>
+                    {{ __('staff.config-manager') }}
+                </h2>
+                <div
+                    class="staff-dashboard__links-grid"
+                    x-effect="Array.from($el.querySelectorAll(':scope > .staff-dashboard__link-card')).forEach(c => c.style.display = (!search || c.querySelector('span')?.textContent.trim().toLowerCase().includes(search.toLowerCase())) ? '' : 'none')"
+                >
+                    @foreach ($configFiles as $tool)
+                        <a class="staff-dashboard__link-card" href="{{ route('staff.config.show', ['tool' => $tool['key']]) }}">
+                            <i class="{{ config('other.font-awesome') }} {{ $tool['icon'] }}"></i>
+                            <span>{{ $tool['label'] }}</span>
+                        </a>
+                    @endforeach
                 </div>
             </div>
 
