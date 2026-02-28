@@ -942,6 +942,16 @@ main > article,
 .form__group--short-horizontal { grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 6px; }
 .form__label                { font-size: 12px; }
 
+/* Floating labels use background-color:inherit to mask the input border when
+   elevated. In CC many parents are transparent or rgba-overlay which breaks
+   the chain. Give every form__group an explicit opaque background so labels
+   always inherit a solid colour and can mask borders correctly.
+   Specific contexts that need a different bg override this below
+   (e.g. .chatroom__new-message .form__group → --cc-bg-main). */
+.form__group {
+    background-color: var(--cc-bg-card);
+}
+
 .form__fieldset {
     padding: 4px 6px 6px 6px;
     border-left: 3px solid var(--cc-accent-muted);
