@@ -1499,7 +1499,7 @@ class DatabaseMigrationService
             );
             $this->log("Forum source table resolved: {$forumsTable}");
 
-            $allRows = $this->sourceQuery("SELECT * FROM `{$forumsTable}` ORDER BY `id` ASC");
+            $allRows = $this->sourceQuery("SELECT * FROM `{$forumsTable}`");
 
             $categories = [];
             $subForums  = [];
