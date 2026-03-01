@@ -171,11 +171,101 @@
                     </div>
 
                     <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                        <button class="form__button form__button--filled" @click="testMigration()" x-show="selectedTables.includes('users')" :disabled="testingMigration">
+                            <i class="{{ config('other.font-awesome') }} fa-vial" style="margin-right: 0.4em;"></i>
+                            Test Migration (10 Users)
+                        </button>
                         <button class="form__button form__button--primary" @click="startMigration()" x-show="selectedTables.length > 0">
                             {{ __('migration.start-migration') }}
                         </button>
                         <button class="form__button form__button--secondary" @click="clearSelection()" x-show="selectedTables.length > 0">
                             {{ __('common.clear') }}
+                        </button>
+                    </div>
+                </section>
+
+                {{-- Test Migration Preview Section --}}
+                <section x-show="showTestPreview" x-cloak>
+                    <h3 style="margin-bottom: 1rem;">
+                        <i class="{{ config('other.font-awesome') }} fa-vial" style="margin-right: 0.4em; color: hsl(38, 92%, 60%);"></i>
+                        Test Migration Preview (10 Users)
+                    </h3>
+
+                    <template x-if="testPreviewError">
+                        <div class="migration-panel__status migration-panel__status--error" style="margin-bottom: 1rem;">
+                            <p x-text="testPreviewError" style="margin: 0;"></p>
+                        </div>
+                    </template>
+
+                    <template x-if="testPreviewData.success && testPreviewData.users">
+                        <div>
+                            <div class="migration-panel__status migration-panel__status--success" style="margin-bottom: 1rem;">
+                                <p style="margin: 0;">
+                                    ✅ Test successful! <strong x-text="testPreviewData.count"></strong> users would be migrated.
+                                    <br><span style="font-size: 0.82rem; opacity: 0.7;">Transaction was rolled back — no data was committed.</span>
+                                </p>
+                            </div>
+
+                            <div class="data-table-wrapper" style="max-height: 400px; overflow-y: auto;">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">ID</th>
+                                            <th scope="col">Username</th>
+                                            <th scope="col">Email</th>
+                                            <th scope="col">Group</th>
+                                            <th scope="col">Uploaded</th>
+                                            <th scope="col">Downloaded</th>
+                                            <th scope="col">Bonus</th>
+                                            <th scope="col">Legacy Auth</th>
+                                            <th scope="col">Created</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <template x-for="user in testPreviewData.users" :key="user.id">
+                                            <tr>
+                                                <td x-text="user.id"></td>
+                                                <td><strong x-text="user.username"></strong></td>
+                                                <td x-text="user.email" style="font-size: 0.82rem;"></td>
+                                                <td>
+                                                    <span style="padding: 0.15rem 0.5rem; border-radius: 3px; background: hsl(38, 92%, 56%, 0.15); color: hsl(38, 92%, 62%); font-size: 0.78rem;" x-text="user.group"></span>
+                                                </td>
+                                                <td x-text="user.uploaded" style="font-family: monospace; font-size: 0.82rem;"></td>
+                                                <td x-text="user.downloaded" style="font-family: monospace; font-size: 0.82rem;"></td>
+                                                <td x-text="user.seedbonus" style="font-family: monospace; font-size: 0.82rem;"></td>
+                                                <td>
+                                                    <span
+                                                        :style="user.legacy.includes('Yes') ? 'color: hsl(38, 92%, 60%);' : 'color: hsl(210, 12%, 55%);'"
+                                                        x-text="user.legacy"
+                                                        style="font-size: 0.78rem;"
+                                                    ></span>
+                                                </td>
+                                                <td x-text="user.created_at" style="font-size: 0.78rem;"></td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <details style="margin-top: 1rem;">
+                                <summary style="cursor: pointer; font-size: 0.82rem; opacity: 0.7;">
+                                    Show migration logs (<span x-text="testPreviewLogs.length"></span> entries)
+                                </summary>
+                                <div style="max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.72rem; line-height: 1.5; padding: 0.5rem; background: rgba(0,0,0,0.3); border-radius: 3px; margin-top: 0.3rem; word-break: break-all;">
+                                    <template x-for="(entry, i) in testPreviewLogs" :key="i">
+                                        <div x-text="entry" :style="entry.includes('failed') || entry.includes('Error') || entry.includes('Skipped') ? 'color:hsl(4,70%,65%)' : 'color:hsl(210,15%,70%)'"></div>
+                                    </template>
+                                </div>
+                            </details>
+                        </div>
+                    </template>
+
+                    <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                        <button class="form__button form__button--secondary" @click="closeTestPreview()">
+                            {{ __('common.close') }}
+                        </button>
+                        <button class="form__button form__button--primary" @click="closeTestPreview(); startMigration();" x-show="testPreviewData.success">
+                            Proceed with Full Migration
                         </button>
                     </div>
                 </section>
@@ -254,6 +344,11 @@
                 showSummary: false,
                 showProgress: false,
                 showCompleted: false,
+                showTestPreview: false,
+                testingMigration: false,
+                testPreviewData: {},
+                testPreviewLogs: [],
+                testPreviewError: null,
                 migrationHadErrors: false,
                 summaryData: {},
                 selectedTables: [],
@@ -417,6 +512,47 @@
                     });
                 },
 
+                async testMigration() {
+                    this.testingMigration  = true;
+                    this.showTestPreview   = false;
+                    this.testPreviewData   = {};
+                    this.testPreviewLogs   = [];
+                    this.testPreviewError  = null;
+
+                    try {
+                        const data = await this._fetchJson(
+                            '{{ route('staff.migrations.test-migration') }}',
+                            { ...this.form, group_map: this.groupMap }
+                        );
+
+                        this.testingMigration = false;
+
+                        if (data.success) {
+                            this.testPreviewData = data.preview ?? {};
+                            this.testPreviewLogs = data.logs ?? [];
+                            this.showTestPreview = true;
+
+                            if (!this.testPreviewData.success) {
+                                this.testPreviewError = this.testPreviewData.error ?? 'Migration test failed';
+                            }
+                        } else {
+                            this.testPreviewError = data.message ?? 'Test migration failed';
+                            this.showTestPreview = true;
+                        }
+                    } catch (error) {
+                        this.testingMigration = false;
+                        this.testPreviewError = error.message;
+                        this.showTestPreview = true;
+                    }
+                },
+
+                closeTestPreview() {
+                    this.showTestPreview  = false;
+                    this.testPreviewData  = {};
+                    this.testPreviewLogs  = [];
+                    this.testPreviewError = null;
+                },
+
                 async startMigration() {
                     if (!confirm('{{ __('migration.confirm-migration') }}')) {
                         return;
@@ -527,6 +663,11 @@
                     this.showSummary = false;
                     this.showProgress = false;
                     this.showCompleted = false;
+                    this.showTestPreview = false;
+                    this.testingMigration = false;
+                    this.testPreviewData = {};
+                    this.testPreviewLogs = [];
+                    this.testPreviewError = null;
                     this.migrationHadErrors = false;
                     this.summaryData = {};
                     this.selectedTables = [];

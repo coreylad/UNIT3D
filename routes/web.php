@@ -715,6 +715,7 @@ Route::middleware('language')->group(function (): void {
                 Route::post('/test-connection', [App\Http\Controllers\Staff\MigrationController::class, 'testConnection'])->name('test-connection');
                 Route::post('/get-summary', [App\Http\Controllers\Staff\MigrationController::class, 'getSummary'])->name('get-summary');
                 Route::post('/get-groups', [App\Http\Controllers\Staff\MigrationController::class, 'getGroups'])->name('get-groups');
+                Route::post('/test-migration', [App\Http\Controllers\Staff\MigrationController::class, 'testMigration'])->name('test-migration');
                 Route::post('/start', [App\Http\Controllers\Staff\MigrationController::class, 'start'])->name('start');
             });
 
