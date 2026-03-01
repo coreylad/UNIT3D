@@ -112,7 +112,7 @@
                             if (input.value !== '') {
                                 input.value += '\n\n';
                             }
-                            input.value += '[quote={{ \htmlspecialchars('@' . $post->user->username) }}]\n';
+                            input.value += '[quote={{ $post->anon ? 'Anonymous' : \htmlspecialchars('@' . $post->user->username) }}]\n';
                             input.value += decodeURIComponent(escape(atob('{{ base64_encode($post->content) }}')));
                             input.value += '\n[/quote]\n\n';
                             input.dispatchEvent(new Event('input'));

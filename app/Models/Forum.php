@@ -110,6 +110,16 @@ final class Forum extends Model
     }
 
     /**
+     * Get the latest post of the forum (cached).
+     *
+     * @return BelongsTo<Post, $this>
+     */
+    public function latestPost(): BelongsTo
+    {
+        return $this->belongsTo(Post::class, 'last_post_id');
+    }
+
+    /**
      * Get the latest poster of the forum (cached).
      *
      * @return BelongsTo<User, $this>

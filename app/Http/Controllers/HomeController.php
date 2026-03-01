@@ -97,7 +97,7 @@ class HomeController extends Controller
                 ->withExists(['unreads' => fn ($query) => $query->whereBelongsTo($user)])
                 ->get(),
             'topics' => Topic::query()
-                ->with(['user', 'user.group', 'latestPoster', 'reads' => fn ($query) => $query->whereBelongsTo($user)])
+                ->with(['user', 'user.group', 'latestPoster', 'latestPost:id,anon', 'reads' => fn ($query) => $query->whereBelongsTo($user)])
                 ->authorized(canReadTopic: true)
                 ->latest()
                 ->take(5)

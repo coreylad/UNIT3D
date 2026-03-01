@@ -115,6 +115,8 @@
         <address class="topic-listing__latest-author">
             @if ($topic->latestPoster === null)
                 {{ __('common.unknown') }}
+            @elseif ($topic->latestPost?->anon && auth()->id() !== $topic->last_post_user_id && ! auth()->user()->group->is_modo)
+                {{ __('common.anonymous') }}
             @else
                 <a
                     class="topic-listing__latest-author-link"

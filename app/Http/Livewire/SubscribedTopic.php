@@ -33,6 +33,7 @@ class SubscribedTopic extends Component
             ->with([
                 'user.group',
                 'latestPoster',
+                'latestPost:id,anon',
                 'forum',
                 'reads' => fn ($query) => $query->whereBelongsTo(auth()->user()),
             ])

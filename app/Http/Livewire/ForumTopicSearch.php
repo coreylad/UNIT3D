@@ -82,6 +82,7 @@ class ForumTopicSearch extends Component
             ->with([
                 'user.group',
                 'latestPoster',
+                'latestPost:id,anon',
                 'forum:id,name',
                 'reads' => fn ($query) => $query->whereBelongsTo(auth()->user()),
             ])

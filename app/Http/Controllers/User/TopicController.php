@@ -32,6 +32,7 @@ class TopicController extends Controller
                 ->with([
                     'user.group',
                     'latestPoster',
+                    'latestPost:id,anon',
                     'forum:id,name',
                     'reads' => fn ($query) => $query->whereBelongsTo(auth()->user()),
                 ])

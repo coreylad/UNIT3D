@@ -29,7 +29,7 @@ class SubscribedForum extends Component
      */
     final protected $forums {
         get => Forum::query()
-            ->with('latestPoster', 'lastRepliedTopic')
+            ->with('latestPoster', 'latestPost:id,anon', 'lastRepliedTopic')
             ->whereRelation('subscribedUsers', 'users.id', '=', auth()->id())
             ->authorized(canReadTopic: true)
             ->orderBy('position')

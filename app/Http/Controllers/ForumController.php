@@ -37,6 +37,7 @@ class ForumController extends Controller
                 ->with([
                     'forums'              => fn ($query) => $query->authorized(canReadTopic: true)->orderBy('position'),
                     'forums.latestPoster' => fn ($query) => $query->withTrashed(),
+                    'forums.latestPost:id,anon',
                     'forums.lastRepliedTopic',
                 ])
                 ->orderBy('position')

@@ -20,7 +20,7 @@ return [
          * The name of this application. You can use this name to monitor
          * the backups.
          */
-        'name' => env('APP_NAME', 'UNIT3D'),
+        'name' => env('APP_NAME', 'BAS3D'),
 
         'source' => [
             'files' => [
@@ -163,7 +163,7 @@ return [
             /*
              * The filename prefix used for the backup zip file.
              */
-            'filename_prefix' => '['.env('APP_NAME', 'UNIT3D').']',
+            'filename_prefix' => '['.env('APP_NAME', 'BAS3D').']',
 
             /*
              * The disk names on which the backups will be stored.
@@ -272,7 +272,7 @@ return [
      */
     'monitor_backups' => [
         [
-            'name'          => env('APP_NAME', 'UNIT3D'),
+            'name'          => env('APP_NAME', 'BAS3D'),
             'disks'         => ['backups'],
             'health_checks' => [
                 Spatie\Backup\Tasks\Monitor\HealthChecks\MaximumAgeInDays::class          => 1,

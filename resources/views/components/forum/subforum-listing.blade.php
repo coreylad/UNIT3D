@@ -57,12 +57,16 @@
         </time>
         @if ($subforum->lastRepliedTopic !== null && $subforum->latestPoster !== null)
             <address class="subforum-listing__latest-author">
-                <a
-                    class="subforum-listing__latest-author-link"
-                    href="{{ route('users.show', ['user' => $subforum->latestPoster]) }}"
-                >
-                    {{ $subforum->latestPoster->username }}
-                </a>
+                @if ($subforum->latestPost?->anon && auth()->id() !== $subforum->last_post_user_id && ! auth()->user()->group->is_modo)
+                    {{ __('common.anonymous') }}
+                @else
+                    <a
+                        class="subforum-listing__latest-author-link"
+                        href="{{ route('users.show', ['user' => $subforum->latestPoster]) }}"
+                    >
+                        {{ $subforum->latestPoster->username }}
+                    </a>
+                @endif
             </address>
         @endif
     </article>

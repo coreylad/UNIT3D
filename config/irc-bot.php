@@ -27,10 +27,10 @@ return [
     'hostname'     => 'example.com',
     'server'       => 'irc.example.com',
     'port'         => 6667,
-    'username'     => 'UNIT3D',
-    'password'     => 'UNIT3D',
+    'username'     => 'BAS3D',
+    'password'     => 'BAS3D',
     'channel'      => '#announce',
-    'channel_key'  => 'UNIT3D',
+    'channel_key'  => 'BAS3D',
     'nickservpass' => false,
     'joinchannel'  => false,
 ];
