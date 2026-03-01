@@ -48,7 +48,7 @@ class ChatMessageResource extends JsonResource
         $emojiOne = new LaravelJoyPixels();
 
         $bbcode = new Bbcode();
-        $logger = $bbcode->parse(self::replaceViewerUsernamePlaceholder($this->message, $request->user()));
+        $logger = $bbcode->parse(self::replaceChatUserPlaceholders($this->message, $request->user(), $this->user));
         $logger = $emojiOne->toImage($logger);
 
         if ($this->user_id == 1) {
@@ -67,12 +67,16 @@ class ChatMessageResource extends JsonResource
         ];
     }
 
-    private static function replaceViewerUsernamePlaceholder(string $message, ?User $viewer): string
+    private static function replaceChatUserPlaceholders(string $message, ?User $viewer, ?User $poster): string
     {
-        if ($viewer === null) {
-            return $message;
+        if ($viewer !== null) {
+            $message = (string) preg_replace('/\[you]/i', $viewer->username, $message);
         }
 
-        return (string) preg_replace('/\[you]/i', $viewer->username, $message);
+        if ($poster !== null) {
+            $message = (string) preg_replace('/\[me]/i', $poster->username, $message);
+        }
+
+        return $message;
     }
 }
