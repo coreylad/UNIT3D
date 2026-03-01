@@ -1662,22 +1662,28 @@ class DatabaseMigrationService
     /**
      * Migrate forum threads from source to destination
      */
-    public function migrateForumThreads(array $sourceConfig): array
+    public function migrateForumThreads(array $sourceConfig, int $offset = 0, int $limit = 500): array
     {
-        $this->log('Starting forum threads migration...');
+        $this->log("Starting forum threads migration (offset={$offset}, limit={$limit})...");
 
         try {
             $this->ensureConnected($sourceConfig);
 
-            $threadsTable = $this->resolveSourceTable(
+            $threadsTable = $this->tryResolveSourceTable(
                 ['tsf_threads', 'forum_threads', 'threads', 'topics', 'forum_topics'],
                 $sourceConfig
             );
+
+            if ($threadsTable === null) {
+                return ['success' => false, 'error' => 'Could not find a threads/topics table in the source DB.', 'done' => true, 'logs' => $this->migrationLog];
+            }
+
             $this->log("Thread source table resolved: {$threadsTable}");
-            $threads = $this->chunkSourceQuery("SELECT * FROM `{$threadsTable}` ORDER BY id", [], 500);
+            $threads = $this->sourceQuery("SELECT * FROM `{$threadsTable}` ORDER BY id LIMIT {$limit} OFFSET {$offset}");
+            $fetched = count($threads);
             $count = 0;
             $forumMap = Cache::get('forum_id_map', []);
-            $topicMap = [];
+            $topicMap = Cache::get('forum_topic_id_map', []);
 
             foreach ($threads as $thread) {
                 try {
@@ -1740,35 +1746,40 @@ class DatabaseMigrationService
 
             $this->topicIdRemap = $topicMap;
             Cache::put('forum_topic_id_map', $topicMap, now()->addHours(24));
-            Cache::put('forum_topic_source_db', $sourceConfig['database'], now()->addHours(24));
 
-            $this->log("Forum threads migration completed: {$count} threads migrated");
+            $this->log("Forum threads migration completed: {$count} threads migrated (offset={$offset})");
 
-            return ['success' => true, 'count' => $count, 'logs' => $this->migrationLog];
+            return ['success' => true, 'count' => $count, 'done' => $fetched < $limit, 'logs' => $this->migrationLog];
         } catch (\Throwable $e) {
             $msg = $this->formatError($e);
             $this->log('Forum threads migration failed: ' . $msg);
 
-            return ['success' => false, 'error' => $msg, 'logs' => $this->migrationLog];
+            return ['success' => false, 'error' => $msg, 'done' => true, 'logs' => $this->migrationLog];
         }
     }
 
     /**
      * Migrate forum posts from source to destination
      */
-    public function migrateForumPosts(array $sourceConfig): array
+    public function migrateForumPosts(array $sourceConfig, int $offset = 0, int $limit = 500): array
     {
-        $this->log('Starting forum posts migration...');
+        $this->log("Starting forum posts migration (offset={$offset}, limit={$limit})...");
 
         try {
             $this->ensureConnected($sourceConfig);
 
-            $postsTable = $this->resolveSourceTable(
+            $postsTable = $this->tryResolveSourceTable(
                 ['tsf_posts', 'forum_posts', 'posts', 'messages', 'forum_messages'],
                 $sourceConfig
             );
+
+            if ($postsTable === null) {
+                return ['success' => false, 'error' => 'Could not find a posts/messages table in the source DB.', 'done' => true, 'logs' => $this->migrationLog];
+            }
+
             $this->log("Post source table resolved: {$postsTable}");
-            $posts = $this->chunkSourceQuery("SELECT * FROM `{$postsTable}` ORDER BY id", [], 500);
+            $posts = $this->sourceQuery("SELECT * FROM `{$postsTable}` ORDER BY id LIMIT {$limit} OFFSET {$offset}");
+            $fetched = count($posts);
 
             $count = 0;
             $batch = [];
@@ -1815,6 +1826,25 @@ class DatabaseMigrationService
                 $count += count($batch);
             }
 
+            $this->log("Forum posts migration: {$count} posts migrated (offset={$offset})");
+
+            return ['success' => true, 'count' => $count, 'done' => $fetched < $limit, 'logs' => $this->migrationLog];
+        } catch (\Throwable $e) {
+            $msg = $this->formatError($e);
+            $this->log('Forum posts migration failed: ' . $msg);
+
+            return ['success' => false, 'error' => $msg, 'done' => true, 'logs' => $this->migrationLog];
+        }
+    }
+
+    /**
+     * Recalculate and update forum and topic statistics after migration.
+     */
+    public function finalizeForumStats(): array
+    {
+        $this->log('Finalizing forum statistics...');
+
+        try {
             DB::table('topics')->orderBy('id')->chunkById(200, function ($topics): void {
                 foreach ($topics as $topic) {
                     $topicPosts = DB::table('posts')
@@ -1856,12 +1886,12 @@ class DatabaseMigrationService
                 }
             });
 
-            $this->log("Forum posts migration completed: {$count} posts migrated");
+            $this->log('Forum statistics finalized.');
 
-            return ['success' => true, 'count' => $count, 'logs' => $this->migrationLog];
+            return ['success' => true, 'logs' => $this->migrationLog];
         } catch (\Throwable $e) {
             $msg = $this->formatError($e);
-            $this->log('Forum posts migration failed: ' . $msg);
+            $this->log('Forum statistics finalization failed: ' . $msg);
 
             return ['success' => false, 'error' => $msg, 'logs' => $this->migrationLog];
         }
