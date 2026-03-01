@@ -1679,7 +1679,7 @@ class DatabaseMigrationService
             }
 
             $this->log("Thread source table resolved: {$threadsTable}");
-            $threads = $this->sourceQuery("SELECT * FROM `{$threadsTable}` ORDER BY id LIMIT {$limit} OFFSET {$offset}");
+            $threads = $this->sourceQuery("SELECT * FROM `{$threadsTable}` ORDER BY tid LIMIT {$limit} OFFSET {$offset}");
             $fetched = count($threads);
             $count = 0;
             $forumMap = Cache::get('forum_id_map', []);
