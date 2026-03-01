@@ -15,6 +15,7 @@ declare(strict_types=1);
  */
 
 use App\Enums\ModerationStatus;
+use App\Models\Peer;
 use App\Models\Torrent;
 use App\Models\User;
 use Illuminate\Support\Facades\Redis;
@@ -53,4 +54,45 @@ test('index returns an ok response', function (): void {
     $response ->assertOk();
 
     $this->assertStringNotContainsString('failure reason', $response->getContent());
+});
+
+test('announce immediately persists peer state', function (): void {
+    Redis::connection('announce')->flushdb();
+    $user = User::factory()->create([
+        'can_download' => true,
+    ]);
+
+    $info_hash = '26679042096019090177';
+    $peer_id = '29045931013802080695';
+
+    $torrent = Torrent::factory()->create([
+        'info_hash' => $info_hash,
+        'status'    => ModerationStatus::APPROVED,
+    ]);
+
+    $headers = [
+        'accept-language' => null,
+        'referer'         => null,
+        'accept-charset'  => null,
+        'want-digest'     => null,
+    ];
+
+    $this->withHeaders($headers)->get(route('announce', [
+        'passkey'    => $user->passkey,
+        'info_hash'  => $info_hash,
+        'peer_id'    => $peer_id,
+        'port'       => 7022,
+        'left'       => 0,
+        'uploaded'   => 1,
+        'downloaded' => 1,
+        'compact'    => 1,
+    ]))->assertOk();
+
+    expect(Peer::query()
+        ->where('torrent_id', $torrent->id)
+        ->where('user_id', $user->id)
+        ->where('left', 0)
+        ->where('seeder', true)
+        ->where('active', true)
+        ->exists())->toBeTrue();
 });

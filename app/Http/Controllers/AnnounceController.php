@@ -116,6 +116,8 @@ final class AnnounceController extends Controller
                 $visible = true;
             }
 
+            $this->upsertCurrentPeer($queries, $torrent, $user, $visible);
+
             // Process Announce Job.
             $this->processAnnounceJob($queries, $user, $group, $torrent, $visible);
 
@@ -445,7 +447,7 @@ final class AnnounceController extends Controller
         // If we use eager loading, then laravel will use `where torrent_id in (123)` instead of `where torrent_id = ?`
         $torrent->setRelation(
             'peers',
-            Peer::select(['torrent_id', 'peer_id', 'user_id', 'downloaded', 'uploaded', 'left', 'seeder', 'active', 'visible', 'ip', 'port', 'updated_at'])
+            Peer::select(['torrent_id', 'peer_id', 'user_id', 'downloaded', 'uploaded', 'left', 'seeder', 'active', 'visible', 'connectable', 'ip', 'port', 'updated_at'])
                 ->where('torrent_id', '=', $torrent->id)
                 ->get()
         );
@@ -721,6 +723,44 @@ final class AnnounceController extends Controller
         $torrentDto = new AnnounceTorrentDTO($torrent->id, $torrent->free, $torrent->doubleup);
 
         ProcessAnnounce::dispatch($queries, $userDto, $torrentDto, $visible);
+    }
+
+    private function upsertCurrentPeer(AnnounceQueryDTO $queries, Torrent $torrent, User $user, bool $visible): void
+    {
+        $currentPeer = $torrent->peers
+            ->where('peer_id', '=', $queries->getPeerId())
+            ->where('user_id', '=', $user->id)
+            ->first();
+
+        $peerAttributes = [
+            'peer_id'     => $queries->getPeerId(),
+            'ip'          => $queries->getIp(),
+            'port'        => $queries->port,
+            'agent'       => $queries->getAgent(),
+            'uploaded'    => $queries->uploaded,
+            'downloaded'  => $queries->downloaded,
+            'left'        => $queries->left,
+            'seeder'      => $queries->left === 0,
+            'torrent_id'  => $torrent->id,
+            'user_id'     => $user->id,
+            'active'      => $queries->event !== 'stopped',
+            'visible'     => $visible,
+            'connectable' => $currentPeer?->connectable ?? false,
+        ];
+
+        Peer::query()->upsert(
+            [$peerAttributes],
+            ['user_id', 'torrent_id', 'peer_id'],
+            ['ip', 'port', 'agent', 'uploaded', 'downloaded', 'left', 'seeder', 'active', 'visible', 'connectable'],
+        );
+
+        if ($currentPeer !== null) {
+            $currentPeer->forceFill($peerAttributes);
+
+            return;
+        }
+
+        $torrent->peers->push(new Peer($peerAttributes));
     }
 
     private function generateFailedAnnounceResponse(TrackerException $trackerException): string

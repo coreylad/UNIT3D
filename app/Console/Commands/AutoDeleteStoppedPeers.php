@@ -47,7 +47,7 @@ class AutoDeleteStoppedPeers extends Command
         DB::transaction(static function (): void {
             DB::table('peers')
                 ->where('active', '=', 0)
-                ->where('updated_at', '>', now()->subHours(2))
+                ->where('updated_at', '<', now()->subHours(2))
                 ->delete();
         }, 5);
 
