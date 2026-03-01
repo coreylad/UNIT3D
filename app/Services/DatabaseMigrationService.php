@@ -1751,7 +1751,7 @@ class DatabaseMigrationService
 
             return ['success' => true, 'count' => $count, 'done' => $fetched < $limit, 'logs' => $this->migrationLog];
         } catch (\Throwable $e) {
-            $msg = $this->formatError($e);
+            $msg = $e->getMessage();
             $this->log('Forum threads migration failed: ' . $msg);
 
             return ['success' => false, 'error' => $msg, 'done' => true, 'logs' => $this->migrationLog];
@@ -1830,7 +1830,7 @@ class DatabaseMigrationService
 
             return ['success' => true, 'count' => $count, 'done' => $fetched < $limit, 'logs' => $this->migrationLog];
         } catch (\Throwable $e) {
-            $msg = $this->formatError($e);
+            $msg = $e->getMessage();
             $this->log('Forum posts migration failed: ' . $msg);
 
             return ['success' => false, 'error' => $msg, 'done' => true, 'logs' => $this->migrationLog];
@@ -1890,7 +1890,7 @@ class DatabaseMigrationService
 
             return ['success' => true, 'logs' => $this->migrationLog];
         } catch (\Throwable $e) {
-            $msg = $this->formatError($e);
+            $msg = $e->getMessage();
             $this->log('Forum statistics finalization failed: ' . $msg);
 
             return ['success' => false, 'error' => $msg, 'logs' => $this->migrationLog];
