@@ -1491,32 +1491,93 @@ class DatabaseMigrationService
         try {
             $this->ensureConnected($sourceConfig);
 
+            // tsf_forums stores both categories (parent_id = 0) and sub-forums (parent_id > 0)
+            // in a single self-referencing table. UNIT3D splits these into forum_categories and forums.
             $forumsTable = $this->resolveSourceTable(
                 ['tsf_forums', 'forums', 'forum_categories', 'forum_sections', 'categories'],
                 $sourceConfig
             );
             $this->log("Forum source table resolved: {$forumsTable}");
-            $forums = $this->sourceQuery("SELECT * FROM `{$forumsTable}`");
 
+            $allRows = $this->sourceQuery("SELECT * FROM `{$forumsTable}` ORDER BY `id` ASC");
+
+            $categories = [];
+            $subForums  = [];
+
+            foreach ($allRows as $row) {
+                $parentId = $row['parent_id'] ?? $row['pid'] ?? $row['category_id'] ?? 0;
+                if (empty($parentId) || (int) $parentId === 0) {
+                    $categories[] = $row;
+                } else {
+                    $subForums[] = $row;
+                }
+            }
+
+            $this->log(count($categories) . ' top-level categories and ' . count($subForums) . ' sub-forums found in source');
+
+            // ── Step 1: insert categories into forum_categories ───────────────
+            $categoryMap = []; // source_id → unit3d category id
+
+            foreach ($categories as $cat) {
+                $sourceId = $cat['id'] ?? $cat['fid'] ?? $cat['forum_id'] ?? 0;
+                $catName  = $cat['name'] ?? $cat['forum_name'] ?? 'Category';
+                $existing = DB::table('forum_categories')->where('name', $catName)->first();
+
+                if ($existing) {
+                    $categoryMap[$sourceId] = $existing->id;
+                } else {
+                    $slug  = \Illuminate\Support\Str::slug($catName) ?: 'category-' . $sourceId;
+                    $newId = DB::table('forum_categories')->insertGetId([
+                        'name'        => $catName,
+                        'slug'        => $slug,
+                        'description' => $cat['description'] ?? $cat['forum_desc'] ?? '',
+                        'position'    => (int) ($cat['position'] ?? $cat['display_order'] ?? $cat['order'] ?? $sourceId),
+                        'created_at'  => now(),
+                        'updated_at'  => now(),
+                    ]);
+                    $categoryMap[$sourceId] = $newId;
+                }
+            }
+
+            $this->log(count($categoryMap) . ' categories inserted into forum_categories');
+
+            // ── Step 2: insert sub-forums into forums ─────────────────────────
             $count    = 0;
-            $forumMap = [];
+            $forumMap = []; // source_id → unit3d forum id
 
-            foreach ($forums as $forum) {
+            foreach ($subForums as $forum) {
                 try {
+                    $sourceId  = $forum['id'] ?? $forum['fid'] ?? $forum['forum_id'] ?? 0;
+                    $parentId  = $forum['parent_id'] ?? $forum['pid'] ?? $forum['category_id'] ?? 0;
+                    $catId     = $categoryMap[$parentId] ?? null;
                     $forumName = $forum['name'] ?? $forum['forum_name'] ?? 'Forum';
-                    $existing  = DB::table('forums')->where('name', $forumName)->first();
-                    if (!$existing) {
-                        $newId = DB::table('forums')->insertGetId([
-                            'name'        => $forumName,
-                            'description' => $forum['description'] ?? $forum['forum_desc'] ?? '',
-                            'position'    => $forum['id'] ?? $forum['fid'] ?? $forum['forum_id'] ?? 0,
-                            'created_at'  => now(),
-                            'updated_at'  => now(),
-                        ]);
-                        $sourceId           = $forum['id'] ?? $forum['fid'] ?? $forum['forum_id'] ?? 0;
-                        $forumMap[$sourceId] = $newId;
-                        $count++;
+
+                    if ($catId === null) {
+                        $this->log("Skipping forum '{$forumName}' (source id {$sourceId}): parent category {$parentId} not mapped");
+
+                        continue;
                     }
+
+                    $existing = DB::table('forums')->where('name', $forumName)->first();
+
+                    if ($existing) {
+                        $forumMap[$sourceId] = $existing->id;
+
+                        continue;
+                    }
+
+                    $newId = DB::table('forums')->insertGetId([
+                        'forum_category_id' => $catId,
+                        'name'              => $forumName,
+                        'slug'              => \Illuminate\Support\Str::slug($forumName) ?: 'forum-' . $sourceId,
+                        'description'       => $forum['description'] ?? $forum['forum_desc'] ?? '',
+                        'position'          => (int) ($forum['position'] ?? $forum['display_order'] ?? $forum['order'] ?? $sourceId),
+                        'created_at'        => now(),
+                        'updated_at'        => now(),
+                    ]);
+
+                    $forumMap[$sourceId] = $newId;
+                    $count++;
                 } catch (\Throwable $e) {
                     $this->log("Error migrating forum {$forum['name']}: " . $e->getMessage());
                 }
