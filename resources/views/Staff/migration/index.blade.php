@@ -203,7 +203,7 @@
                             <div style="margin-bottom:1rem;">
                                 <div x-html="result.success
                                     ? `<strong style='color:hsl(140,55%,60%)'>✅ ${table}:</strong> ${(result.count ?? 0).toLocaleString()} records migrated`
-                                    : `<strong style='color:hsl(4,70%,62%)'>❌ ${table}:</strong> ${result.error ?? 'Unknown error'}`">
+                                    : `<strong style='color:hsl(4,70%,62%)'>❌ ${table}:</strong> ${result.error || (result.logs && result.logs.length ? result.logs.slice(-1)[0] : 'Unknown error')}`">
                                 </div>
                                 <template x-if="result.logs && result.logs.length">
                                     <details style="margin-top:0.4rem;">
@@ -477,7 +477,8 @@
 
                                 if (!result.success) {
                                     tableSucceeded = false;
-                                    tableError = result.error ?? 'Unknown error';
+                                    // prefer explicit error message but fall back to last log line
+                                    tableError = result.error || (result.logs?.length ? result.logs.slice(-1)[0] : 'Unknown error');
                                     this.migrationHadErrors = true;
                                     this._appendLog(`❌ <strong>${table}</strong> page failed: ${tableError}`, 'hsl(4,70%,62%)');
                                     tableDone = true;

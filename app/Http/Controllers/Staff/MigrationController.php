@@ -243,6 +243,10 @@ class MigrationController extends Controller
                 try {
                     Log::info("Migration: starting {$table}");
                     $result = $migrateFn();
+                    // guarantee there is an 
+                    if (isset($result['success']) && $result['success'] === false && !array_key_exists('error', $result)) {
+                        $result['error'] = '(no message)';
+                    }
                     $results['data'][$table] = $result;
                     Log::info("Migration: completed {$table}", ['result' => $result]);
                 } catch (\Throwable $e) {

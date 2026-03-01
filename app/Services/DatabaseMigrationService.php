@@ -16,6 +16,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Models\User;
 use Exception;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -51,6 +52,12 @@ class DatabaseMigrationService
      * All other users are inserted with their original ID so FK references remain valid.
      */
     private array $userIdRemap = [];
+
+    /** source topic/thread id -> unit3d topic id */
+    private array $topicIdRemap = [];
+
+    /** Cache of resolved forum user ids to avoid repeated existence checks */
+    private array $resolvedForumUserIds = [];
 
     // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // Connection
@@ -823,9 +830,10 @@ class DatabaseMigrationService
 
             return ['success' => true, 'count' => $count, 'done' => $fetched < $limit, 'logs' => $this->migrationLog];
         } catch (\Throwable $e) {
-            $this->log('User migration failed: ' . $e->getMessage());
+            $msg = $this->formatError($e);
+            $this->log('User migration failed: ' . $msg);
 
-            return ['success' => false, 'error' => $e->getMessage(), 'done' => true, 'logs' => $this->migrationLog];
+            return ['success' => false, 'error' => $msg, 'done' => true, 'logs' => $this->migrationLog];
         }
     }
 
@@ -1067,9 +1075,10 @@ class DatabaseMigrationService
                 'logs'    => $this->migrationLog,
             ];
         } catch (\Throwable $e) {
-            $this->log('Torrent migration failed: ' . $e->getMessage());
+            $msg = $this->formatError($e);
+            $this->log('Torrent migration failed: ' . $msg);
 
-            return ['success' => false, 'error' => $e->getMessage(), 'done' => true, 'logs' => $this->migrationLog];
+            return ['success' => false, 'error' => $msg, 'done' => true, 'logs' => $this->migrationLog];
         }
     }
 
@@ -1170,6 +1179,56 @@ class DatabaseMigrationService
     private function applyUserRemap(int $srcId): int
     {
         return $this->userIdRemap[$srcId] ?? $srcId;
+    }
+
+    /**
+     * Resolve a source forum/thread ID to the inserted UNIT3D topic ID.
+     */
+    private function applyTopicRemap(int $srcId): int
+    {
+        return $this->topicIdRemap[$srcId] ?? $srcId;
+    }
+
+    /**
+     * Normalize source timestamps that may be Unix timestamps, datetime strings, or empty values.
+     */
+    private function normalizeSourceDateTime(mixed $value, ?string $fallback = null): ?string
+    {
+        if ($value === null || $value === '' || $value === '0000-00-00 00:00:00') {
+            return $fallback;
+        }
+
+        if (is_numeric($value)) {
+            return date('Y-m-d H:i:s', (int) $value);
+        }
+
+        $timestamp = strtotime((string) $value);
+
+        return $timestamp !== false ? date('Y-m-d H:i:s', $timestamp) : $fallback;
+    }
+
+    /**
+     * Forum imports may reference deleted or unmigrated users; use the system user as a safe fallback.
+     */
+    private function resolveForumUserId(int $srcId, bool $nullable = false): ?int
+    {
+        if ($srcId <= 0) {
+            return $nullable ? null : User::SYSTEM_USER_ID;
+        }
+
+        $unit3dUserId = $this->applyUserRemap($srcId);
+
+        if (array_key_exists($unit3dUserId, $this->resolvedForumUserIds)) {
+            return $this->resolvedForumUserIds[$unit3dUserId];
+        }
+
+        $resolved = DB::table('users')->where('id', $unit3dUserId)->exists()
+            ? $unit3dUserId
+            : ($nullable ? null : User::SYSTEM_USER_ID);
+
+        $this->resolvedForumUserIds[$unit3dUserId] = $resolved;
+
+        return $resolved;
     }
 
     /**
@@ -1303,9 +1362,10 @@ class DatabaseMigrationService
 
             return ['success' => true, 'count' => $count, 'done' => $fetched < $limit, 'logs' => $this->migrationLog];
         } catch (\Throwable $e) {
-            $this->log('Peer migration failed: ' . $e->getMessage());
+            $msg = $this->formatError($e);
+            $this->log('Peer migration failed: ' . $msg);
 
-            return ['success' => false, 'error' => $e->getMessage(), 'done' => true, 'logs' => $this->migrationLog];
+            return ['success' => false, 'error' => $msg, 'done' => true, 'logs' => $this->migrationLog];
         }
     }
 
@@ -1388,9 +1448,10 @@ class DatabaseMigrationService
 
             return ['success' => true, 'count' => $count, 'done' => $fetched < $limit, 'logs' => $this->migrationLog];
         } catch (\Throwable $e) {
-            $this->log('Snatched migration failed: ' . $e->getMessage());
+            $msg = $this->formatError($e);
+            $this->log('Snatched migration failed: ' . $msg);
 
-            return ['success' => false, 'error' => $e->getMessage(), 'done' => true, 'logs' => $this->migrationLog];
+            return ['success' => false, 'error' => $msg, 'done' => true, 'logs' => $this->migrationLog];
         }
     }
 
@@ -1475,9 +1536,10 @@ class DatabaseMigrationService
 
             return ['success' => true, 'count' => $count, 'done' => $fetched < $limit, 'logs' => $this->migrationLog];
         } catch (\Throwable $e) {
-            $this->log('Comments migration failed: ' . $e->getMessage());
+            $msg = $this->formatError($e);
+            $this->log('Comments migration failed: ' . $msg);
 
-            return ['success' => false, 'error' => $e->getMessage(), 'done' => true, 'logs' => $this->migrationLog];
+            return ['success' => false, 'error' => $msg, 'done' => true, 'logs' => $this->migrationLog];
         }
     }
 
@@ -1590,9 +1652,10 @@ class DatabaseMigrationService
 
             return ['success' => true, 'count' => $count, 'logs' => $this->migrationLog];
         } catch (\Throwable $e) {
-            $this->log('Forum migration failed: ' . $e->getMessage());
+            $msg = $this->formatError($e);
+            $this->log('Forum migration failed: ' . $msg);
 
-            return ['success' => false, 'error' => $e->getMessage(), 'logs' => $this->migrationLog];
+            return ['success' => false, 'error' => $msg, 'logs' => $this->migrationLog];
         }
     }
 
@@ -1611,53 +1674,82 @@ class DatabaseMigrationService
                 $sourceConfig
             );
             $this->log("Thread source table resolved: {$threadsTable}");
-            $threads = $this->sourceQuery("SELECT * FROM `{$threadsTable}`");
-            $count    = 0;
-            $batch    = [];
-            $batchSize = 200;
+            $threads = $this->chunkSourceQuery("SELECT * FROM `{$threadsTable}` ORDER BY id", [], 500);
+            $count = 0;
             $forumMap = Cache::get('forum_id_map', []);
+            $topicMap = [];
 
             foreach ($threads as $thread) {
                 try {
+                    $sourceThreadId = (int) ($thread['id'] ?? $thread['thread_id'] ?? $thread['tid'] ?? 0);
                     $sourceFid  = $thread['forum_id'] ?? $thread['fid'] ?? 0;
                     $newForumId = $forumMap[$sourceFid] ?? null;
 
-                    if ($newForumId) {
-                        $threadDate = $thread['thread_date'] ?? $thread['created_at'] ?? $thread['post_date'] ?? null;
-                        $batch[] = [
-                            'forum_id'   => $newForumId,
-                            'user_id'    => $thread['user_id'] ?? $thread['uid'] ?? $thread['author_id'] ?? 0,
-                            'title'      => $thread['title'] ?? $thread['thread_title'] ?? $thread['subject'] ?? 'Thread',
-                            'sticky'     => (bool) ($thread['sticky'] ?? $thread['pinned'] ?? false),
-                            'locked'     => (bool) ($thread['locked'] ?? $thread['closed'] ?? false),
-                            'views'      => (int) ($thread['views'] ?? 0),
-                            'created_at' => $threadDate ? date('Y-m-d H:i:s', (int) $threadDate) : now(),
-                            'updated_at' => now(),
-                        ];
+                    if (!$newForumId) {
+                        continue;
+                    }
 
-                        if (count($batch) >= $batchSize) {
-                            DB::table('forum_threads')->insert($batch);
-                            $count += count($batch);
-                            $batch = [];
+                    $threadDate = $this->normalizeSourceDateTime(
+                        $thread['thread_date'] ?? $thread['created_at'] ?? $thread['post_date'] ?? $thread['added'] ?? null,
+                        now()->toDateTimeString()
+                    );
+                    $lastPostDate = $this->normalizeSourceDateTime(
+                        $thread['last_post_date'] ?? $thread['updated_at'] ?? $thread['last_post_time'] ?? null,
+                        $threadDate
+                    );
+                    $srcUserId = (int) ($thread['user_id'] ?? $thread['uid'] ?? $thread['author_id'] ?? 0);
+                    $userId = $this->resolveForumUserId($srcUserId, true);
+                    $state = ((bool) ($thread['locked'] ?? $thread['closed'] ?? false)) ? 'closed' : 'open';
+
+                    $topicData = [
+                        'forum_id'             => $newForumId,
+                        'name'                 => $thread['title'] ?? $thread['thread_title'] ?? $thread['subject'] ?? 'Thread',
+                        'state'                => $state,
+                        'priority'             => (int) (((bool) ($thread['sticky'] ?? $thread['pinned'] ?? false)) ? 1 : 0),
+                        'approved'             => 0,
+                        'denied'               => 0,
+                        'solved'               => 0,
+                        'invalid'              => 0,
+                        'bug'                  => 0,
+                        'suggestion'           => 0,
+                        'implemented'          => 0,
+                        'num_post'             => max(0, (int) ($thread['post_count'] ?? $thread['replies'] ?? $thread['reply_count'] ?? 0)),
+                        'first_post_user_id'   => $userId,
+                        'last_post_user_id'    => $userId,
+                        'last_post_created_at' => $lastPostDate,
+                        'views'                => (int) ($thread['views'] ?? 0),
+                        'created_at'           => $threadDate,
+                        'updated_at'           => $lastPostDate ?? $threadDate,
+                    ];
+
+                    if ($sourceThreadId > 0 && !DB::table('topics')->where('id', $sourceThreadId)->exists()) {
+                        DB::table('topics')->insert(['id' => $sourceThreadId] + $topicData);
+                        $topicMap[$sourceThreadId] = $sourceThreadId;
+                    } else {
+                        $newTopicId = DB::table('topics')->insertGetId($topicData);
+                        if ($sourceThreadId > 0) {
+                            $topicMap[$sourceThreadId] = $newTopicId;
                         }
                     }
+
+                    $count++;
                 } catch (\Throwable $e) {
                     $this->log('Error migrating forum thread: ' . $e->getMessage());
                 }
             }
 
-            if (!empty($batch)) {
-                DB::table('forum_threads')->insert($batch);
-                $count += count($batch);
-            }
+            $this->topicIdRemap = $topicMap;
+            Cache::put('forum_topic_id_map', $topicMap, now()->addHours(24));
+            Cache::put('forum_topic_source_db', $sourceConfig['database'], now()->addHours(24));
 
             $this->log("Forum threads migration completed: {$count} threads migrated");
 
             return ['success' => true, 'count' => $count, 'logs' => $this->migrationLog];
         } catch (\Throwable $e) {
-            $this->log('Forum threads migration failed: ' . $e->getMessage());
+            $msg = $this->formatError($e);
+            $this->log('Forum threads migration failed: ' . $msg);
 
-            return ['success' => false, 'error' => $e->getMessage(), 'logs' => $this->migrationLog];
+            return ['success' => false, 'error' => $msg, 'logs' => $this->migrationLog];
         }
     }
 
@@ -1676,26 +1768,40 @@ class DatabaseMigrationService
                 $sourceConfig
             );
             $this->log("Post source table resolved: {$postsTable}");
-            $posts = $this->sourceQuery("SELECT * FROM `{$postsTable}`");
+            $posts = $this->chunkSourceQuery("SELECT * FROM `{$postsTable}` ORDER BY id", [], 500);
 
             $count = 0;
             $batch = [];
             $batchSize = 500;
+            $topicMap = Cache::get('forum_topic_id_map', []);
 
             foreach ($posts as $post) {
                 try {
-                    $postDate   = $post['post_date'] ?? $post['created_at'] ?? $post['date_posted'] ?? null;
-                    $editedDate = $post['edited_at'] ?? $post['edited_time'] ?? $post['updated_at'] ?? null;
+                    $sourceThreadId = (int) ($post['thread_id'] ?? $post['tid'] ?? $post['topic_id'] ?? 0);
+                    $topicId = $topicMap[$sourceThreadId] ?? $this->applyTopicRemap($sourceThreadId);
+                    if ($topicId <= 0 || !DB::table('topics')->where('id', $topicId)->exists()) {
+                        continue;
+                    }
+
+                    $postDate = $this->normalizeSourceDateTime(
+                        $post['post_date'] ?? $post['created_at'] ?? $post['date_posted'] ?? $post['added'] ?? null,
+                        now()->toDateTimeString()
+                    );
+                    $editedDate = $this->normalizeSourceDateTime(
+                        $post['edited_at'] ?? $post['edited_time'] ?? $post['updated_at'] ?? null,
+                        $postDate
+                    );
                     $batch[] = [
-                        'thread_id'  => $post['thread_id'] ?? $post['tid'] ?? 0,
-                        'user_id'    => $post['user_id'] ?? $post['uid'] ?? $post['author_id'] ?? 0,
+                        'topic_id'   => $topicId,
+                        'user_id'    => $this->resolveForumUserId((int) ($post['user_id'] ?? $post['uid'] ?? $post['author_id'] ?? 0)),
                         'content'    => $post['post_text'] ?? $post['message'] ?? $post['content'] ?? $post['body'] ?? '',
-                        'created_at' => $postDate   ? date('Y-m-d H:i:s', (int) $postDate)   : now(),
-                        'updated_at' => $editedDate ? date('Y-m-d H:i:s', (int) $editedDate) : now(),
+                        'anon'       => (bool) ($post['anonymous'] ?? $post['anon'] ?? false),
+                        'created_at' => $postDate,
+                        'updated_at' => $editedDate,
                     ];
 
                     if (count($batch) >= $batchSize) {
-                        DB::table('forum_posts')->insert($batch);
+                        DB::table('posts')->insert($batch);
                         $count += count($batch);
                         $batch = [];
                     }
@@ -1705,17 +1811,59 @@ class DatabaseMigrationService
             }
 
             if (!empty($batch)) {
-                DB::table('forum_posts')->insert($batch);
+                DB::table('posts')->insert($batch);
                 $count += count($batch);
             }
+
+            DB::table('topics')->orderBy('id')->chunkById(200, function ($topics): void {
+                foreach ($topics as $topic) {
+                    $topicPosts = DB::table('posts')
+                        ->where('topic_id', $topic->id)
+                        ->orderByDesc('created_at')
+                        ->orderByDesc('id');
+                    $latestPost = $topicPosts->first();
+
+                    DB::table('topics')
+                        ->where('id', $topic->id)
+                        ->update([
+                            'num_post'             => $topicPosts->count(),
+                            'last_post_id'         => $latestPost->id ?? null,
+                            'last_post_user_id'    => $latestPost->user_id ?? $topic->last_post_user_id,
+                            'last_post_created_at' => $latestPost->created_at ?? $topic->last_post_created_at,
+                            'updated_at'           => $latestPost->updated_at ?? $topic->updated_at,
+                        ]);
+                }
+            });
+
+            DB::table('forums')->orderBy('id')->chunkById(100, function ($forums): void {
+                foreach ($forums as $forum) {
+                    $latestTopic = DB::table('topics')
+                        ->where('forum_id', $forum->id)
+                        ->orderByDesc('last_post_created_at')
+                        ->orderByDesc('id')
+                        ->first();
+
+                    DB::table('forums')
+                        ->where('id', $forum->id)
+                        ->update([
+                            'num_topic'            => DB::table('topics')->where('forum_id', $forum->id)->count(),
+                            'num_post'             => DB::table('posts')->join('topics', 'posts.topic_id', '=', 'topics.id')->where('topics.forum_id', $forum->id)->count(),
+                            'last_topic_id'        => $latestTopic->id ?? null,
+                            'last_post_id'         => $latestTopic->last_post_id ?? null,
+                            'last_post_user_id'    => $latestTopic->last_post_user_id ?? null,
+                            'last_post_created_at' => $latestTopic->last_post_created_at ?? null,
+                        ]);
+                }
+            });
 
             $this->log("Forum posts migration completed: {$count} posts migrated");
 
             return ['success' => true, 'count' => $count, 'logs' => $this->migrationLog];
         } catch (\Throwable $e) {
-            $this->log('Forum posts migration failed: ' . $e->getMessage());
+            $msg = $this->formatError($e);
+            $this->log('Forum posts migration failed: ' . $msg);
 
-            return ['success' => false, 'error' => $e->getMessage(), 'logs' => $this->migrationLog];
+            return ['success' => false, 'error' => $msg, 'logs' => $this->migrationLog];
         }
     }
 
