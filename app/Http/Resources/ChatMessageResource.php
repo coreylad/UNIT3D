@@ -17,6 +17,7 @@ declare(strict_types=1);
 namespace App\Http\Resources;
 
 use App\Helpers\Bbcode;
+use App\Models\User;
 use hdvinnie\LaravelJoyPixels\LaravelJoyPixels;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -47,7 +48,7 @@ class ChatMessageResource extends JsonResource
         $emojiOne = new LaravelJoyPixels();
 
         $bbcode = new Bbcode();
-        $logger = $bbcode->parse($this->message);
+        $logger = $bbcode->parse(self::replaceViewerUsernamePlaceholder($this->message, $request->user()));
         $logger = $emojiOne->toImage($logger);
 
         if ($this->user_id == 1) {
@@ -64,5 +65,14 @@ class ChatMessageResource extends JsonResource
             'created_at' => $this->created_at->toIso8601String(),
             'updated_at' => $this->updated_at->toIso8601String(),
         ];
+    }
+
+    private static function replaceViewerUsernamePlaceholder(string $message, ?User $viewer): string
+    {
+        if ($viewer === null) {
+            return $message;
+        }
+
+        return (string) preg_replace('/\[you]/i', $viewer->username, $message);
     }
 }
