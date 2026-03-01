@@ -55,3 +55,4 @@ config/caddy/autosave.json
 /data/
 package-lock.json
 TSSEDB.sql
+CLAUDE.md

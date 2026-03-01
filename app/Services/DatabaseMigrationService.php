@@ -52,20 +52,6 @@ class DatabaseMigrationService
      */
     private array $userIdRemap = [];
 
-    /**
-     * source_torrent_id → unit3d_torrent_id
-     * Only populated when a TSSE torrent ID collides with an existing UNIT3D torrent.
-     * All other torrents are inserted with their original ID so FK references remain valid.
-     */
-    private array $torrentIdRemap = [];
-
-    /**
-     * source_torrent_id → hex_info_hash
-     * Built during torrent migration for use by snatched→history migration
-     * (UNIT3D history table uses info_hash as key, not torrent_id).
-     */
-    private array $torrentHashMap = [];
-
     // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // Connection
     // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -522,25 +508,11 @@ class DatabaseMigrationService
 
                     $srcName = (string) ($sg['name'] ?? $sg['group_name'] ?? $sg['title'] ?? $sg['class_name'] ?? '');
 
-                    // TSSE-specific: check isbanned/candownload flags for group classification
-                    // These override name-based matching when present
-                    $isBanned     = ($sg['isbanned'] ?? $sg['is_banned'] ?? null) === 'yes' || ($sg['isbanned'] ?? $sg['is_banned'] ?? 0) === 1;
-                    $canDownload  = ($sg['candownload'] ?? $sg['can_download'] ?? null);
-                    $isLeechGroup = $canDownload !== null && ($canDownload === 'no' || $canDownload === 0 || $canDownload === '0');
-
-                    if ($isBanned) {
-                        $destId = $bySlug->get('banned')?->id ?? $fallbackId;
-                    } elseif ($isLeechGroup && !$isBanned) {
-                        // Can't download but not banned = leech/validating group
-                        $destId = $bySlug->get('validating')?->id ?? $bySlug->get('leech')?->id ?? $fallbackId;
-                    } else {
-                        $destId = $resolveByKeyword($srcName);
-                    }
-
+                    $destId   = $resolveByKeyword($srcName);
                     $destName = $unit3dGroups->first(fn ($g) => $g->id === $destId)?->name ?? "id={$destId}";
                     $map[$srcId] = $destId;
 
-                    $this->log("  src #{$srcId} '{$srcName}' → UNIT3D '{$destName}' (id={$destId})" . ($isBanned ? ' [isbanned=yes]' : ''));
+                    $this->log("  src #{$srcId} '{$srcName}' → UNIT3D '{$destName}' (id={$destId})");
                 }
 
                 $this->log('Group map built from `' . $sourceGroupsTable . '`: ' . count($map) . ' source groups mapped.');
@@ -815,12 +787,11 @@ class DatabaseMigrationService
                         'is_donor' => $isDonor,
 
                         // Permissions — TSSE uses can_leech for download permission
-                        'can_chat'     => isset($user['can_chat'])    ? (int) (bool) $user['can_chat']    : 1,
-                        'can_comment'  => isset($user['can_comment']) ? (int) (bool) $user['can_comment'] : 1,
+                        'can_chat'     => isset($user['can_chat'])    ? (int) (bool) $user['can_chat']    : null,
                         'can_download' => isset($user['can_leech'])   ? (int) (bool) $user['can_leech']   : (isset($user['can_download']) ? (int) (bool) $user['can_download'] : 1),
-                        'can_request'  => isset($user['can_request']) ? (int) (bool) $user['can_request'] : 1,
-                        'can_invite'   => isset($user['can_invite'])  ? (int) (bool) $user['can_invite']  : 1,
-                        'can_upload'   => isset($user['can_upload'])  ? (int) (bool) $user['can_upload']  : 1,
+                        'can_request'  => isset($user['can_request']) ? (int) (bool) $user['can_request'] : null,
+                        'can_invite'   => isset($user['can_invite'])  ? (int) (bool) $user['can_invite']  : null,
+                        'can_upload'   => isset($user['can_upload'])  ? (int) (bool) $user['can_upload']  : null,
 
                         // Email verification
                         'email_verified_at' => $emailVerifiedAt,
@@ -980,7 +951,7 @@ class DatabaseMigrationService
                  LIMIT {$limit} OFFSET {$offset}"
             );
 
-            $fetched   = \count($torrents);
+            $fetched   = count($torrents);
             $count     = 0;
             $skipped   = 0;
             $batch     = [];
@@ -1007,8 +978,6 @@ class DatabaseMigrationService
                         continue;
                     }
 
-                    $srcId = (int) $torrent['id'];
-
                     // TSSE stores info_hash as BINARY(20) — convert to 40-char hex string
                     $rawHash = $torrent['info_hash'] ?? null;
 
@@ -1018,12 +987,12 @@ class DatabaseMigrationService
                         continue;
                     }
 
-                    $infoHash = (\strlen($rawHash) === 40 && ctype_xdigit($rawHash))
+                    $infoHash = (strlen($rawHash) === 40 && ctype_xdigit($rawHash))
                         ? strtolower($rawHash)
                         : strtolower(bin2hex($rawHash));
 
-                    if (\strlen($infoHash) !== 40) {
-                        $this->log("Skipping torrent id={$srcId}: invalid info_hash");
+                    if (strlen($infoHash) !== 40) {
+                        $this->log("Skipping torrent id={$torrent['id']}: invalid info_hash");
                         $skipped++;
 
                         continue;
@@ -1033,11 +1002,10 @@ class DatabaseMigrationService
                     $categoryId = $categoryMap[$srcCatId] ?? $fallbackCatId;
 
                     $name = (string) ($torrent['name'] ?? 'Unknown');
-                    $slug = \Illuminate\Support\Str::slug($name) ?: ('torrent-' . $srcId);
+                    $slug = \Illuminate\Support\Str::slug($name) ?: ('torrent-' . $torrent['id']);
 
-                    // Key by source ID to enable ID preservation
-                    $batch[$srcId] = [
-                        'id'              => $srcId,
+                    // No source id — let UNIT3D auto-increment assign a new id
+                    $batch[$infoHash] = [
                         'name'            => $name,
                         'slug'            => $slug,
                         'description'     => (string) ($torrent['descr'] ?? ''),
@@ -1072,10 +1040,10 @@ class DatabaseMigrationService
                         'updated_at'      => now()->toDateTimeString(),
                     ];
 
-                    if (\count($batch) >= $batchSize) {
+                    if (count($batch) >= $batchSize) {
                         $inserted = $this->insertNewTorrents($batch);
                         $count   += $inserted;
-                        $skipped += \count($batch) - $inserted;
+                        $skipped += count($batch) - $inserted;
                         $batch    = [];
                     }
                 } catch (\Throwable $e) {
@@ -1086,11 +1054,10 @@ class DatabaseMigrationService
             if (!empty($batch)) {
                 $inserted = $this->insertNewTorrents($batch);
                 $count   += $inserted;
-                $skipped += \count($batch) - $inserted;
+                $skipped += count($batch) - $inserted;
             }
 
             $this->log("Torrent migration: {$count} inserted, {$skipped} skipped (offset={$offset})");
-            $this->log("Torrent hash map now has " . \count($this->torrentHashMap) . " entries");
 
             return [
                 'success' => true,
@@ -1206,36 +1173,10 @@ class DatabaseMigrationService
     }
 
     /**
-     * Resolve a TSSE torrent_id to its UNIT3D equivalent.
-     * Returns the same value unless that ID was remapped due to a collision.
-     */
-    private function applyTorrentRemap(int $srcId): int
-    {
-        return $this->torrentIdRemap[$srcId] ?? $srcId;
-    }
-
-    /**
-     * Get the info_hash for a TSSE torrent ID.
-     * Returns null if the torrent wasn't migrated.
-     */
-    private function getTorrentHash(int $srcId): ?string
-    {
-        $remappedId = $this->applyTorrentRemap($srcId);
-
-        return $this->torrentHashMap[$remappedId] ?? $this->torrentHashMap[$srcId] ?? null;
-    }
-
-    /**
-     * Insert torrents, preserving source IDs wherever possible so that all foreign-key
-     * references in peers, snatched, and comments remain valid after migration.
+     * Insert torrents that don't already exist (keyed by info_hash).
+     * Existing UNIT3D torrents are never modified.
      *
-     * When a source ID collides with an existing UNIT3D torrent, the TSSE torrent is
-     * inserted without an explicit ID so MySQL assigns a new one, and the mapping is
-     * stored in $this->torrentIdRemap for downstream use.
-     *
-     * Also builds $this->torrentHashMap for use by snatched→history migration.
-     *
-     * @param  array<int, array>  $batch  source_torrent_id → row data
+     * @param  array<string, array>  $batch  info_hash → row data
      * @return int  number of rows actually inserted
      */
     private function insertNewTorrents(array $batch): int
@@ -1244,78 +1185,28 @@ class DatabaseMigrationService
             return 0;
         }
 
-        // Pre-check which IDs and info_hashes already exist in UNIT3D
-        $ids        = array_column($batch, 'id');
-        $infoHashes = array_column($batch, 'info_hash');
-
-        $existingIds = DB::table('torrents')
-            ->whereIn('id', $ids)
-            ->pluck('id')
-            ->flip()
-            ->all();
-
-        $existingHashes = DB::table('torrents')
-            ->whereIn('info_hash', $infoHashes)
+        // Find which info_hashes already exist in UNIT3D
+        $existing = DB::table('torrents')
+            ->whereIn('info_hash', array_keys($batch))
             ->pluck('info_hash')
             ->flip()
             ->all();
 
-        $inserted = 0;
+        $toInsert = array_values(
+            array_filter($batch, fn ($row) => !isset($existing[$row['info_hash']]))
+        );
 
-        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
-
-        foreach ($batch as $srcId => $row) {
-            $infoHash = $row['info_hash'];
-
-            // Skip if this info_hash already exists (torrent already migrated or exists in UNIT3D)
-            if (isset($existingHashes[$infoHash])) {
-                // Still build the hash map for peers/snatched/comments lookup
-                $existingTorrent = DB::table('torrents')->where('info_hash', $infoHash)->first(['id']);
-                if ($existingTorrent && $existingTorrent->id !== $srcId) {
-                    $this->torrentIdRemap[$srcId] = $existingTorrent->id;
-                }
-
-                $this->torrentHashMap[$srcId] = $infoHash;
-
-                continue;
-            }
-
-            if (isset($existingIds[$srcId])) {
-                // ID conflict → insert without ID so MySQL assigns a new one
-                $rowWithoutId = $row;
-                unset($rowWithoutId['id']);
-
-                try {
-                    $newId = DB::table('torrents')->insertGetId($rowWithoutId);
-                    $this->torrentIdRemap[$srcId] = $newId;
-                    $this->torrentHashMap[$srcId] = $infoHash;
-                    $this->log("Torrent ID conflict: TSSE #{$srcId} → UNIT3D #{$newId} (auto-remapped)");
-                    $inserted++;
-                } catch (\Throwable $e) {
-                    $this->log("Failed to insert remapped torrent TSSE #{$srcId}: " . $e->getMessage());
-                }
-            } else {
-                // No conflict → insert with original ID preserved
-                try {
-                    DB::table('torrents')->insert($row);
-                    $this->torrentHashMap[$srcId] = $infoHash;
-                    $inserted++;
-                } catch (\Throwable $e) {
-                    $this->log("Failed to insert torrent TSSE #{$srcId}: " . $e->getMessage());
-                }
-            }
+        if (empty($toInsert)) {
+            return 0;
         }
 
-        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+        DB::table('torrents')->insert($toInsert);
 
-        return $inserted;
+        return count($toInsert);
     }
 
     /**
-     * Migrate peers from source to destination.
-     *
-     * TSSE peers table uses `torrent` column (numeric FK to torrents.id), not info_hash.
-     * We apply torrent ID remapping and look up the info_hash from our cached map.
+     * Migrate peers from source to destination
      */
     public function migratePeers(array $sourceConfig, int $offset = 0, int $limit = 100): array
     {
@@ -1325,95 +1216,78 @@ class DatabaseMigrationService
             $this->ensureConnected($sourceConfig);
 
             // Abort early if torrents haven't been migrated yet
-            if (empty($this->torrentHashMap)) {
-                $this->log('WARNING: Torrent hash map is empty — migrate torrents first, then re-run peers.');
+            $unit3dTorrentCount = DB::table('torrents')->count();
+            if ($unit3dTorrentCount === 0) {
+                $this->log('WARNING: No torrents found in UNIT3D — migrate torrents first, then re-run peers.');
 
-                return ['success' => false, 'error' => 'Run torrent migration first to build hash map.', 'done' => true, 'logs' => $this->migrationLog];
+                return ['success' => false, 'error' => 'No torrents in UNIT3D. Run torrent migration first.', 'done' => true, 'logs' => $this->migrationLog];
             }
 
-            // TSSE peers uses `torrent` column (torrent ID), `to_go` for bytes left
             $peers   = $this->sourceQuery("SELECT * FROM peers ORDER BY userid LIMIT {$limit} OFFSET {$offset}");
-            $fetched = \count($peers);
+            $fetched = count($peers);
 
-            $count     = 0;
-            $skipped   = 0;
-            $batch     = [];
-            $batchSize = 500;
+            $count        = 0;
+            $skipped      = 0;
+            $batch        = [];
+            $batchSize    = 500;
 
-            // Pre-fetch which torrent IDs exist in UNIT3D for this batch
-            $srcTorrentIds = array_unique(array_filter(array_map(
-                fn ($p) => (int) ($p['torrent'] ?? 0),
-                $peers
-            )));
-
-            // Build set of valid UNIT3D torrent IDs (after remapping)
-            $validTorrentIds = [];
-            foreach ($srcTorrentIds as $srcId) {
-                $remappedId = $this->applyTorrentRemap($srcId);
-                $validTorrentIds[$remappedId] = true;
+            // Build a hex info_hash → torrent_id map for this page in one query
+            $rawHashes = [];
+            foreach ($peers as $peer) {
+                $raw = $peer['infohash'] ?? $peer['info_hash'] ?? $peer['torrent_hash'] ?? null;
+                if ($raw !== null) {
+                    $hex = (strlen($raw) === 40 && ctype_xdigit($raw))
+                        ? strtolower($raw)
+                        : strtolower(bin2hex($raw));
+                    $rawHashes[$hex] = true;
+                }
             }
 
-            $existingTorrentIds = DB::table('torrents')
-                ->whereIn('id', array_keys($validTorrentIds))
-                ->pluck('id')
-                ->flip()
-                ->all();
+            $torrentMap = DB::table('torrents')
+                ->whereIn('info_hash', array_keys($rawHashes))
+                ->pluck('id', 'info_hash')
+                ->all(); // hash → id
 
             foreach ($peers as $peer) {
                 try {
-                    // TSSE peers.torrent is the torrent ID (FK), not info_hash
-                    $srcTorrentId = (int) ($peer['torrent'] ?? 0);
-                    if ($srcTorrentId === 0) {
+                    // TSSE peers.infohash is BINARY(20) — convert to hex for lookup
+                    $rawHash = $peer['infohash'] ?? $peer['info_hash'] ?? $peer['torrent_hash'] ?? null;
+                    if ($rawHash === null) {
                         $skipped++;
-
                         continue;
                     }
 
-                    $torrentId = $this->applyTorrentRemap($srcTorrentId);
+                    $infoHash = (strlen($rawHash) === 40 && ctype_xdigit($rawHash))
+                        ? strtolower($rawHash)
+                        : strtolower(bin2hex($rawHash));
 
-                    // Verify torrent exists in UNIT3D
-                    if (!isset($existingTorrentIds[$torrentId])) {
+                    $torrentId = $torrentMap[$infoHash] ?? null;
+                    if ($torrentId === null) {
                         $skipped++;
-
-                        continue;
-                    }
-
-                    // Get info_hash from our cached map
-                    $infoHash = $this->torrentHashMap[$srcTorrentId] ?? null;
-                    if ($infoHash === null) {
-                        // Fallback: query UNIT3D directly
-                        $infoHash = DB::table('torrents')->where('id', $torrentId)->value('info_hash');
-                        if ($infoHash === null) {
-                            $skipped++;
-
-                            continue;
-                        }
+                        continue; // torrent not migrated — skip peer
                     }
 
                     $srcUserId = (int) ($peer['userid'] ?? $peer['user_id'] ?? 0);
-
-                    // TSSE uses `to_go` for bytes remaining
-                    $bytesLeft = (int) ($peer['to_go'] ?? $peer['left'] ?? 0);
 
                     $batch[] = [
                         'peer_id'    => $peer['peer_id'] ?? $peer['peerid'] ?? null,
                         'hash'       => $infoHash,
                         'ip'         => $peer['ip'] ?? null,
                         'port'       => (int) ($peer['port'] ?? 0),
-                        'left'       => $bytesLeft,
+                        'left'       => (int) ($peer['left'] ?? 0),
                         'uploaded'   => (int) ($peer['uploaded'] ?? 0),
                         'downloaded' => (int) ($peer['downloaded'] ?? 0),
-                        'seeder'     => $bytesLeft === 0 ? 1 : 0,
+                        'seeder'     => ($peer['left'] ?? 1) == 0 ? 1 : 0,
                         'torrent_id' => $torrentId,
                         'user_id'    => $this->applyUserRemap($srcUserId) ?: null,
                         'created_at' => now()->toDateTimeString(),
                         'updated_at' => now()->toDateTimeString(),
                     ];
 
-                    if (\count($batch) >= $batchSize) {
+                    if (count($batch) >= $batchSize) {
                         DB::table('peers')->insert($batch);
-                        $count += \count($batch);
-                        $batch  = [];
+                        $count += count($batch);
+                        $batch = [];
                     }
                 } catch (\Throwable $e) {
                     $this->log('Error migrating peer: ' . $e->getMessage());
@@ -1422,7 +1296,7 @@ class DatabaseMigrationService
 
             if (!empty($batch)) {
                 DB::table('peers')->insert($batch);
-                $count += \count($batch);
+                $count += count($batch);
             }
 
             $this->log("Peer migration completed: {$count} peers migrated, {$skipped} skipped (torrent not found)");
@@ -1436,10 +1310,7 @@ class DatabaseMigrationService
     }
 
     /**
-     * Migrate snatched from source to UNIT3D's history table.
-     *
-     * TSSE snatched table uses `torrentid` column (numeric FK to torrents.id), not info_hash.
-     * UNIT3D history table uses `info_hash` as the key, so we look up from our cached map.
+     * Migrate snatched from source to destination
      */
     public function migrateSnatched(array $sourceConfig, int $offset = 0, int $limit = 100): array
     {
@@ -1448,71 +1319,39 @@ class DatabaseMigrationService
         try {
             $this->ensureConnected($sourceConfig);
 
-            // Abort early if torrents haven't been migrated yet
-            if (empty($this->torrentHashMap)) {
-                $this->log('WARNING: Torrent hash map is empty — migrate torrents first, then re-run snatched.');
-
-                return ['success' => false, 'error' => 'Run torrent migration first to build hash map.', 'done' => true, 'logs' => $this->migrationLog];
-            }
-
-            // TSSE snatched uses `torrentid` column (numeric FK), not infohash
             $snatched = $this->sourceQuery(
-                "SELECT torrentid, userid, uploaded, downloaded, seedtime, leechtime, completedat, startdat
+                "SELECT userid, infohash, uploaded, downloaded, snatched_time, completedtime
                  FROM snatched
                  ORDER BY userid
                  LIMIT {$limit} OFFSET {$offset}"
             );
-            $fetched = \count($snatched);
+            $fetched  = count($snatched);
 
-            $count   = 0;
-            $skipped = 0;
-            $batch   = [];
+            $count = 0;
+            $batch = [];
             $batchSize = 500;
 
             foreach ($snatched as $snatch) {
                 try {
-                    $srcTorrentId = (int) ($snatch['torrentid'] ?? 0);
-                    if ($srcTorrentId === 0) {
-                        $skipped++;
-
+                    // TSSE snatched.infohash is BINARY(20) — convert to hex
+                    $rawHash = $snatch['infohash'] ?? $snatch['info_hash'] ?? null;
+                    if ($rawHash === null) {
                         continue;
                     }
 
-                    // Look up info_hash from our cached map (built during torrent migration)
-                    $infoHash = $this->torrentHashMap[$srcTorrentId] ?? null;
-                    if ($infoHash === null) {
-                        // Torrent wasn't migrated (banned/hidden) — skip
-                        $skipped++;
+                    $infoHash = (strlen($rawHash) === 40 && ctype_xdigit($rawHash))
+                        ? strtolower($rawHash)
+                        : strtolower(bin2hex($rawHash));
 
-                        continue;
-                    }
+                    $srcUserId    = (int) ($snatch['userid'] ?? $snatch['user_id'] ?? 0);
+                    $uploaded     = (int) ($snatch['uploaded'] ?? 0);
+                    $downloaded   = (int) ($snatch['downloaded'] ?? 0);
+                    $completedRaw = $snatch['snatched_time'] ?? $snatch['completedtime'] ?? null;
+                    $completedAt  = ($completedRaw && $completedRaw !== '0000-00-00 00:00:00')
+                        ? date('Y-m-d H:i:s', is_numeric($completedRaw) ? (int) $completedRaw : strtotime($completedRaw))
+                        : null;
 
-                    $srcUserId  = (int) ($snatch['userid'] ?? 0);
-                    $uploaded   = (int) ($snatch['uploaded'] ?? 0);
-                    $downloaded = (int) ($snatch['downloaded'] ?? 0);
-                    $seedtime   = (int) ($snatch['seedtime'] ?? 0);
-
-                    // Parse completed date — TSSE uses `completedat` column
-                    $completedRaw = $snatch['completedat'] ?? null;
-                    $completedAt  = null;
-                    if ($completedRaw && $completedRaw !== '0000-00-00 00:00:00') {
-                        $ts = is_numeric($completedRaw) ? (int) $completedRaw : strtotime((string) $completedRaw);
-                        if ($ts && $ts > 0) {
-                            $completedAt = date('Y-m-d H:i:s', $ts);
-                        }
-                    }
-
-                    // Parse start date for created_at
-                    $startRaw  = $snatch['startdat'] ?? null;
-                    $startedAt = null;
-                    if ($startRaw && $startRaw !== '0000-00-00 00:00:00') {
-                        $ts = is_numeric($startRaw) ? (int) $startRaw : strtotime((string) $startRaw);
-                        if ($ts && $ts > 0) {
-                            $startedAt = date('Y-m-d H:i:s', $ts);
-                        }
-                    }
-
-                    // UNIT3D history table schema
+                    // UNIT3D tracks snatch history in the `history` table
                     $batch[] = [
                         'user_id'           => $this->applyUserRemap($srcUserId),
                         'info_hash'         => $infoHash,
@@ -1524,16 +1363,16 @@ class DatabaseMigrationService
                         'client_downloaded' => $downloaded,
                         'seeder'            => 0,
                         'active'            => 0,
-                        'seedtime'          => $seedtime,
+                        'seedtime'          => 0,
                         'completed_at'      => $completedAt,
-                        'created_at'        => $startedAt ?? now()->toDateTimeString(),
+                        'created_at'        => now()->toDateTimeString(),
                         'updated_at'        => now()->toDateTimeString(),
                     ];
 
-                    if (\count($batch) >= $batchSize) {
+                    if (count($batch) >= $batchSize) {
                         DB::table('history')->insert($batch);
-                        $count += \count($batch);
-                        $batch  = [];
+                        $count += count($batch);
+                        $batch = [];
                     }
                 } catch (\Throwable $e) {
                     $this->log('Error migrating snatched record: ' . $e->getMessage());
@@ -1542,10 +1381,10 @@ class DatabaseMigrationService
 
             if (!empty($batch)) {
                 DB::table('history')->insert($batch);
-                $count += \count($batch);
+                $count += count($batch);
             }
 
-            $this->log("Snatched migration completed: {$count} records migrated to history, {$skipped} skipped");
+            $this->log("Snatched migration completed: {$count} records migrated to history");
 
             return ['success' => true, 'count' => $count, 'done' => $fetched < $limit, 'logs' => $this->migrationLog];
         } catch (\Throwable $e) {
@@ -1557,9 +1396,6 @@ class DatabaseMigrationService
 
     /**
      * Migrate torrent comments from source to UNIT3D's polymorphic comments table.
-     *
-     * TSSE comments table uses `torrent` column (numeric FK to torrents.id).
-     * We apply torrent ID remapping to resolve the UNIT3D torrent_id.
      */
     public function migrateComments(array $sourceConfig, int $offset = 0, int $limit = 100): array
     {
@@ -1568,32 +1404,32 @@ class DatabaseMigrationService
         try {
             $this->ensureConnected($sourceConfig);
 
-            // TSSE comments uses `torrent` column (numeric FK), `user` for user ID
+            // TSSE comments reference torrents by their internal ID.
+            // We join with TSSE torrents to get the info_hash, then resolve to the UNIT3D torrent_id.
             $rows = $this->sourceQuery(
-                "SELECT id, text, user, torrent, added
-                 FROM comments
-                 ORDER BY id
+                "SELECT c.id, c.text, c.userid, c.added, c.anonymous,
+                        t.info_hash
+                 FROM comments c
+                 LEFT JOIN torrents t ON t.id = c.torrent
                  LIMIT {$limit} OFFSET {$offset}"
             );
-            $fetched = \count($rows);
+            $fetched = count($rows);
 
-            // Pre-fetch which torrent IDs exist in UNIT3D for this batch
-            $srcTorrentIds = array_unique(array_filter(array_map(
-                fn ($r) => (int) ($r['torrent'] ?? 0),
-                $rows
-            )));
-
-            // Build set of valid UNIT3D torrent IDs (after remapping)
-            $validTorrentIds = [];
-            foreach ($srcTorrentIds as $srcId) {
-                $remappedId = $this->applyTorrentRemap($srcId);
-                $validTorrentIds[$remappedId] = true;
+            // Build hex hash → UNIT3D torrent_id lookup for this page in one query
+            $rawHashes = [];
+            foreach ($rows as $row) {
+                $raw = $row['info_hash'] ?? null;
+                if ($raw !== null) {
+                    $hex = (strlen($raw) === 40 && ctype_xdigit($raw))
+                        ? strtolower($raw)
+                        : strtolower(bin2hex($raw));
+                    $rawHashes[$hex] = true;
+                }
             }
 
-            $existingTorrentIds = DB::table('torrents')
-                ->whereIn('id', array_keys($validTorrentIds))
-                ->pluck('id')
-                ->flip()
+            $torrentMap = DB::table('torrents')
+                ->whereIn('info_hash', array_keys($rawHashes))
+                ->pluck('id', 'info_hash')
                 ->all();
 
             $count   = 0;
@@ -1601,39 +1437,30 @@ class DatabaseMigrationService
             $batch   = [];
 
             foreach ($rows as $row) {
-                $srcTorrentId = (int) ($row['torrent'] ?? 0);
-                if ($srcTorrentId === 0) {
+                $raw = $row['info_hash'] ?? null;
+                if ($raw === null) {
                     $skipped++;
-
                     continue;
                 }
 
-                $torrentId = $this->applyTorrentRemap($srcTorrentId);
-
-                // Verify torrent exists in UNIT3D
-                if (!isset($existingTorrentIds[$torrentId])) {
+                $infoHash  = (strlen($raw) === 40 && ctype_xdigit($raw)) ? strtolower($raw) : strtolower(bin2hex($raw));
+                $torrentId = $torrentMap[$infoHash] ?? null;
+                if ($torrentId === null) {
                     $skipped++;
-
-                    continue;
+                    continue; // torrent not migrated
                 }
 
                 $addedRaw = $row['added'] ?? null;
-                $addedAt  = now()->toDateTimeString();
-                if ($addedRaw && $addedRaw !== '0000-00-00 00:00:00') {
-                    $ts = is_numeric($addedRaw) ? (int) $addedRaw : strtotime((string) $addedRaw);
-                    if ($ts && $ts > 0) {
-                        $addedAt = date('Y-m-d H:i:s', $ts);
-                    }
-                }
-
-                $srcUserId = (int) ($row['user'] ?? 0);
+                $addedAt  = ($addedRaw && $addedRaw !== '0000-00-00 00:00:00')
+                    ? date('Y-m-d H:i:s', is_numeric($addedRaw) ? (int) $addedRaw : strtotime($addedRaw))
+                    : now()->toDateTimeString();
 
                 $batch[] = [
                     'content'          => $row['text'] ?? '',
-                    'anon'             => 0,
+                    'anon'             => ($row['anonymous'] ?? 0) ? 1 : 0,
                     'commentable_id'   => $torrentId,
-                    'commentable_type' => 'App\\Models\\Torrent',
-                    'user_id'          => $this->applyUserRemap($srcUserId) ?: null,
+                    'commentable_type' => 'App\Models\Torrent',
+                    'user_id'          => $this->applyUserRemap((int) ($row['userid'] ?? 0)) ?: null,
                     'created_at'       => $addedAt,
                     'updated_at'       => $addedAt,
                 ];
@@ -1641,7 +1468,7 @@ class DatabaseMigrationService
 
             if (!empty($batch)) {
                 DB::table('comments')->insert($batch);
-                $count = \count($batch);
+                $count = count($batch);
             }
 
             $this->log("Comments migration completed: {$count} inserted, {$skipped} skipped (torrent not found)");

@@ -3,7 +3,13 @@
     "allow": [
       "Bash(grep -n \"CREATE TABLE \\\\`users\\\\`\" d:/UNIT3D/TSSEDB.sql)",
       "Bash(xargs grep -l \"announce\")",
-      "Bash(xargs grep -n \".\")"
+      "Bash(xargs grep -n \".\")",
+      "Bash(wc:*)",
+      "Bash(Select-String -Path \"D:\\\\UNIT3D\\\\TSSEDB.sql\" -Pattern \"^CREATE TABLE\")",
+      "Bash(ForEach-Object { $_Line })",
+      "Bash(Select-Object -First 100)",
+      "Bash(grep:*)",
+      "Bash(git commit:*)"
     ]
   }
 }
