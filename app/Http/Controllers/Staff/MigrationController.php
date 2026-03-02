@@ -201,6 +201,8 @@ class MigrationController extends Controller
         @ini_set('memory_limit', '-1');
         @set_time_limit(0);
 
+        $allowedTables = ['users', 'torrents', 'peers', 'snatched', 'comments', 'forums', 'forum_threads', 'forum_posts'];
+
         try {
             $config = request()->validate([
                 'host'      => ['required', 'string'],
@@ -208,8 +210,11 @@ class MigrationController extends Controller
                 'username'  => ['required', 'string'],
                 'password'  => ['required', 'string'],
                 'database'  => ['required', 'string'],
-                'tables'    => ['required', 'array'],
+                'tables'    => ['required', 'array', 'min:1'],
+                'tables.*'  => ['required', 'string', 'in:' . implode(',', $allowedTables)],
                 'group_map' => ['nullable', 'array'],
+                'offset'    => ['nullable', 'integer', 'min:0'],
+                'page_size' => ['nullable', 'integer', 'between:10,2000'],
             ]);
 
             $tables     = $config['tables'];
