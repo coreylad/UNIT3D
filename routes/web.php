@@ -652,13 +652,6 @@ Route::middleware('language')->group(function (): void {
                 Route::get('/', [App\Http\Controllers\Staff\AnnounceController::class, 'index'])->name('index');
             });
 
-            // Configuration file viewer/editor
-            Route::prefix('config')->name('config.')->middleware('admin')->group(function (): void {
-                Route::get('/', [App\Http\Controllers\Staff\ConfigController::class, 'index'])->name('index');
-                Route::get('/{tool}/edit', [App\Http\Controllers\Staff\ConfigController::class, 'edit'])->name('edit');
-                Route::get('/{tool}', [App\Http\Controllers\Staff\ConfigController::class, 'show'])->name('show');
-                Route::patch('/{tool}/{key}', [App\Http\Controllers\Staff\ConfigController::class, 'update'])->name('update');
-            });
 
             // Apikeys
             Route::prefix('apikeys')->name('apikeys.')->group(function (): void {
@@ -783,6 +776,14 @@ Route::middleware('language')->group(function (): void {
                 Route::get('/registration', [App\Http\Controllers\Staff\SiteSettingController::class, 'editRegistration'])->name('registration');
                 Route::get('/tracker', [App\Http\Controllers\Staff\SiteSettingController::class, 'editTracker'])->name('tracker');
                 Route::get('/social', [App\Http\Controllers\Staff\SiteSettingController::class, 'editSocial'])->name('social');
+                Route::get('/economy', [App\Http\Controllers\Staff\SiteSettingController::class, 'editEconomy'])->name('economy');
+                Route::get('/invites', [App\Http\Controllers\Staff\SiteSettingController::class, 'editInvites'])->name('invites');
+                Route::get('/user-defaults', [App\Http\Controllers\Staff\SiteSettingController::class, 'editUserDefaults'])->name('user_defaults');
+                Route::get('/hit-run', [App\Http\Controllers\Staff\SiteSettingController::class, 'editHitRun'])->name('hit_run');
+                Route::get('/chat', [App\Http\Controllers\Staff\SiteSettingController::class, 'editChat'])->name('chat');
+                Route::get('/torrent-settings', [App\Http\Controllers\Staff\SiteSettingController::class, 'editTorrent'])->name('torrent');
+                Route::get('/donation', [App\Http\Controllers\Staff\SiteSettingController::class, 'editDonation'])->name('donation');
+                Route::get('/graveyard', [App\Http\Controllers\Staff\SiteSettingController::class, 'editGraveyard'])->name('graveyard');
                 Route::patch('/', [App\Http\Controllers\Staff\SiteSettingController::class, 'update'])->name('update');
             });
 

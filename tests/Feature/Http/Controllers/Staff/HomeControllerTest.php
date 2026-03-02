@@ -34,9 +34,8 @@ test('index returns an ok response', function (): void {
     $response->assertViewHas('avg');
     $response->assertViewHas('basic');
     $response->assertViewHas('file_permissions');
-    $response->assertViewHas('configFiles');
-    // panel heading uses translation key 'config-manager'
-    $response->assertSee(__('staff.config-manager'));
+    // Site Settings panel links are rendered directly in the view
+    $response->assertSee('Site Settings');
 });
 
 test('dashboard is not available to regular users', function (): void {

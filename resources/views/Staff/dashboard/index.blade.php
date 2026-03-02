@@ -191,10 +191,10 @@
                         class="staff-dashboard__nav-item"
                         :class="{ 'staff-dashboard__nav-item--active': activePanel === 'config' }"
                         x-on:click="activePanel = 'config'"
-                        title="{{ __('staff.config-manager') }}"
+                        title="Site Settings"
                     >
-                        <i class="{{ config('other.font-awesome') }} fa-cogs"></i>
-                        <span x-show="!collapsed" x-cloak>{{ __('staff.config-manager') }}</span>
+                        <i class="{{ config('other.font-awesome') }} fa-sliders"></i>
+                        <span x-show="!collapsed" x-cloak>Site Settings</span>
                         <span class="staff-dashboard__nav-shortcut" x-show="!collapsed" x-cloak>8</span>
                     </button>
                 </li>
@@ -751,22 +751,68 @@
                 </div>
             </div>
 
-            {{-- Config Panel --}}
+            {{-- Site Settings Panel --}}
             <div x-show="activePanel === 'config'" x-cloak>
                 <h2 class="staff-dashboard__panel-title">
-                    <i class="{{ config('other.font-awesome') }} fa-cogs"></i>
-                    {{ __('staff.config-manager') }}
+                    <i class="{{ config('other.font-awesome') }} fa-sliders"></i>
+                    Site Settings
                 </h2>
                 <div
                     class="staff-dashboard__links-grid"
                     x-effect="Array.from($el.querySelectorAll(':scope > .staff-dashboard__link-card')).forEach(c => c.style.display = (!search || c.querySelector('span')?.textContent.trim().toLowerCase().includes(search.toLowerCase())) ? '' : 'none')"
                 >
-                    @foreach ($configFiles as $tool)
-                        <a class="staff-dashboard__link-card" href="{{ route('staff.config.show', ['tool' => $tool['key']]) }}">
-                            <i class="{{ config('other.font-awesome') }} {{ $tool['icon'] }}"></i>
-                            <span>{{ $tool['label'] }}</span>
-                        </a>
-                    @endforeach
+                    <a class="staff-dashboard__link-card" href="{{ route('staff.site_settings.edit') }}">
+                        <i class="{{ config('other.font-awesome') }} fa-paintbrush"></i>
+                        <span>Branding & Identity</span>
+                    </a>
+                    <a class="staff-dashboard__link-card" href="{{ route('staff.site_settings.economy') }}">
+                        <i class="{{ config('other.font-awesome') }} fa-coins"></i>
+                        <span>Economy & Freeleech</span>
+                    </a>
+                    <a class="staff-dashboard__link-card" href="{{ route('staff.site_settings.invites') }}">
+                        <i class="{{ config('other.font-awesome') }} fa-envelope-open"></i>
+                        <span>Invite System</span>
+                    </a>
+                    <a class="staff-dashboard__link-card" href="{{ route('staff.site_settings.user_defaults') }}">
+                        <i class="{{ config('other.font-awesome') }} fa-user-cog"></i>
+                        <span>User Defaults</span>
+                    </a>
+                    <a class="staff-dashboard__link-card" href="{{ route('staff.site_settings.hit_run') }}">
+                        <i class="{{ config('other.font-awesome') }} fa-exclamation-triangle"></i>
+                        <span>Hit & Run</span>
+                    </a>
+                    <a class="staff-dashboard__link-card" href="{{ route('staff.site_settings.chat') }}">
+                        <i class="{{ config('other.font-awesome') }} fa-comments"></i>
+                        <span>Chat Settings</span>
+                    </a>
+                    <a class="staff-dashboard__link-card" href="{{ route('staff.site_settings.torrent') }}">
+                        <i class="{{ config('other.font-awesome') }} fa-download"></i>
+                        <span>Torrent Settings</span>
+                    </a>
+                    <a class="staff-dashboard__link-card" href="{{ route('staff.site_settings.donation') }}">
+                        <i class="{{ config('other.font-awesome') }} fa-hand-holding-dollar"></i>
+                        <span>Donation System</span>
+                    </a>
+                    <a class="staff-dashboard__link-card" href="{{ route('staff.site_settings.graveyard') }}">
+                        <i class="{{ config('other.font-awesome') }} fa-skull-crossbones"></i>
+                        <span>Graveyard</span>
+                    </a>
+                    <a class="staff-dashboard__link-card" href="{{ route('staff.site_settings.registration') }}">
+                        <i class="{{ config('other.font-awesome') }} fa-user-plus"></i>
+                        <span>Registration & Access</span>
+                    </a>
+                    <a class="staff-dashboard__link-card" href="{{ route('staff.site_settings.tracker') }}">
+                        <i class="{{ config('other.font-awesome') }} fa-server"></i>
+                        <span>Tracker Settings</span>
+                    </a>
+                    <a class="staff-dashboard__link-card" href="{{ route('staff.site_settings.social') }}">
+                        <i class="{{ config('other.font-awesome') }} fa-share-nodes"></i>
+                        <span>Social Links</span>
+                    </a>
+                    <a class="staff-dashboard__link-card" href="{{ route('staff.email_settings.edit') }}">
+                        <i class="{{ config('other.font-awesome') }} fa-envelope"></i>
+                        <span>Email & SMTP</span>
+                    </a>
                 </div>
             </div>
 

@@ -81,11 +81,87 @@ class AppServiceProvider extends ServiceProvider
                 ]);
             }
 
-            // Sync registration settings from DB into config so all app code reads live values
+            // Sync all DB settings into config so existing code reads live values
             config([
-                'other.invite-only'         => (bool) $siteSetting->invite_only,
-                'other.registration_open'   => (bool) $siteSetting->registration_open,
-                'chat.nerd_bot'             => (bool) ($siteSetting->nerd_bot ?? true),
+                // Registration & access
+                'other.invite-only'                  => (bool) $siteSetting->invite_only,
+                'other.registration_open'            => (bool) $siteSetting->registration_open,
+                'other.invite_expire'                => $siteSetting->invite_expire ?? 14,
+                'other.invites_restriced'            => (bool) ($siteSetting->invites_restricted ?? false),
+                'other.invite_groups'                => $siteSetting->invite_groups ?? ['Administrator', 'Owner'],
+                'other.max_unused_user_invites'      => $siteSetting->max_unused_user_invites ?? 1,
+                'other.application_signups'          => (bool) ($siteSetting->application_signups ?? false),
+
+                // Economy
+                'other.freeleech'                    => (bool) ($siteSetting->freeleech ?? false),
+                'other.freeleech_until'              => $siteSetting->freeleech_until,
+                'other.doubleup'                     => (bool) ($siteSetting->doubleup ?? false),
+                'other.refundable'                   => (bool) ($siteSetting->refundable ?? false),
+                'other.ratio'                        => (float) ($siteSetting->min_ratio ?? 0.40),
+                'other.bon.max-buffer-to-buy-upload' => $siteSetting->bon_max_buffer,
+
+                // User defaults
+                'other.default_upload'               => $siteSetting->default_upload ?? 53687091200,
+                'other.default_download'             => $siteSetting->default_download ?? 1073741824,
+                'other.default_style'                => $siteSetting->default_style ?? 12,
+                'other.font-awesome'                 => $siteSetting->font_awesome ?? 'fas',
+
+                // Page URLs
+                'other.rules_url'                    => $siteSetting->rules_url,
+                'other.faq_url'                      => $siteSetting->faq_url,
+                'other.upload-guide_url'             => $siteSetting->upload_guide_url,
+
+                // Staff forum
+                'other.staff-forum-notify'           => $siteSetting->staff_forum_notify ? '1' : '0',
+                'other.staff-forum-id'               => $siteSetting->staff_forum_id ?? '',
+
+                // Thanks system
+                'other.thanks-system.is-enabled'     => (bool) ($siteSetting->thanks_enabled ?? true),
+
+                // Mail rate limiting
+                'other.mail.allow'                   => $siteSetting->mail_rate_allow ?? 1,
+                'other.mail.every'                   => $siteSetting->mail_rate_every ?? 5,
+
+                // External chat link
+                'unit3d.chat-link-name'              => $siteSetting->chat_link_name ?? 'Discord',
+                'unit3d.chat-link-icon'              => $siteSetting->chat_link_icon ?? 'fab fa-discord',
+                'unit3d.chat-link-url'               => $siteSetting->chat_link_url ?? '',
+
+                // Comment rate limit
+                'unit3d.comment-rate-limit'          => $siteSetting->comment_rate_limit ?? 3,
+
+                // Chat
+                'chat.nerd_bot'                      => (bool) ($siteSetting->nerd_bot ?? true),
+                'chat.system_chatroom'               => $siteSetting->system_chatroom ?? 'General',
+                'chat.message_limit'                 => $siteSetting->chat_message_limit ?? 100,
+
+                // Hit & Run
+                'hitrun.enabled'                     => (bool) ($siteSetting->hitrun_enabled ?? true),
+                'hitrun.seedtime'                    => $siteSetting->hitrun_seedtime ?? 604800,
+                'hitrun.max_warnings'                => $siteSetting->hitrun_max_warnings ?? 3,
+                'hitrun.grace'                       => $siteSetting->hitrun_grace ?? 3,
+                'hitrun.buffer'                      => $siteSetting->hitrun_buffer ?? 10,
+                'hitrun.expire'                      => $siteSetting->hitrun_expire ?? 14,
+                'hitrun.prewarn'                     => $siteSetting->hitrun_prewarn ?? 1,
+
+                // Torrent
+                'torrent.download_check_page'        => (int) ($siteSetting->torrent_download_check_page ?? false),
+                'torrent.source'                     => $siteSetting->torrent_source ?? 'BAS3D',
+                'torrent.created_by'                 => $siteSetting->torrent_created_by ?? 'Edited by BAS3D',
+                'torrent.created_by_append'          => (bool) ($siteSetting->torrent_created_by_append ?? true),
+                'torrent.comment'                    => $siteSetting->torrent_comment ?? '',
+                'torrent.magnet'                     => (int) ($siteSetting->torrent_magnet ?? false),
+
+                // Donation
+                'donation.is_enabled'                => (bool) ($siteSetting->donation_enabled ?? true),
+                'donation.monthly_goal'              => $siteSetting->donation_monthly_goal ?? 100,
+                'donation.currency'                  => $siteSetting->donation_currency ?? 'USD',
+                'donation.description'               => $siteSetting->donation_description ?? '',
+
+                // Graveyard
+                'graveyard.enabled'                  => (bool) ($siteSetting->graveyard_enabled ?? true),
+                'graveyard.time'                     => $siteSetting->graveyard_time ?? 2592000,
+                'graveyard.reward'                   => $siteSetting->graveyard_reward ?? 5,
             ]);
         } catch (\Throwable) {
             // DB not ready (e.g. first migrate) — keep env defaults

@@ -9,7 +9,9 @@
       "Bash(ForEach-Object { $_Line })",
       "Bash(Select-Object -First 100)",
       "Bash(grep:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(php vendor/bin/pint app/Models/SiteSetting.php app/Http/Controllers/Staff/SiteSettingController.php app/Http/Controllers/Staff/HomeController.php app/Http/Requests/Staff/UpdateSiteSettingRequest.php app/Providers/AppServiceProvider.php database/migrations/2026_03_02_000001_add_config_settings_to_site_settings_table.php --test)",
+      "Bash(ls d:/UNIT3D/vendor/bin/pint*)"
     ]
   }
 }

@@ -24,7 +24,7 @@ use Illuminate\Support\Facades\Cache;
 class SiteSettingController extends Controller
 {
     /**
-     * Show the site settings edit form.
+     * Show the site settings edit form (all sections).
      */
     public function edit(): \Illuminate\Contracts\View\Factory|\Illuminate\View\View
     {
@@ -74,6 +74,86 @@ class SiteSettingController extends Controller
     }
 
     /**
+     * Show the economy settings edit form.
+     */
+    public function editEconomy(): \Illuminate\Contracts\View\Factory|\Illuminate\View\View
+    {
+        return view('Staff.site-setting.economy', [
+            'siteSetting' => SiteSetting::instance(),
+        ]);
+    }
+
+    /**
+     * Show the invite settings edit form.
+     */
+    public function editInvites(): \Illuminate\Contracts\View\Factory|\Illuminate\View\View
+    {
+        return view('Staff.site-setting.invites', [
+            'siteSetting' => SiteSetting::instance(),
+        ]);
+    }
+
+    /**
+     * Show the user defaults edit form.
+     */
+    public function editUserDefaults(): \Illuminate\Contracts\View\Factory|\Illuminate\View\View
+    {
+        return view('Staff.site-setting.user-defaults', [
+            'siteSetting' => SiteSetting::instance(),
+        ]);
+    }
+
+    /**
+     * Show the hit & run settings edit form.
+     */
+    public function editHitRun(): \Illuminate\Contracts\View\Factory|\Illuminate\View\View
+    {
+        return view('Staff.site-setting.hit-run', [
+            'siteSetting' => SiteSetting::instance(),
+        ]);
+    }
+
+    /**
+     * Show the chat settings edit form.
+     */
+    public function editChat(): \Illuminate\Contracts\View\Factory|\Illuminate\View\View
+    {
+        return view('Staff.site-setting.chat', [
+            'siteSetting' => SiteSetting::instance(),
+        ]);
+    }
+
+    /**
+     * Show the torrent settings edit form.
+     */
+    public function editTorrent(): \Illuminate\Contracts\View\Factory|\Illuminate\View\View
+    {
+        return view('Staff.site-setting.torrent-settings', [
+            'siteSetting' => SiteSetting::instance(),
+        ]);
+    }
+
+    /**
+     * Show the donation settings edit form.
+     */
+    public function editDonation(): \Illuminate\Contracts\View\Factory|\Illuminate\View\View
+    {
+        return view('Staff.site-setting.donation', [
+            'siteSetting' => SiteSetting::instance(),
+        ]);
+    }
+
+    /**
+     * Show the graveyard settings edit form.
+     */
+    public function editGraveyard(): \Illuminate\Contracts\View\Factory|\Illuminate\View\View
+    {
+        return view('Staff.site-setting.graveyard', [
+            'siteSetting' => SiteSetting::instance(),
+        ]);
+    }
+
+    /**
      * Update the site settings.
      */
     public function update(UpdateSiteSettingRequest $request): \Illuminate\Http\RedirectResponse
@@ -81,17 +161,41 @@ class SiteSettingController extends Controller
         $setting = SiteSetting::firstOrNew([]);
         $scalar  = $request->safe()->except(['header_image', 'remove_header_image']);
 
-        // Coerce checkboxes (unchecked = absent from POST)
-        $scalar['registration_open']       = $request->boolean('registration_open');
-        $scalar['invite_only']             = $request->boolean('invite_only');
-        $scalar['category_filter_enabled'] = $request->boolean('category_filter_enabled');
-        $scalar['nerd_bot']                = $request->boolean('nerd_bot');
+        // Coerce checkboxes (unchecked = absent from POST) — only for fields in the current section
+        $booleanFields = [
+            'registration_open',
+            'invite_only',
+            'invites_restricted',
+            'application_signups',
+            'category_filter_enabled',
+            'nerd_bot',
+            'freeleech',
+            'doubleup',
+            'refundable',
+            'staff_forum_notify',
+            'thanks_enabled',
+            'hitrun_enabled',
+            'torrent_download_check_page',
+            'torrent_created_by_append',
+            'torrent_magnet',
+            'donation_enabled',
+            'graveyard_enabled',
+        ];
+
+        $section = $request->input('_section');
+
+        foreach ($booleanFields as $field) {
+            if ($request->has($field) || $section) {
+                $scalar[$field] = $request->boolean($field);
+            }
+        }
 
         $setting->fill($scalar);
 
         // Header image removal
         if ($request->boolean('remove_header_image') && $setting->header_image) {
-            $oldPath = public_path('img/' . $setting->header_image);
+            $oldPath = public_path('img/'.$setting->header_image);
+
             if (file_exists($oldPath)) {
                 unlink($oldPath);
             }
@@ -102,14 +206,15 @@ class SiteSettingController extends Controller
         // Header image upload
         if ($request->hasFile('header_image')) {
             if ($setting->header_image) {
-                $oldPath = public_path('img/' . $setting->header_image);
+                $oldPath = public_path('img/'.$setting->header_image);
+
                 if (file_exists($oldPath)) {
                     unlink($oldPath);
                 }
             }
 
             $ext      = $request->file('header_image')->getClientOriginalExtension();
-            $filename = 'header_banner.' . strtolower($ext);
+            $filename = 'header_banner.'.strtolower($ext);
             $request->file('header_image')->move(public_path('img'), $filename);
             $setting->header_image = $filename;
         }
