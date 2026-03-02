@@ -1,7 +1,7 @@
 // Classic Theme
 // Based on Command Center
 
-@import "_command-center.scss";
+@use "command-center";
 
 .banner {
     width: 100%;
