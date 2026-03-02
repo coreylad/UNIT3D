@@ -105,6 +105,7 @@ class AppServiceProvider extends ServiceProvider
                 'other.default_download'             => $siteSetting->default_download ?? 1073741824,
                 'other.default_style'                => $siteSetting->default_style ?? 12,
                 'other.font-awesome'                 => $siteSetting->font_awesome ?? 'fas',
+                'unit3d.homepage-banner-style'       => $siteSetting->homepage_banner_style ?? 'compact',
 
                 // Page URLs
                 'other.rules_url'                    => $siteSetting->rules_url,

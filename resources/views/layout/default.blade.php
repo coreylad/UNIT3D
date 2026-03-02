@@ -9,7 +9,7 @@
             @include('partials.alerts')
         </div>
         @if (auth()->user()->settings->style === 18)
-            @include('partials.banner')
+            @include('partials.banner', ['siteSetting' => \App\Models\SiteSetting::instance()])
         @endif
         <header>
             @include('partials.top-nav')

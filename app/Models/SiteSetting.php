@@ -27,6 +27,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property string           $meta_description
  * @property string|null      $login_message
  * @property string|null      $header_image
+ * @property string           $homepage_banner_style
  * @property string|null      $smtp_host
  * @property int              $smtp_port
  * @property string|null      $smtp_encryption
@@ -103,6 +104,7 @@ final class SiteSetting extends Model
     protected $guarded = ['id'];
 
     protected $casts = [
+        'homepage_banner_style'       => 'string',
         'registration_open'           => 'boolean',
         'invite_only'                 => 'boolean',
         'invite_expire'               => 'integer',
@@ -159,6 +161,7 @@ final class SiteSetting extends Model
                 'sub_title'        => config('other.subTitle'),
                 'meta_description' => config('other.meta_description'),
                 'login_message'    => null,
+                'homepage_banner_style' => 'compact',
             ]));
         } catch (\Throwable) {
             $fallback = new self();
@@ -167,6 +170,7 @@ final class SiteSetting extends Model
             $fallback->meta_description           = (string) config('other.meta_description');
             $fallback->login_message              = null;
             $fallback->header_image               = null;
+            $fallback->homepage_banner_style      = 'compact';
             $fallback->smtp_host                  = null;
             $fallback->smtp_port                  = 587;
             $fallback->smtp_encryption            = null;
