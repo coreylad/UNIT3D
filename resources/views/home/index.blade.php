@@ -8,7 +8,6 @@
             <div class="classic-layout__main">
                 <div class="classic-layout__left">
                     @include('blocks.chat')
-                    @vite('resources/js/unit3d/chat.js')
                 </div>
                 <div class="classic-layout__right">
                     @include('blocks.login')
@@ -72,7 +71,6 @@
                     @break
                 @case('chat')
                     @include('blocks.chat')
-                    @vite('resources/js/unit3d/chat.js')
 
                     @break
                 @case('featured')
@@ -88,7 +86,7 @@
 
                     @break
                 @case('top_torrents')
-                    @livelivewire('top-torrents')
+                    @livewire('top-torrents')
 
                     @break
                 @case('top_users')
@@ -114,4 +112,5 @@
             @endswitch
         @endforeach
     @endif
+    @vite('resources/js/unit3d/chat.js')
 @endsection
