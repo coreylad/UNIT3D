@@ -1,0 +1,27 @@
+// Classic Theme
+// Based on Command Center
+
+@import "_command-center.scss";
+
+.banner {
+    width: 100%;
+    height: 200px; // Or any other height
+    background-image: url('/img/banner.jpg'); // Add a default banner image
+    background-size: cover;
+    background-position: center;
+}
+
+.classic-layout {
+    &__main {
+        display: flex;
+        gap: 1rem;
+    }
+
+    &__left {
+        flex: 3;
+    }
+
+    &__right {
+        flex: 1;
+    }
+}

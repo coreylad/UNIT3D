@@ -8,6 +8,9 @@
             @include('cookie-consent::index')
             @include('partials.alerts')
         </div>
+        @if (auth()->user()->settings->style === 18)
+            @include('partials.banner')
+        @endif
         <header>
             @include('partials.top-nav')
             <nav class="secondary-nav">
