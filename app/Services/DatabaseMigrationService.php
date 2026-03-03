@@ -287,7 +287,7 @@ class DatabaseMigrationService
                 [$config['database']]
             );
         } catch (\Throwable $e) {
-            Log::error('Failed to get source tables: ' . $e->getMessage());
+            $this->log('Failed to get source tables: ' . $this->formatError($e));
 
             return [];
         }
@@ -311,7 +311,7 @@ class DatabaseMigrationService
 
             return DB::table($table)->count();
         } catch (\Throwable $e) {
-            Log::error("Failed to get row count for table {$table}: " . $e->getMessage());
+            $this->log("Failed to get row count for table {$table}: " . $this->formatError($e));
 
             return 0;
         }
@@ -686,9 +686,13 @@ class DatabaseMigrationService
     /**
      * @param  array<int|string, int>  $groupOverrides  srcGroupId => unit3dGroupId (user-defined overrides)
      */
-    public function migrateUsers(array $sourceConfig, int $offset = 0, int $limit = 100, array $groupOverrides = []): array
+    public function migrateUsers(array $sourceConfig, int $offset = 0, int $limit = 100, array $groupOverrides = [], bool $dryRun = false): array
     {
-        $this->log("Starting user migration (offset={$offset}, limit={$limit})...");
+        $this->log("Starting user migration (offset={$offset}, limit={$limit})" . ($dryRun ? ' [DRY RUN]' : ''));
+
+        if ($dryRun) {
+            $this->log('DRY RUN: Skipping database writes.');
+        }
 
         try {
             $this->ensureConnected($sourceConfig);
@@ -811,7 +815,7 @@ class DatabaseMigrationService
                     ];
 
                     if (count($batch) >= $batchSize) {
-                        $inserted = $this->insertNewUsers($batch);
+                        $inserted = $this->insertNewUsers($batch, $dryRun);
                         $count   += $inserted;
                         $batch    = [];
                     }
@@ -823,7 +827,7 @@ class DatabaseMigrationService
             }
 
             if (!empty($batch)) {
-                $count += $this->insertNewUsers($batch);
+                $count += $this->insertNewUsers($batch, $dryRun);
             }
 
             $this->log("User migration completed: {$count} users migrated" . ($unmappedCount > 0 ? " ({$unmappedCount} used fallback group)" : ' (all groups matched)'));
@@ -937,9 +941,13 @@ class DatabaseMigrationService
         return $map;
     }
 
-    public function migrateTorrents(array $sourceConfig, int $offset = 0, int $limit = 500): array
+    public function migrateTorrents(array $sourceConfig, int $offset = 0, int $limit = 500, bool $dryRun = false): array
     {
-        $this->log("Starting torrent migration (offset={$offset}, limit={$limit})...");
+        $this->log("Starting torrent migration (offset={$offset}, limit={$limit})" . ($dryRun ? ' [DRY RUN]' : ''));
+
+        if ($dryRun) {
+            $this->log('DRY RUN: Skipping database writes.');
+        }
 
         try {
             $this->ensureConnected($sourceConfig);
@@ -1093,10 +1101,18 @@ class DatabaseMigrationService
      * @param  array<int, array>  $batch
      * @return int  number of rows actually inserted
      */
-    private function insertNewUsers(array $batch): int
+    private function insertNewUsers(array $batch, bool $dryRun = false): int
     {
         if (empty($batch)) {
             return 0;
+        }
+
+        if ($dryRun) {
+            foreach ($batch as $row) {
+                $this->log("[DRY RUN] Would insert user: {$row['username']}");
+            }
+
+            return count($batch);
         }
 
         // Pre-check which IDs, usernames, and emails already exist in UNIT3D
@@ -1925,7 +1941,7 @@ class DatabaseMigrationService
                 ),
             ];
         } catch (\Throwable $e) {
-            Log::error('Failed to get migration summary: ' . $e->getMessage());
+            $this->log('Failed to get migration summary: ' . $this->formatError($e));
 
             return [];
         }
@@ -2001,6 +2017,16 @@ class DatabaseMigrationService
         }
 
         return null;
+    }
+
+    private function formatError(\Throwable $e): string
+    {
+        return sprintf(
+            '%s in %s on line %d',
+            $e->getMessage(),
+            basename($e->getFile()),
+            $e->getLine()
+        );
     }
 
     /**
