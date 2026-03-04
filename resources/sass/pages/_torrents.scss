@@ -1105,10 +1105,18 @@ th.similar-torrents__type {
 }
 
 .torrent-search__category-box-icon {
-    width: 56px;
-    height: 40px;
     display: inline-grid;
     place-items: center;
+}
+
+.torrent-search__category-box-icon--icon {
+    width: 56px;
+    height: 40px;
+}
+
+.torrent-search__category-box-icon--img {
+    width: 220px;
+    height: 70px;
 }
 
 .torrent-search__category-box-icon img {
@@ -1132,11 +1140,6 @@ th.similar-torrents__type {
     justify-items: center;
     min-height: auto;
     padding: 6px 8px;
-
-    .torrent-search__category-box-icon {
-        width: 220px;
-        height: 70px;
-    }
 }
 
 /* Torrent Moderation */

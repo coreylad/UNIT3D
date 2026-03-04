@@ -33,6 +33,8 @@
                         <th>{{ __('common.name') }}</th>
                         <th>{{ __('common.icon') }}</th>
                         <th>{{ __('common.image') }}</th>
+                        <th>Show Image</th>
+                        <th>Show Name</th>
                         <th>Movie meta</th>
                         <th>TV meta</th>
                         <th>Game meta</th>
@@ -63,6 +65,20 @@
                                     />
                                 @else
                                     <span>N/A</span>
+                                @endif
+                            </td>
+                            <td>
+                                @if ($category->show_image)
+                                    <i class="{{ config('other.font-awesome') }} fa-check text-green"></i>
+                                @else
+                                    <i class="{{ config('other.font-awesome') }} fa-times text-red"></i>
+                                @endif
+                            </td>
+                            <td>
+                                @if ($category->show_name)
+                                    <i class="{{ config('other.font-awesome') }} fa-check text-green"></i>
+                                @else
+                                    <i class="{{ config('other.font-awesome') }} fa-times text-red"></i>
                                 @endif
                             </td>
                             <td>

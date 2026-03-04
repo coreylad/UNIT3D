@@ -60,6 +60,16 @@ class StoreCategoryRequest extends FormRequest
                 'image',
                 'max:10240',
             ],
+            'show_image' => [
+                'nullable',
+                'boolean',
+                'exclude',
+            ],
+            'show_name' => [
+                'nullable',
+                'boolean',
+                'exclude',
+            ],
         ];
     }
 }

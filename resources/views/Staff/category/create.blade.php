@@ -62,9 +62,23 @@
                         {{ __('common.select') }}
                         {{ trans_choice('common.a-an-art', false) }}
                         {{ __('common.image') }}
-                        (If not using a FontAwesome icon)
+                        (If not using a FontAwesome icon — 220x70 recommended)
                     </label>
                     <input id="file" class="form__file" type="file" name="image" />
+                </p>
+                <p class="form__group">
+                    <label for="show_image">
+                        <input type="hidden" name="show_image" value="0" />
+                        <input id="show_image" type="checkbox" name="show_image" value="1" @checked(old('show_image', true)) />
+                        Display image on torrents page
+                    </label>
+                </p>
+                <p class="form__group">
+                    <label for="show_name">
+                        <input type="hidden" name="show_name" value="0" />
+                        <input id="show_name" type="checkbox" name="show_name" value="1" @checked(old('show_name', true)) />
+                        Display name text on torrents page
+                    </label>
                 </p>
                 <p class="form__group">
                     <select name="meta" id="meta" class="form__select" required>

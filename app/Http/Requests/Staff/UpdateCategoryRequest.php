@@ -64,6 +64,16 @@ class UpdateCategoryRequest extends FormRequest
                 'nullable',
                 'boolean',
             ],
+            'show_image' => [
+                'nullable',
+                'boolean',
+                'exclude',
+            ],
+            'show_name' => [
+                'nullable',
+                'boolean',
+                'exclude',
+            ],
         ];
     }
 }

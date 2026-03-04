@@ -19,7 +19,6 @@ namespace App\Http\Livewire;
 use App\DTO\TorrentSearchFiltersDTO;
 use App\Models\Category;
 use App\Models\Distributor;
-use App\Models\SiteSetting;
 use App\Models\TmdbGenre;
 use App\Models\TmdbMovie;
 use App\Models\Region;
@@ -829,8 +828,7 @@ class TorrentSearch extends Component
                 'poster' => $this->groupedPosters,
                 default  => $this->torrents,
             },
-            'torrentHealth'     => $this->torrentHealth,
-            'categoryShowName'  => SiteSetting::instance()->category_show_name,
+            'torrentHealth' => $this->torrentHealth,
         ]);
     }
 }

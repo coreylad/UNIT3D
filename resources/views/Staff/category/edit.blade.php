@@ -76,8 +76,8 @@
                         <img
                             src="{{ route('authenticated_images.category_image', ['category' => $category]) }}"
                             alt="{{ $category->name }}"
-                            width="50"
-                            height="50"
+                            width="220"
+                            height="70"
                         />
                     </p>
                     <p class="form__group">
@@ -92,9 +92,23 @@
                         {{ __('common.select') }}
                         {{ trans_choice('common.a-an-art', false) }}
                         {{ __('common.image') }}
-                        (If not using a FontAwesome icon)
+                        (If not using a FontAwesome icon — 220x70 recommended)
                     </label>
                     <input id="file" class="form__file" type="file" name="image" />
+                </p>
+                <p class="form__group">
+                    <label for="show_image">
+                        <input type="hidden" name="show_image" value="0" />
+                        <input id="show_image" type="checkbox" name="show_image" value="1" @checked(old('show_image', $category->show_image)) />
+                        Display image on torrents page
+                    </label>
+                </p>
+                <p class="form__group">
+                    <label for="show_name">
+                        <input type="hidden" name="show_name" value="0" />
+                        <input id="show_name" type="checkbox" name="show_name" value="1" @checked(old('show_name', $category->show_name)) />
+                        Display name text on torrents page
+                    </label>
                 </p>
                 <p class="form__group">
                     <select name="meta" id="meta" class="form__select" required>

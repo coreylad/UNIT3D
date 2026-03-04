@@ -168,7 +168,6 @@ class SiteSettingController extends Controller
             'invites_restricted',
             'application_signups',
             'category_filter_enabled',
-            'category_show_name',
             'nerd_bot',
             'freeleech',
             'doubleup',
