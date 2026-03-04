@@ -168,7 +168,9 @@
                         @if ($pendingApplicationsCount > 0)
                             <span class="staff-dashboard__badge">{{ $pendingApplicationsCount }}</span>
                         @endif
-                        <span class="staff-dashboard__nav-shortcut" x-show="!collapsed && {{ $pendingApplicationsCount }} === 0" x-cloak>6</span>
+                        @if ($pendingApplicationsCount === 0)
+                            <span class="staff-dashboard__nav-shortcut" x-show="!collapsed" x-cloak>6</span>
+                        @endif
                     </button>
                 </li>
                 <li>
@@ -183,7 +185,9 @@
                         @if ($unsolvedReportsCount > 0)
                             <span class="staff-dashboard__badge">{{ $unsolvedReportsCount }}</span>
                         @endif
-                        <span class="staff-dashboard__nav-shortcut" x-show="!collapsed && {{ $unsolvedReportsCount }} === 0" x-cloak>7</span>
+                        @if ($unsolvedReportsCount === 0)
+                            <span class="staff-dashboard__nav-shortcut" x-show="!collapsed" x-cloak>7</span>
+                        @endif
                     </button>
                 </li>
                 <li>
