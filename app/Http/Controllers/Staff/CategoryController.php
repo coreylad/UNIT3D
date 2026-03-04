@@ -59,7 +59,7 @@ class CategoryController extends Controller
 
             $filename = 'category-'.uniqid('', true).'.'.$image->getClientOriginalExtension();
             $path = Storage::disk('category-images')->path($filename);
-            Image::make($image->getRealPath())->fit(50, 50)->encode('png', 100)->save($path);
+            Image::make($image->getRealPath())->fit(220, 70)->encode('png', 100)->save($path);
         }
 
         Category::create([
@@ -104,7 +104,7 @@ class CategoryController extends Controller
 
             $filename = 'category-'.uniqid('', true).'.'.$image->getClientOriginalExtension();
             $path = Storage::disk('category-images')->path($filename);
-            Image::make($image->getRealPath())->fit(50, 50)->encode('png', 100)->save($path);
+            Image::make($image->getRealPath())->fit(220, 70)->encode('png', 100)->save($path);
 
             if ($category->image !== null && $category->image !== $filename) {
                 Storage::disk('category-images')->delete($category->image);

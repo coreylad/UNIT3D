@@ -261,6 +261,18 @@
         @method('PATCH')
         <input type="hidden" name="_section" value="torrent-settings" />
 
+        <label class="ss-toggle" for="category_show_name">
+            <span class="ss-toggle__info">
+                <span class="ss-toggle__title">Category Name Labels</span>
+                <span class="ss-toggle__desc">Show category name text alongside images on the torrents page</span>
+            </span>
+            <label class="ss-switch">
+                <input type="hidden" name="category_show_name" value="0" />
+                <input id="category_show_name" type="checkbox" name="category_show_name" value="1" @checked(old('category_show_name', $siteSetting->category_show_name ?? false)) />
+                <span class="ss-switch__track"></span>
+            </label>
+        </label>
+
         <label class="ss-toggle" for="torrent_download_check_page">
             <span class="ss-toggle__info">
                 <span class="ss-toggle__title">Download Check Page</span>

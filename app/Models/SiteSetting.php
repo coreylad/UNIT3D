@@ -57,6 +57,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property int              $mail_rate_every
  * @property int              $announce_interval
  * @property bool             $category_filter_enabled
+ * @property bool             $category_show_name
  * @property bool             $nerd_bot
  * @property bool             $freeleech
  * @property string|null      $freeleech_until
@@ -113,6 +114,7 @@ final class SiteSetting extends Model
         'max_unused_user_invites'     => 'integer',
         'application_signups'         => 'boolean',
         'category_filter_enabled'     => 'boolean',
+        'category_show_name'          => 'boolean',
         'nerd_bot'                    => 'boolean',
         'smtp_port'                   => 'integer',
         'default_download_slots'      => 'integer',
@@ -200,6 +202,7 @@ final class SiteSetting extends Model
             $fallback->mail_rate_every            = 5;
             $fallback->announce_interval          = 1800;
             $fallback->category_filter_enabled    = true;
+            $fallback->category_show_name         = false;
             $fallback->nerd_bot                   = true;
             $fallback->freeleech                  = false;
             $fallback->freeleech_until            = null;

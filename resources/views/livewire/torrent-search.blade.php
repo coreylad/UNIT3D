@@ -11,7 +11,7 @@
         </button>
         @foreach ($categories as $category)
             <button
-                class="torrent-search__category-box {{ in_array($category->id, $categoryIds) ? 'torrent-search__category-box--active' : '' }}"
+                class="torrent-search__category-box {{ in_array($category->id, $categoryIds) ? 'torrent-search__category-box--active' : '' }} {{ $category->image && ! $categoryShowName ? 'torrent-search__category-box--image-only' : '' }}"
                 wire:click="$set('categoryIds', [{{ $category->id }}])"
                 title="{{ $category->name }}"
             >
@@ -28,7 +28,9 @@
                         <i class="{{ config('other.font-awesome') }} fa-folder" aria-hidden="true"></i>
                     @endif
                 </span>
-                <span class="torrent-search__category-box-name">{{ $category->name }}</span>
+                @if ($categoryShowName || ! $category->image)
+                    <span class="torrent-search__category-box-name">{{ $category->name }}</span>
+                @endif
             </button>
         @endforeach
     </nav>

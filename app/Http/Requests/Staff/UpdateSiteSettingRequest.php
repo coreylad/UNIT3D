@@ -113,6 +113,7 @@ class UpdateSiteSettingRequest extends FormRequest
             'chat_message_limit' => ['nullable', 'integer', 'between:10,1000'],
 
             // Torrent
+            'category_show_name'          => ['nullable', 'boolean'],
             'torrent_download_check_page' => ['nullable', 'boolean'],
             'torrent_source'              => ['nullable', 'string', 'max:100'],
             'torrent_created_by'          => ['nullable', 'string', 'max:255'],
