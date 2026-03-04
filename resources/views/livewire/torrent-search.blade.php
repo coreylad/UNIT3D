@@ -4,27 +4,19 @@
             class="torrent-search__category-box {{ empty($categoryIds) ? 'torrent-search__category-box--active' : '' }}"
             wire:click="$set('categoryIds', [])"
         >
-            <span class="torrent-search__category-box-icon torrent-search__category-box-icon--icon">
+            <span class="torrent-search__category-box-icon">
                 <i class="{{ config('other.font-awesome') }} fa-globe" aria-hidden="true"></i>
             </span>
             <span class="torrent-search__category-box-name">ALL TORRENTS</span>
         </button>
         @foreach ($categories as $category)
-            @php
-                $hasImage = $category->image && $category->show_image;
-                $boxModifier = match (true) {
-                    $hasImage && ! $category->show_name => 'torrent-search__category-box--image-only',
-                    $hasImage && $category->show_name   => 'torrent-search__category-box--image-with-name',
-                    default                             => '',
-                };
-            @endphp
             <button
-                class="torrent-search__category-box {{ in_array($category->id, $categoryIds) ? 'torrent-search__category-box--active' : '' }} {{ $boxModifier }}"
+                class="torrent-search__category-box {{ in_array($category->id, $categoryIds) ? 'torrent-search__category-box--active' : '' }}"
                 wire:click="$set('categoryIds', [{{ $category->id }}])"
                 title="{{ $category->name }}"
             >
                 <span class="torrent-search__category-box-icon">
-                    @if ($hasImage)
+                    @if ($category->image && $category->show_image)
                         <img
                             src="{{ route('authenticated_images.category_image', ['category' => $category]) }}"
                             alt="{{ $category->name }}"

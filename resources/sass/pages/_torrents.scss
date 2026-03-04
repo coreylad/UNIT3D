@@ -1060,26 +1060,42 @@ th.similar-torrents__type {
 ---------------------------------------------------------------------------- */
 
 .torrent-search__category-bar {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: stretch;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
     gap: 8px;
     padding: 8px 10px;
 }
 
-/* Base box — icon + name side-by-side (default for non-image categories) */
+@media (max-width: 1200px) {
+    .torrent-search__category-bar {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+@media (max-width: 900px) {
+    .torrent-search__category-bar {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .torrent-search__category-bar {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Base box — used for all category buttons */
 .torrent-search__category-box {
     display: grid;
-    grid-template-columns: 60px minmax(0, 1fr);
+    grid-template-columns: 1fr;
     align-items: center;
-    justify-items: start;
-    gap: 8px;
-    min-height: 74px;
-    padding: 8px 10px;
+    justify-items: center;
+    gap: 0;
+    padding: 4px;
     border-radius: 8px;
     font-size: 13px;
     font-weight: 700;
-    text-align: left;
+    text-align: center;
     cursor: pointer;
     background: var(--category-btn-bg, rgba(128, 128, 128, 0.15));
     color: var(--category-btn-fg, inherit);
@@ -1106,50 +1122,30 @@ th.similar-torrents__type {
     filter: brightness(1.1);
 }
 
-/* Icon container (shared) */
+/* Icon container */
 .torrent-search__category-box-icon {
     display: inline-grid;
     place-items: center;
+    width: 100%;
 }
 
 .torrent-search__category-box-icon i {
     font-size: 26px;
+    padding: 16px 0;
 }
 
 .torrent-search__category-box-icon img {
     display: block;
-    width: 220px;
-    height: 70px;
+    width: 100%;
+    height: auto;
     object-fit: contain;
+    border-radius: 4px;
 }
 
 .torrent-search__category-box-name {
-    text-align: left;
     line-height: 1.2;
     word-break: break-word;
-}
-
-/* Image only — no name, box hugs image exactly */
-.torrent-search__category-box--image-only {
-    grid-template-columns: 1fr;
-    justify-items: center;
-    min-height: 0;
-    padding: 4px;
-}
-
-/* Image + name stacked vertically */
-.torrent-search__category-box--image-with-name {
-    grid-template-columns: 1fr;
-    justify-items: center;
-    min-height: 0;
-    padding: 4px;
-    gap: 4px;
-
-    .torrent-search__category-box-name {
-        text-align: center;
-        font-size: 11px;
-        padding: 0 4px 2px;
-    }
+    padding: 4px 6px;
 }
 
 /* Torrent Moderation */
