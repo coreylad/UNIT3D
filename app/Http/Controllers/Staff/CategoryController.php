@@ -64,6 +64,7 @@ class CategoryController extends Controller
 
         Category::create([
             'image'      => $filename ?? null,
+            'icon'       => $request->input('icon') ?? '',
             'show_image' => $request->boolean('show_image'),
             'show_name'  => $request->boolean('show_name'),
             'no_meta'    => $request->meta === 'no',
@@ -115,6 +116,7 @@ class CategoryController extends Controller
 
         $category->update([
             'image'      => $filename ?? null,
+            'icon'       => $request->input('icon') ?? '',
             'show_image' => $request->boolean('show_image'),
             'show_name'  => $request->boolean('show_name'),
             'no_meta'    => $request->meta === 'no',
