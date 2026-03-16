@@ -63,8 +63,10 @@ class CategoryController extends Controller
         }
 
         Category::create([
+            'name'       => $request->validated('name'),
+            'position'   => $request->validated('position'),
             'image'      => $filename ?? null,
-            'icon'       => $request->input('icon') ?? '',
+            'icon'       => $request->validated('icon') ?? '',
             'show_image' => $request->boolean('show_image'),
             'show_name'  => $request->boolean('show_name'),
             'no_meta'    => $request->meta === 'no',
@@ -72,7 +74,7 @@ class CategoryController extends Controller
             'game_meta'  => $request->meta === 'game',
             'tv_meta'    => $request->meta === 'tv',
             'movie_meta' => $request->meta === 'movie',
-        ] + $request->validated());
+        ]);
 
         return to_route('staff.categories.index')
             ->with('success', 'Category successfully added');
@@ -115,8 +117,10 @@ class CategoryController extends Controller
         }
 
         $category->update([
+            'name'       => $request->validated('name'),
+            'position'   => $request->validated('position'),
             'image'      => $filename ?? null,
-            'icon'       => $request->input('icon') ?? '',
+            'icon'       => $request->validated('icon') ?? '',
             'show_image' => $request->boolean('show_image'),
             'show_name'  => $request->boolean('show_name'),
             'no_meta'    => $request->meta === 'no',
@@ -124,7 +128,7 @@ class CategoryController extends Controller
             'game_meta'  => $request->meta === 'game',
             'tv_meta'    => $request->meta === 'tv',
             'movie_meta' => $request->meta === 'movie',
-        ] + $request->validated());
+        ]);
 
         return to_route('staff.categories.index')
             ->with('success', 'Category successfully modified');

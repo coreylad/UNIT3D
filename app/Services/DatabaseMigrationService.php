@@ -1298,7 +1298,7 @@ class DatabaseMigrationService
                 return ['success' => false, 'error' => 'No torrents in UNIT3D. Run torrent migration first.', 'done' => true, 'logs' => $this->migrationLog];
             }
 
-            $peers   = $this->sourceQuery("SELECT * FROM peers ORDER BY userid LIMIT {$limit} OFFSET {$offset}");
+            $peers   = $this->sourceQuery("SELECT * FROM peers ORDER BY id LIMIT {$limit} OFFSET {$offset}");
             $fetched = count($peers);
 
             $count        = 0;
@@ -1306,15 +1306,53 @@ class DatabaseMigrationService
             $batch        = [];
             $batchSize    = 500;
 
-            // Build a hex info_hash → torrent_id map for this page in one query
+            // TSSE variants can reference torrents by infohash OR by torrent id
             $rawHashes = [];
+            $hashMapBySourceTorrentId = [];
             foreach ($peers as $peer) {
                 $raw = $peer['infohash'] ?? $peer['info_hash'] ?? $peer['torrent_hash'] ?? null;
-                if ($raw !== null) {
-                    $hex = (strlen($raw) === 40 && ctype_xdigit($raw))
-                        ? strtolower($raw)
-                        : strtolower(bin2hex($raw));
-                    $rawHashes[$hex] = true;
+                if ($raw !== null && $raw !== '') {
+                    $hex = (strlen((string) $raw) === 40 && ctype_xdigit((string) $raw))
+                        ? strtolower((string) $raw)
+                        : strtolower(bin2hex((string) $raw));
+                    if (strlen($hex) === 40) {
+                        $rawHashes[$hex] = true;
+                    }
+
+                    continue;
+                }
+
+                $srcTorrentId = (int) ($peer['torrent'] ?? $peer['torrentid'] ?? $peer['torrent_id'] ?? 0);
+                if ($srcTorrentId > 0) {
+                    $hashMapBySourceTorrentId[$srcTorrentId] = null;
+                }
+            }
+
+            if (!empty($hashMapBySourceTorrentId)) {
+                foreach (array_chunk(array_keys($hashMapBySourceTorrentId), 1000) as $chunkIds) {
+                    $inList = implode(',', array_map('intval', $chunkIds));
+                    $rows = $this->sourceQuery("SELECT id, info_hash FROM torrents WHERE id IN ({$inList})");
+
+                    foreach ($rows as $row) {
+                        $raw = $row['info_hash'] ?? null;
+                        if ($raw === null || $raw === '') {
+                            continue;
+                        }
+
+                        $hex = (strlen((string) $raw) === 40 && ctype_xdigit((string) $raw))
+                            ? strtolower((string) $raw)
+                            : strtolower(bin2hex((string) $raw));
+
+                        if (strlen($hex) !== 40) {
+                            continue;
+                        }
+
+                        $sourceId = (int) ($row['id'] ?? 0);
+                        if ($sourceId > 0) {
+                            $hashMapBySourceTorrentId[$sourceId] = $hex;
+                            $rawHashes[$hex] = true;
+                        }
+                    }
                 }
             }
 
@@ -1325,16 +1363,21 @@ class DatabaseMigrationService
 
             foreach ($peers as $peer) {
                 try {
-                    // TSSE peers.infohash is BINARY(20) — convert to hex for lookup
                     $rawHash = $peer['infohash'] ?? $peer['info_hash'] ?? $peer['torrent_hash'] ?? null;
-                    if ($rawHash === null) {
-                        $skipped++;
-                        continue;
+                    if ($rawHash !== null && $rawHash !== '') {
+                        $infoHash = (strlen((string) $rawHash) === 40 && ctype_xdigit((string) $rawHash))
+                            ? strtolower((string) $rawHash)
+                            : strtolower(bin2hex((string) $rawHash));
+                    } else {
+                        $srcTorrentId = (int) ($peer['torrent'] ?? $peer['torrentid'] ?? $peer['torrent_id'] ?? 0);
+                        $infoHash = $hashMapBySourceTorrentId[$srcTorrentId] ?? null;
                     }
 
-                    $infoHash = (strlen($rawHash) === 40 && ctype_xdigit($rawHash))
-                        ? strtolower($rawHash)
-                        : strtolower(bin2hex($rawHash));
+                    if ($infoHash === null || strlen($infoHash) !== 40) {
+                        $skipped++;
+
+                        continue;
+                    }
 
                     $torrentId = $torrentMap[$infoHash] ?? null;
                     if ($torrentId === null) {
@@ -1343,16 +1386,21 @@ class DatabaseMigrationService
                     }
 
                     $srcUserId = (int) ($peer['userid'] ?? $peer['user_id'] ?? 0);
+                    $left = (int) ($peer['left'] ?? $peer['to_go'] ?? 0);
+                    $seeder = match (true) {
+                        isset($peer['seeder']) && in_array($peer['seeder'], ['yes', 'no'], true) => $peer['seeder'] === 'yes' ? 1 : 0,
+                        default => $left === 0 ? 1 : 0,
+                    };
 
                     $batch[] = [
                         'peer_id'    => $peer['peer_id'] ?? $peer['peerid'] ?? null,
                         'hash'       => $infoHash,
                         'ip'         => $peer['ip'] ?? null,
                         'port'       => (int) ($peer['port'] ?? 0),
-                        'left'       => (int) ($peer['left'] ?? 0),
+                        'left'       => $left,
                         'uploaded'   => (int) ($peer['uploaded'] ?? 0),
                         'downloaded' => (int) ($peer['downloaded'] ?? 0),
-                        'seeder'     => ($peer['left'] ?? 1) == 0 ? 1 : 0,
+                        'seeder'     => $seeder,
                         'torrent_id' => $torrentId,
                         'user_id'    => $this->applyUserRemap($srcUserId) ?: null,
                         'created_at' => now()->toDateTimeString(),
@@ -1360,8 +1408,9 @@ class DatabaseMigrationService
                     ];
 
                     if (count($batch) >= $batchSize) {
-                        DB::table('peers')->insert($batch);
-                        $count += count($batch);
+                        $inserted = DB::table('peers')->insertOrIgnore($batch);
+                        $count += $inserted;
+                        $skipped += count($batch) - $inserted;
                         $batch = [];
                     }
                 } catch (\Throwable $e) {
@@ -1370,8 +1419,9 @@ class DatabaseMigrationService
             }
 
             if (!empty($batch)) {
-                DB::table('peers')->insert($batch);
-                $count += count($batch);
+                $inserted = DB::table('peers')->insertOrIgnore($batch);
+                $count += $inserted;
+                $skipped += count($batch) - $inserted;
             }
 
             $this->log("Peer migration completed: {$count} peers migrated, {$skipped} skipped (torrent not found)");
@@ -1396,9 +1446,9 @@ class DatabaseMigrationService
             $this->ensureConnected($sourceConfig);
 
             $snatched = $this->sourceQuery(
-                "SELECT userid, infohash, uploaded, downloaded, snatched_time, completedtime
+                "SELECT *
                  FROM snatched
-                 ORDER BY userid
+                 ORDER BY id
                  LIMIT {$limit} OFFSET {$offset}"
             );
             $fetched  = count($snatched);
@@ -1407,25 +1457,64 @@ class DatabaseMigrationService
             $batch = [];
             $batchSize = 500;
 
+            $sourceTorrentIds = [];
+            foreach ($snatched as $row) {
+                $rawHash = $row['infohash'] ?? $row['info_hash'] ?? null;
+                if ($rawHash === null || $rawHash === '') {
+                    $srcTorrentId = (int) ($row['torrentid'] ?? $row['torrent_id'] ?? 0);
+                    if ($srcTorrentId > 0) {
+                        $sourceTorrentIds[$srcTorrentId] = true;
+                    }
+                }
+            }
+
+            $sourceTorrentHashMap = [];
+            if (!empty($sourceTorrentIds)) {
+                foreach (array_chunk(array_keys($sourceTorrentIds), 1000) as $chunkIds) {
+                    $inList = implode(',', array_map('intval', $chunkIds));
+                    $rows = $this->sourceQuery("SELECT id, info_hash FROM torrents WHERE id IN ({$inList})");
+
+                    foreach ($rows as $row) {
+                        $rawHash = $row['info_hash'] ?? null;
+                        if ($rawHash === null || $rawHash === '') {
+                            continue;
+                        }
+
+                        $hex = (strlen((string) $rawHash) === 40 && ctype_xdigit((string) $rawHash))
+                            ? strtolower((string) $rawHash)
+                            : strtolower(bin2hex((string) $rawHash));
+
+                        if (strlen($hex) === 40) {
+                            $sourceTorrentHashMap[(int) $row['id']] = $hex;
+                        }
+                    }
+                }
+            }
+
             foreach ($snatched as $snatch) {
                 try {
-                    // TSSE snatched.infohash is BINARY(20) — convert to hex
                     $rawHash = $snatch['infohash'] ?? $snatch['info_hash'] ?? null;
-                    if ($rawHash === null) {
-                        continue;
+                    if ($rawHash !== null && $rawHash !== '') {
+                        $infoHash = (strlen((string) $rawHash) === 40 && ctype_xdigit((string) $rawHash))
+                            ? strtolower((string) $rawHash)
+                            : strtolower(bin2hex((string) $rawHash));
+                    } else {
+                        $srcTorrentId = (int) ($snatch['torrentid'] ?? $snatch['torrent_id'] ?? 0);
+                        $infoHash = $sourceTorrentHashMap[$srcTorrentId] ?? null;
                     }
 
-                    $infoHash = (strlen($rawHash) === 40 && ctype_xdigit($rawHash))
-                        ? strtolower($rawHash)
-                        : strtolower(bin2hex($rawHash));
+                    if ($infoHash === null || strlen($infoHash) !== 40) {
+                        continue;
+                    }
 
                     $srcUserId    = (int) ($snatch['userid'] ?? $snatch['user_id'] ?? 0);
                     $uploaded     = (int) ($snatch['uploaded'] ?? 0);
                     $downloaded   = (int) ($snatch['downloaded'] ?? 0);
-                    $completedRaw = $snatch['snatched_time'] ?? $snatch['completedtime'] ?? null;
+                    $completedRaw = $snatch['completedat'] ?? $snatch['completedtime'] ?? $snatch['snatched_time'] ?? $snatch['startdat'] ?? null;
                     $completedAt  = ($completedRaw && $completedRaw !== '0000-00-00 00:00:00')
                         ? date('Y-m-d H:i:s', is_numeric($completedRaw) ? (int) $completedRaw : strtotime($completedRaw))
                         : null;
+                    $seedtime = max(0, (int) ($snatch['seedtime'] ?? 0));
 
                     // UNIT3D tracks snatch history in the `history` table
                     $batch[] = [
@@ -1439,7 +1528,7 @@ class DatabaseMigrationService
                         'client_downloaded' => $downloaded,
                         'seeder'            => 0,
                         'active'            => 0,
-                        'seedtime'          => 0,
+                        'seedtime'          => $seedtime,
                         'completed_at'      => $completedAt,
                         'created_at'        => now()->toDateTimeString(),
                         'updated_at'        => now()->toDateTimeString(),
@@ -1484,7 +1573,7 @@ class DatabaseMigrationService
             // TSSE comments reference torrents by their internal ID.
             // We join with TSSE torrents to get the info_hash, then resolve to the UNIT3D torrent_id.
             $rows = $this->sourceQuery(
-                "SELECT c.id, c.text, c.userid, c.added, c.anonymous,
+                "SELECT c.id, c.text, c.user AS src_user, c.userid AS src_userid, c.added, c.anonymous,
                         t.info_hash
                  FROM comments c
                  LEFT JOIN torrents t ON t.id = c.torrent
@@ -1537,7 +1626,7 @@ class DatabaseMigrationService
                     'anon'             => ($row['anonymous'] ?? 0) ? 1 : 0,
                     'commentable_id'   => $torrentId,
                     'commentable_type' => 'App\Models\Torrent',
-                    'user_id'          => $this->applyUserRemap((int) ($row['userid'] ?? 0)) ?: null,
+                    'user_id'          => $this->applyUserRemap((int) ($row['src_user'] ?? $row['src_userid'] ?? 0)) ?: null,
                     'created_at'       => $addedAt,
                     'updated_at'       => $addedAt,
                 ];
@@ -1695,7 +1784,8 @@ class DatabaseMigrationService
             }
 
             $this->log("Thread source table resolved: {$threadsTable}");
-            $threads = $this->sourceQuery("SELECT * FROM `{$threadsTable}` ORDER BY tid LIMIT {$limit} OFFSET {$offset}");
+            $threadOrderColumn = $this->sourceTableHasColumn($sourceConfig, $threadsTable, 'tid') ? 'tid' : 'id';
+            $threads = $this->sourceQuery("SELECT * FROM `{$threadsTable}` ORDER BY `{$threadOrderColumn}` LIMIT {$limit} OFFSET {$offset}");
             $fetched = count($threads);
             $count = 0;
             $forumMap = Cache::get('forum_id_map', []);
@@ -1794,7 +1884,8 @@ class DatabaseMigrationService
             }
 
             $this->log("Post source table resolved: {$postsTable}");
-            $posts = $this->sourceQuery("SELECT * FROM `{$postsTable}` ORDER BY id LIMIT {$limit} OFFSET {$offset}");
+            $postOrderColumn = $this->sourceTableHasColumn($sourceConfig, $postsTable, 'id') ? 'id' : 'pid';
+            $posts = $this->sourceQuery("SELECT * FROM `{$postsTable}` ORDER BY `{$postOrderColumn}` LIMIT {$limit} OFFSET {$offset}");
             $fetched = count($posts);
 
             $count = 0;
@@ -2017,6 +2108,20 @@ class DatabaseMigrationService
         }
 
         return null;
+    }
+
+    private function sourceTableHasColumn(array $config, string $table, string $column): bool
+    {
+        try {
+            $rows = $this->sourceQuery(
+                'SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ? LIMIT 1',
+                [$config['database'], $table, $column]
+            );
+
+            return !empty($rows);
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     private function formatError(\Throwable $e): string
