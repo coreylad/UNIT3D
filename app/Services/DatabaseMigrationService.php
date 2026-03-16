@@ -59,6 +59,9 @@ class DatabaseMigrationService
     /** Cache of resolved forum user ids to avoid repeated existence checks */
     private array $resolvedForumUserIds = [];
 
+    /** Cached destination table columns keyed by table name */
+    private array $targetTableColumns = [];
+
     // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // Connection
     // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -1260,6 +1263,17 @@ class DatabaseMigrationService
             return 0;
         }
 
+        $allowedColumns = array_flip($this->getTargetTableColumns('torrents'));
+
+        if ($allowedColumns === []) {
+            throw new \RuntimeException('Could not resolve destination torrents table columns.');
+        }
+
+        $batch = array_map(
+            static fn (array $row): array => array_intersect_key($row, $allowedColumns),
+            $batch
+        );
+
         // Find which info_hashes already exist in UNIT3D
         $existing = DB::table('torrents')
             ->whereIn('info_hash', array_keys($batch))
@@ -2122,6 +2136,27 @@ class DatabaseMigrationService
         } catch (\Throwable) {
             return false;
         }
+    }
+
+    /**
+     * Get destination table columns from the active UNIT3D connection.
+     * Results are cached for the lifetime of the service instance.
+     *
+     * @return string[]
+     */
+    private function getTargetTableColumns(string $table): array
+    {
+        if (isset($this->targetTableColumns[$table])) {
+            return $this->targetTableColumns[$table];
+        }
+
+        try {
+            $columns = DB::getSchemaBuilder()->getColumnListing($table);
+        } catch (\Throwable) {
+            $columns = [];
+        }
+
+        return $this->targetTableColumns[$table] = $columns;
     }
 
     private function formatError(\Throwable $e): string
