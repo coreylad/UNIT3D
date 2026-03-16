@@ -59,6 +59,12 @@ class DatabaseMigrationService
     /** Cache of resolved forum user ids to avoid repeated existence checks */
     private array $resolvedForumUserIds = [];
 
+    /** Cache source username keyed by source user ID */
+    private array $sourceUsernamesById = [];
+
+    /** Cache destination user ID keyed by normalized username */
+    private array $unit3dUserIdsByUsername = [];
+
     /** Destination fallback user id for forum content when source author cannot be resolved */
     private ?int $forumFallbackUserId = null;
 
@@ -692,7 +698,7 @@ class DatabaseMigrationService
     /**
      * @param  array<int|string, int>  $groupOverrides  srcGroupId => unit3dGroupId (user-defined overrides)
      */
-    public function migrateUsers(array $sourceConfig, int $offset = 0, int $limit = 100, array $groupOverrides = [], bool $dryRun = false): array
+    public function migrateUsers(array $sourceConfig, int $offset = 0, int $limit = 100, array $groupOverrides = [], bool $dryRun = false, bool $force = false): array
     {
         $this->log("Starting user migration (offset={$offset}, limit={$limit})" . ($dryRun ? ' [DRY RUN]' : ''));
 
@@ -821,7 +827,7 @@ class DatabaseMigrationService
                     ];
 
                     if (count($batch) >= $batchSize) {
-                        $inserted = $this->insertNewUsers($batch, $dryRun);
+                        $inserted = $this->insertNewUsers($batch, $dryRun, $force);
                         $count   += $inserted;
                         $batch    = [];
                     }
@@ -833,7 +839,7 @@ class DatabaseMigrationService
             }
 
             if (!empty($batch)) {
-                $count += $this->insertNewUsers($batch, $dryRun);
+                $count += $this->insertNewUsers($batch, $dryRun, $force);
             }
 
             $this->persistUserIdRemap((string) ($sourceConfig['database'] ?? 'default'));
@@ -1109,7 +1115,7 @@ class DatabaseMigrationService
      * @param  array<int, array>  $batch
      * @return int  number of rows actually inserted
      */
-    private function insertNewUsers(array $batch, bool $dryRun = false): int
+    private function insertNewUsers(array $batch, bool $dryRun = false, bool $force = false): int
     {
         if (empty($batch)) {
             return 0;
@@ -1134,11 +1140,17 @@ class DatabaseMigrationService
 
         $existingUsernames = DB::table('users')
             ->whereIn('username', $usernames)
-            ->pluck('username')->flip()->all();
+            ->pluck('username')
+            ->map(static fn ($username): string => strtolower((string) $username))
+            ->flip()
+            ->all();
 
         $existingEmails = DB::table('users')
             ->whereIn('email', $emails)
-            ->pluck('email')->flip()->all();
+            ->pluck('email')
+            ->map(static fn ($email): string => strtolower((string) $email))
+            ->flip()
+            ->all();
 
         $inserted = 0;
 
@@ -1148,20 +1160,51 @@ class DatabaseMigrationService
             $srcId    = $row['id'];
             $username = $row['username'] ?? '(unknown)';
             $email    = $row['email'] ?? '';
+            $usernameKey = strtolower((string) $username);
+            $emailKey = strtolower((string) $email);
 
             // Skip username/email conflicts up-front with a clear message
-            if (isset($existingUsernames[$username])) {
-                $this->log("Skipped user TSSE #{$srcId} ({$username}): username already exists in UNIT3D");
-                // Track them so downstream FK references still resolve
-                $existingId = DB::table('users')->where('username', $username)->value('id');
-                if ($existingId && $existingId !== $srcId) {
-                    $this->userIdRemap[$srcId] = $existingId;
+            if (isset($existingUsernames[$usernameKey])) {
+                $existingId = DB::table('users')
+                    ->whereRaw('LOWER(username) = ?', [$usernameKey])
+                    ->value('id');
+
+                if ($existingId !== null) {
+                    $this->userIdRemap[$srcId] = (int) $existingId;
                 }
+
+                if ($force && $existingId !== null) {
+                    $updatePayload = [
+                        'uploaded'     => (int) ($row['uploaded'] ?? 0),
+                        'downloaded'   => (int) ($row['downloaded'] ?? 0),
+                        'seedbonus'    => (float) ($row['seedbonus'] ?? 0),
+                        'fl_tokens'    => (int) ($row['fl_tokens'] ?? 0),
+                        'invites'      => (int) ($row['invites'] ?? 0),
+                        'hitandruns'   => (int) ($row['hitandruns'] ?? 0),
+                        'is_donor'     => (int) ($row['is_donor'] ?? 0),
+                        'can_chat'     => $row['can_chat'] ?? null,
+                        'can_download' => $row['can_download'] ?? null,
+                        'can_request'  => $row['can_request'] ?? null,
+                        'can_invite'   => $row['can_invite'] ?? null,
+                        'can_upload'   => $row['can_upload'] ?? null,
+                        'last_login'   => $row['last_login'] ?? null,
+                        'last_action'  => $row['last_action'] ?? null,
+                        'updated_at'   => now(),
+                    ];
+
+                    DB::table('users')->where('id', (int) $existingId)->update($updatePayload);
+                    $this->log("Force-updated existing UNIT3D user #{$existingId} from TSSE #{$srcId} ({$username})");
+                    $inserted++;
+
+                    continue;
+                }
+
+                $this->log("Skipped user TSSE #{$srcId} ({$username}): username already exists in UNIT3D");
 
                 continue;
             }
 
-            if ($email && isset($existingEmails[$email])) {
+            if ($email && isset($existingEmails[$emailKey])) {
                 $this->log("Skipped user TSSE #{$srcId} ({$username}): email already exists in UNIT3D");
 
                 continue;
@@ -1255,13 +1298,35 @@ class DatabaseMigrationService
     /**
      * Forum imports may reference deleted or unmigrated users; use the system user as a safe fallback.
      */
-    private function resolveForumUserId(int $srcId, bool $nullable = false): ?int
+    private function resolveForumUserId(int $srcId, ?string $sourceUsername = null, bool $nullable = false): ?int
     {
+        $sourceUsername = $this->normalizeForumUsername($sourceUsername);
+
         if ($srcId <= 0) {
+            if ($sourceUsername !== null) {
+                $usernameMatchedId = $this->resolveUnit3dUserIdByUsername($sourceUsername);
+                if ($usernameMatchedId !== null) {
+                    return $usernameMatchedId;
+                }
+            }
+
             return $nullable ? null : $this->getForumFallbackUserId();
         }
 
         $unit3dUserId = $this->applyUserRemap($srcId);
+
+        if ($sourceUsername === null) {
+            $sourceUsername = $this->resolveSourceUsernameById($srcId);
+        }
+
+        if ($sourceUsername !== null) {
+            $usernameMatchedId = $this->resolveUnit3dUserIdByUsername($sourceUsername);
+            if ($usernameMatchedId !== null) {
+                $this->resolvedForumUserIds[$unit3dUserId] = $usernameMatchedId;
+
+                return $usernameMatchedId;
+            }
+        }
 
         if (array_key_exists($unit3dUserId, $this->resolvedForumUserIds)) {
             return $this->resolvedForumUserIds[$unit3dUserId];
@@ -1274,6 +1339,54 @@ class DatabaseMigrationService
         $this->resolvedForumUserIds[$unit3dUserId] = $resolved;
 
         return $resolved;
+    }
+
+    private function normalizeForumUsername(?string $username): ?string
+    {
+        if ($username === null) {
+            return null;
+        }
+
+        $normalized = strtolower(trim($username));
+
+        return $normalized !== '' ? $normalized : null;
+    }
+
+    private function resolveSourceUsernameById(int $srcId): ?string
+    {
+        if ($srcId <= 0) {
+            return null;
+        }
+
+        if (array_key_exists($srcId, $this->sourceUsernamesById)) {
+            return $this->sourceUsernamesById[$srcId];
+        }
+
+        $username = $this->sourceQuery(
+            'SELECT username FROM users WHERE id = ? LIMIT 1',
+            [$srcId]
+        )[0]['username'] ?? null;
+
+        $normalized = $this->normalizeForumUsername($username !== null ? (string) $username : null);
+        $this->sourceUsernamesById[$srcId] = $normalized;
+
+        return $normalized;
+    }
+
+    private function resolveUnit3dUserIdByUsername(string $normalizedUsername): ?int
+    {
+        if (array_key_exists($normalizedUsername, $this->unit3dUserIdsByUsername)) {
+            return $this->unit3dUserIdsByUsername[$normalizedUsername];
+        }
+
+        $userId = DB::table('users')
+            ->whereRaw('LOWER(username) = ?', [$normalizedUsername])
+            ->value('id');
+
+        $resolvedId = $userId !== null ? (int) $userId : null;
+        $this->unit3dUserIdsByUsername[$normalizedUsername] = $resolvedId;
+
+        return $resolvedId;
     }
 
     private function getForumFallbackUserId(): int
@@ -2054,7 +2167,8 @@ class DatabaseMigrationService
                         $threadDate
                     );
                     $srcUserId = (int) ($thread['user_id'] ?? $thread['uid'] ?? $thread['author_id'] ?? 0);
-                    $userId = $this->resolveForumUserId($srcUserId, true);
+                    $sourceUsername = (string) ($thread['username'] ?? $thread['author'] ?? $thread['poster'] ?? '');
+                    $userId = $this->resolveForumUserId($srcUserId, $sourceUsername, true);
                     $state = ((bool) ($thread['locked'] ?? $thread['closed'] ?? false)) ? 'closed' : 'open';
 
                     $topicData = [
@@ -2156,7 +2270,10 @@ class DatabaseMigrationService
                     );
                     $batch[] = [
                         'topic_id'   => $topicId,
-                        'user_id'    => $this->resolveForumUserId((int) ($post['user_id'] ?? $post['uid'] ?? $post['author_id'] ?? 0)),
+                        'user_id'    => $this->resolveForumUserId(
+                            (int) ($post['user_id'] ?? $post['uid'] ?? $post['author_id'] ?? 0),
+                            (string) ($post['username'] ?? $post['author'] ?? $post['poster'] ?? '')
+                        ),
                         'content'    => $post['post_text'] ?? $post['message'] ?? $post['content'] ?? $post['body'] ?? '',
                         'anon'       => (bool) ($post['anonymous'] ?? $post['anon'] ?? false),
                         'created_at' => $postDate,

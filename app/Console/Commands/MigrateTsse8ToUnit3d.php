@@ -37,6 +37,7 @@ class MigrateTsse8ToUnit3d extends Command
                             {--page-size=500 : Batch/page size for paginated stages}
                             {--offset=0 : Starting offset for paginated stages}
                             {--group-map= : Optional JSON source_group_id->unit3d_group_id map (users only)}
+                            {--force : Reconcile existing users by username and update imported stats}
                             {--dry-run : Dry-run users/torrents only}';
 
     /**
@@ -88,6 +89,7 @@ class MigrateTsse8ToUnit3d extends Command
         $pageSize = max(10, min(5000, (int) $this->option('page-size')));
         $initialOffset = max(0, (int) $this->option('offset'));
         $dryRun = (bool) $this->option('dry-run');
+        $force = (bool) $this->option('force');
 
         $groupMap = [];
         $rawGroupMap = (string) ($this->option('group-map') ?? '');
@@ -127,7 +129,7 @@ class MigrateTsse8ToUnit3d extends Command
                 if ($table === 'users') {
                     $offset = $initialOffset;
                     do {
-                        $result = $this->migrationService->migrateUsers($sourceConfig, $offset, $pageSize, $groupMap, $dryRun);
+                        $result = $this->migrationService->migrateUsers($sourceConfig, $offset, $pageSize, $groupMap, $dryRun, $force);
                         if (($result['success'] ?? false) !== true) {
                             $this->error(($result['error'] ?? 'User migration failed without message.'));
 

@@ -6,13 +6,14 @@
 # Safe to call from Plesk scheduled tasks or cron.
 #
 # Usage:
-#   ./migrate-tsse8.sh [--memory=512M] [--page-size=50] [--dry-run] [--tables=TABLES]
+#   ./migrate-tsse8.sh [--memory=512M] [--page-size=50] [--dry-run] [--force] [--tables=TABLES]
 #
 # Examples:
 #   ./migrate-tsse8.sh                                    # Full migration, 256M RAM, batch 100
 #   ./migrate-tsse8.sh --memory=512M                      # 512M RAM limit
 #   ./migrate-tsse8.sh --page-size=50 --tables=torrents   # Torrents only, smaller batches
 #   ./migrate-tsse8.sh --dry-run --tables=users           # Test users migration
+#   ./migrate-tsse8.sh --force --tables=users             # Reconcile existing users by username
 #
 # IMPORTANT: Edit CONFIGURATION section below before first run!
 # =============================================================================
@@ -49,6 +50,7 @@ PAGE_SIZE="$PAGE_SIZE_DEFAULT"
 OFFSET="$OFFSET_DEFAULT"
 MEMORY_LIMIT="$MEMORY_LIMIT_DEFAULT"
 DRY_RUN=0
+FORCE=0
 
 for arg in "$@"; do
     case "$arg" in
@@ -67,6 +69,9 @@ for arg in "$@"; do
         --dry-run)
             DRY_RUN=1
             ;;
+        --force)
+            FORCE=1
+            ;;
         --help|-h)
             echo "Usage: $0 [OPTIONS]"
             echo ""
@@ -76,6 +81,7 @@ for arg in "$@"; do
             echo "  --offset=NUM        Starting offset for pagination (default: 0)"
             echo "  --tables=LIST       Comma-separated tables to migrate"
             echo "  --dry-run           Test run without writing data"
+            echo "  --force             Reconcile existing users by username and update imported stats"
             echo "  --help              Show this help message"
             echo ""
             echo "EXAMPLES:"
@@ -131,6 +137,10 @@ if [[ "$DRY_RUN" -eq 1 ]]; then
     CMD+=("--dry-run")
 fi
 
+if [[ "$FORCE" -eq 1 ]]; then
+    CMD+=("--force")
+fi
+
 # Print execution info
 echo "========================================================"
 echo "  TSSE8 → UNIT3D Migration"
@@ -145,6 +155,9 @@ if [[ "$DRY_RUN" -eq 1 ]]; then
     echo "Mode         : DRY RUN (no writes)"
 else
     echo "Mode         : LIVE (writes enabled)"
+fi
+if [[ "$FORCE" -eq 1 ]]; then
+    echo "Force Mode   : ON (updates existing users by username)"
 fi
 echo "========================================================"
 echo ""

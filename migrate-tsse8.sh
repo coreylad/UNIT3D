@@ -7,7 +7,7 @@
 # issues since all arguments are passed as discrete shell words.
 #
 # Usage:
-#   ./migrate-tsse8.sh [--dry-run] [--tables=users,torrents,...]
+#   ./migrate-tsse8.sh [--dry-run] [--force] [--tables=users,torrents,...]
 #
 # Edit the variables in the CONFIGURATION section before running.
 # =============================================================================
@@ -52,12 +52,16 @@ GROUP_MAP=""
 # =============================================================================
 
 DRY_RUN=0
+FORCE=0
 EXTRA_ARGS=()
 
 for arg in "$@"; do
     case "$arg" in
         --dry-run)
             DRY_RUN=1
+            ;;
+        --force)
+            FORCE=1
             ;;
         --tables=*)
             TABLES="${arg#--tables=}"
@@ -105,6 +109,10 @@ if [[ "$DRY_RUN" -eq 1 ]]; then
     CMD+=("--dry-run")
 fi
 
+if [[ "$FORCE" -eq 1 ]]; then
+    CMD+=("--force")
+fi
+
 # =============================================================================
 # RUN
 # =============================================================================
@@ -120,6 +128,9 @@ if [[ "$DRY_RUN" -eq 1 ]]; then
     echo "  Mode   : DRY RUN (no writes)"
 else
     echo "  Mode   : LIVE"
+fi
+if [[ "$FORCE" -eq 1 ]]; then
+    echo "  Force  : ON (updates existing users by username)"
 fi
 echo "========================================================"
 echo ""
