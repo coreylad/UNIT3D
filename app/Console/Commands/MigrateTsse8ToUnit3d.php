@@ -135,6 +135,7 @@ class MigrateTsse8ToUnit3d extends Command
                         }
 
                         $this->info("users: migrated {$result['count']} (offset {$offset})");
+                        gc_collect_cycles();
                         $offset += $pageSize;
                     } while (($result['done'] ?? true) !== true);
 
@@ -152,6 +153,7 @@ class MigrateTsse8ToUnit3d extends Command
                         }
 
                         $this->info("torrents: migrated {$result['count']}, skipped {$result['skipped']} (offset {$offset})");
+                        gc_collect_cycles();
                         $offset += $pageSize;
                     } while (($result['done'] ?? true) !== true);
 
@@ -168,8 +170,7 @@ class MigrateTsse8ToUnit3d extends Command
                             return self::FAILURE;
                         }
 
-                        $this->info("peers: migrated {$result['count']} (offset {$offset})");
-                        $offset += $pageSize;
+                        $this->info("peers: migrated {$result['count']} (offset {$offset})");                        gc_collect_cycles();                        $offset += $pageSize;
                     } while (($result['done'] ?? true) !== true);
 
                     continue;
@@ -186,6 +187,7 @@ class MigrateTsse8ToUnit3d extends Command
                         }
 
                         $this->info("snatched: migrated {$result['count']} (offset {$offset})");
+                        gc_collect_cycles();
                         $offset += $pageSize;
                     } while (($result['done'] ?? true) !== true);
 
@@ -203,6 +205,7 @@ class MigrateTsse8ToUnit3d extends Command
                         }
 
                         $this->info("comments: migrated {$result['count']} (offset {$offset})");
+                        gc_collect_cycles();
                         $offset += $pageSize;
                     } while (($result['done'] ?? true) !== true);
 
@@ -223,8 +226,7 @@ class MigrateTsse8ToUnit3d extends Command
                             return self::FAILURE;
                         }
 
-                        $this->info("forum_threads: migrated {$result['count']} (offset {$offset})");
-                        $offset += $pageSize;
+                        $this->info("forum_threads: migrated {$result['count']} (offset {$offset})");                        gc_collect_cycles();                        $offset += $pageSize;
                     } while (($result['done'] ?? true) !== true);
 
                     continue;
@@ -240,8 +242,7 @@ class MigrateTsse8ToUnit3d extends Command
                             return self::FAILURE;
                         }
 
-                        $this->info("forum_posts: migrated {$result['count']} (offset {$offset})");
-                        $offset += $pageSize;
+                        $this->info("forum_posts: migrated {$result['count']} (offset {$offset})");                        gc_collect_cycles();                        $offset += $pageSize;
                     } while (($result['done'] ?? true) !== true);
 
                     continue;

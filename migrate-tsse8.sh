@@ -31,11 +31,16 @@ DB_PASS="Honeythecat123"
 #   users,torrents,peers,snatched,comments,forums,forum_threads,forum_posts
 TABLES="users,torrents,peers,snatched,comments,forums,forum_threads,forum_posts"
 
-# Batch size per page (reduce to 50-100 for large/slow servers)
-PAGE_SIZE="500"
+# Batch size per page (lower = less memory, slower)
+# Default 100 recommended; reduce to 50 for shared/low-memory hosts
+PAGE_SIZE="100"
 
 # Starting offset (usually 0; set higher to resume a partial run)
 OFFSET="0"
+
+# PHP memory limit (default 256M; increase for very large datasets)
+# Expressed as: integer bytes, or with suffix K, M, G (e.g. "512M")
+MEMORY_LIMIT="256M"
 
 # Optional JSON group map: source_group_id -> unit3d_group_id
 # Example: GROUP_MAP='{"1":5,"2":3,"3":4}'
@@ -63,6 +68,9 @@ for arg in "$@"; do
         --offset=*)
             OFFSET="${arg#--offset=}"
             ;;
+        --memory=*)
+            MEMORY_LIMIT="${arg#--memory=}"
+            ;;
         *)
             echo "Unknown argument: $arg" >&2
             exit 1
@@ -76,6 +84,7 @@ done
 
 CMD=(
     "$PHP_BIN"
+    "-d" "memory_limit=${MEMORY_LIMIT}"
     "${ARTISAN_DIR}/artisan"
     "migrate:tsse8"
     "--host=${DB_HOST}"
@@ -106,6 +115,7 @@ echo "  Host   : ${DB_HOST}:${DB_PORT}"
 echo "  Source : ${DB_NAME}"
 echo "  Tables : ${TABLES}"
 echo "  Offset : ${OFFSET}  |  Page size: ${PAGE_SIZE}"
+echo "  Memory : ${MEMORY_LIMIT}"
 if [[ "$DRY_RUN" -eq 1 ]]; then
     echo "  Mode   : DRY RUN (no writes)"
 else
