@@ -59,6 +59,9 @@ class DatabaseMigrationService
     /** Cache of resolved forum user ids to avoid repeated existence checks */
     private array $resolvedForumUserIds = [];
 
+    /** Destination fallback user id for forum content when source author cannot be resolved */
+    private ?int $forumFallbackUserId = null;
+
     /** Cached destination table columns keyed by table name */
     private array $targetTableColumns = [];
 
@@ -833,6 +836,8 @@ class DatabaseMigrationService
                 $count += $this->insertNewUsers($batch, $dryRun);
             }
 
+            $this->persistUserIdRemap((string) ($sourceConfig['database'] ?? 'default'));
+
             $this->log("User migration completed: {$count} users migrated" . ($unmappedCount > 0 ? " ({$unmappedCount} used fallback group)" : ' (all groups matched)'));
 
             return ['success' => true, 'count' => $count, 'done' => $fetched < $limit, 'logs' => $this->migrationLog];
@@ -1200,6 +1205,27 @@ class DatabaseMigrationService
         return $this->userIdRemap[$srcId] ?? $srcId;
     }
 
+    private function persistUserIdRemap(string $sourceDatabase): void
+    {
+        if ($this->userIdRemap === []) {
+            return;
+        }
+
+        Cache::put('migration_user_id_remap:' . $sourceDatabase, $this->userIdRemap, now()->addDays(7));
+    }
+
+    private function hydrateUserIdRemap(string $sourceDatabase): void
+    {
+        if ($this->userIdRemap !== []) {
+            return;
+        }
+
+        $cached = Cache::get('migration_user_id_remap:' . $sourceDatabase, []);
+        if (is_array($cached) && $cached !== []) {
+            $this->userIdRemap = $cached;
+        }
+    }
+
     /**
      * Resolve a source forum/thread ID to the inserted UNIT3D topic ID.
      */
@@ -1232,7 +1258,7 @@ class DatabaseMigrationService
     private function resolveForumUserId(int $srcId, bool $nullable = false): ?int
     {
         if ($srcId <= 0) {
-            return $nullable ? null : User::SYSTEM_USER_ID;
+            return $nullable ? null : $this->getForumFallbackUserId();
         }
 
         $unit3dUserId = $this->applyUserRemap($srcId);
@@ -1243,11 +1269,70 @@ class DatabaseMigrationService
 
         $resolved = DB::table('users')->where('id', $unit3dUserId)->exists()
             ? $unit3dUserId
-            : ($nullable ? null : User::SYSTEM_USER_ID);
+            : ($nullable ? null : $this->getForumFallbackUserId());
 
         $this->resolvedForumUserIds[$unit3dUserId] = $resolved;
 
         return $resolved;
+    }
+
+    private function getForumFallbackUserId(): int
+    {
+        if ($this->forumFallbackUserId !== null) {
+            return $this->forumFallbackUserId;
+        }
+
+        if (DB::table('users')->where('id', User::SYSTEM_USER_ID)->exists()) {
+            $this->forumFallbackUserId = User::SYSTEM_USER_ID;
+
+            return $this->forumFallbackUserId;
+        }
+
+        $firstUserId = DB::table('users')->orderBy('id')->value('id');
+        $this->forumFallbackUserId = $firstUserId !== null ? (int) $firstUserId : User::SYSTEM_USER_ID;
+
+        return $this->forumFallbackUserId;
+    }
+
+    /**
+     * Ensure post user IDs are valid destination users before insert.
+     * Invalid users are reassigned to a safe fallback account.
+     *
+     * @param  array<int, array<string, mixed>>  $batch
+     * @return array<int, array<string, mixed>>
+     */
+    private function sanitizeForumPostBatchUsers(array $batch): array
+    {
+        if ($batch === []) {
+            return $batch;
+        }
+
+        $candidateUserIds = array_values(array_unique(array_map(
+            static fn (array $row): int => (int) ($row['user_id'] ?? 0),
+            $batch
+        )));
+
+        $existingUserIds = [];
+        if ($candidateUserIds !== []) {
+            $existingUserIds = DB::table('users')
+                ->whereIn('id', $candidateUserIds)
+                ->pluck('id')
+                ->map(static fn ($id): int => (int) $id)
+                ->flip()
+                ->all();
+        }
+
+        $fallbackUserId = $this->getForumFallbackUserId();
+
+        foreach ($batch as &$row) {
+            $userId = (int) ($row['user_id'] ?? 0);
+            if (!isset($existingUserIds[$userId])) {
+                $row['user_id'] = $fallbackUserId;
+            }
+        }
+        unset($row);
+
+        return $batch;
     }
 
     /**
@@ -1311,6 +1396,52 @@ class DatabaseMigrationService
                     'Skipping torrent "%s" [%s]: %s',
                     mb_strimwidth($name, 0, 120, '...'),
                     $infoHash,
+                    $this->formatError($e)
+                ));
+            }
+        }
+
+        return $inserted;
+    }
+
+    /**
+     * Insert history rows with schema filtering and duplicate-safe behavior.
+     *
+     * @param  array<int, array<string, mixed>>  $batch
+     */
+    private function insertHistoryRows(array $batch): int
+    {
+        if ($batch === []) {
+            return 0;
+        }
+
+        $allowedColumns = array_flip($this->getTargetTableColumns('history'));
+
+        if ($allowedColumns === []) {
+            throw new \RuntimeException('Could not resolve destination history table columns.');
+        }
+
+        $batch = array_map(
+            static fn (array $row): array => array_intersect_key($row, $allowedColumns),
+            $batch
+        );
+
+        try {
+            return DB::table('history')->insertOrIgnore($batch);
+        } catch (\Throwable $e) {
+            $this->log('History batch insert failed; retrying row-by-row: ' . $this->formatError($e));
+        }
+
+        $inserted = 0;
+
+        foreach ($batch as $row) {
+            try {
+                $inserted += DB::table('history')->insertOrIgnore($row);
+            } catch (\Throwable $e) {
+                $this->log(sprintf(
+                    'Skipping history record user=%s torrent=%s: %s',
+                    (string) ($row['user_id'] ?? 'unknown'),
+                    (string) ($row['torrent_id'] ?? 'unknown'),
                     $this->formatError($e)
                 ));
             }
@@ -1483,6 +1614,7 @@ class DatabaseMigrationService
 
         try {
             $this->ensureConnected($sourceConfig);
+            $this->hydrateUserIdRemap((string) ($sourceConfig['database'] ?? 'default'));
 
             $snatched = $this->sourceQuery(
                 "SELECT *
@@ -1493,16 +1625,26 @@ class DatabaseMigrationService
             $fetched  = count($snatched);
 
             $count = 0;
+            $skipped = 0;
             $batch = [];
             $batchSize = 500;
 
             $sourceTorrentIds = [];
+            $rawHashes = [];
             foreach ($snatched as $row) {
                 $rawHash = $row['infohash'] ?? $row['info_hash'] ?? null;
                 if ($rawHash === null || $rawHash === '') {
                     $srcTorrentId = (int) ($row['torrentid'] ?? $row['torrent_id'] ?? 0);
                     if ($srcTorrentId > 0) {
                         $sourceTorrentIds[$srcTorrentId] = true;
+                    }
+                } else {
+                    $hex = (strlen((string) $rawHash) === 40 && ctype_xdigit((string) $rawHash))
+                        ? strtolower((string) $rawHash)
+                        : strtolower(bin2hex((string) $rawHash));
+
+                    if (strlen($hex) === 40) {
+                        $rawHashes[$hex] = true;
                     }
                 }
             }
@@ -1525,10 +1667,16 @@ class DatabaseMigrationService
 
                         if (strlen($hex) === 40) {
                             $sourceTorrentHashMap[(int) $row['id']] = $hex;
+                            $rawHashes[$hex] = true;
                         }
                     }
                 }
             }
+
+            $torrentMap = DB::table('torrents')
+                ->whereIn('info_hash', array_keys($rawHashes))
+                ->pluck('id', 'info_hash')
+                ->all();
 
             foreach ($snatched as $snatch) {
                 try {
@@ -1543,10 +1691,22 @@ class DatabaseMigrationService
                     }
 
                     if ($infoHash === null || strlen($infoHash) !== 40) {
+                        $skipped++;
+                        continue;
+                    }
+
+                    $torrentId = $torrentMap[$infoHash] ?? null;
+                    if ($torrentId === null) {
+                        $skipped++;
                         continue;
                     }
 
                     $srcUserId    = (int) ($snatch['userid'] ?? $snatch['user_id'] ?? 0);
+                    $userId       = $this->applyUserRemap($srcUserId);
+                    if ($userId <= 0 || !DB::table('users')->where('id', $userId)->exists()) {
+                        $skipped++;
+                        continue;
+                    }
                     $uploaded     = (int) ($snatch['uploaded'] ?? 0);
                     $downloaded   = (int) ($snatch['downloaded'] ?? 0);
                     $completedRaw = $snatch['completedat'] ?? $snatch['completedtime'] ?? $snatch['snatched_time'] ?? $snatch['startdat'] ?? null;
@@ -1557,8 +1717,9 @@ class DatabaseMigrationService
 
                     // UNIT3D tracks snatch history in the `history` table
                     $batch[] = [
-                        'user_id'           => $this->applyUserRemap($srcUserId),
-                        'info_hash'         => $infoHash,
+                        'user_id'           => $userId,
+                        'torrent_id'        => $torrentId,
+                        'agent'             => '',
                         'uploaded'          => $uploaded,
                         'actual_uploaded'   => $uploaded,
                         'client_uploaded'   => $uploaded,
@@ -1574,8 +1735,9 @@ class DatabaseMigrationService
                     ];
 
                     if (count($batch) >= $batchSize) {
-                        DB::table('history')->insert($batch);
-                        $count += count($batch);
+                        $inserted = $this->insertHistoryRows($batch);
+                        $count += $inserted;
+                        $skipped += count($batch) - $inserted;
                         $batch = [];
                     }
                 } catch (\Throwable $e) {
@@ -1584,11 +1746,12 @@ class DatabaseMigrationService
             }
 
             if (!empty($batch)) {
-                DB::table('history')->insert($batch);
-                $count += count($batch);
+                $inserted = $this->insertHistoryRows($batch);
+                $count += $inserted;
+                $skipped += count($batch) - $inserted;
             }
 
-            $this->log("Snatched migration completed: {$count} records migrated to history");
+            $this->log("Snatched migration completed: {$count} records migrated to history, {$skipped} skipped");
 
             return ['success' => true, 'count' => $count, 'done' => $fetched < $limit, 'logs' => $this->migrationLog];
         } catch (\Throwable $e) {
@@ -1768,6 +1931,7 @@ class DatabaseMigrationService
 
                     if ($existing) {
                         $forumMap[$sourceId] = $existing->id;
+                        $this->ensureForumIsVisible((int) $existing->id);
 
                         continue;
                     }
@@ -1783,6 +1947,7 @@ class DatabaseMigrationService
                     ]);
 
                     $forumMap[$sourceId] = $newId;
+                    $this->ensureForumIsVisible((int) $newId);
                     $count++;
                 } catch (\Throwable $e) {
                     $this->log("Error migrating forum {$forum['name']}: " . $e->getMessage());
@@ -1801,6 +1966,46 @@ class DatabaseMigrationService
 
             return ['success' => false, 'error' => $msg, 'logs' => $this->migrationLog];
         }
+    }
+
+    /**
+     * Ensure a forum is visible/active for all groups after migration.
+     */
+    private function ensureForumIsVisible(int $forumId): void
+    {
+        $permissionTable = DB::getSchemaBuilder()->hasTable('forum_permissions')
+            ? 'forum_permissions'
+            : (DB::getSchemaBuilder()->hasTable('permissions') ? 'permissions' : null);
+
+        if ($permissionTable === null) {
+            $this->log("Skipping forum permission sync for forum {$forumId}: no permissions table found");
+
+            return;
+        }
+
+        $groupIds = DB::table('groups')->pluck('id')->all();
+
+        if ($groupIds === []) {
+            return;
+        }
+
+        $rows = [];
+
+        foreach ($groupIds as $groupId) {
+            $rows[] = [
+                'forum_id'    => $forumId,
+                'group_id'    => (int) $groupId,
+                'read_topic'  => true,
+                'reply_topic' => true,
+                'start_topic' => true,
+            ];
+        }
+
+        DB::table($permissionTable)->upsert(
+            $rows,
+            ['forum_id', 'group_id'],
+            ['read_topic', 'reply_topic', 'start_topic']
+        );
     }
 
     /**
@@ -1912,6 +2117,7 @@ class DatabaseMigrationService
 
         try {
             $this->ensureConnected($sourceConfig);
+            $this->hydrateUserIdRemap($sourceConfig['database']);
 
             $postsTable = $this->tryResolveSourceTable(
                 ['tsf_posts', 'forum_posts', 'posts', 'messages', 'forum_messages'],
@@ -1958,8 +2164,24 @@ class DatabaseMigrationService
                     ];
 
                     if (count($batch) >= $batchSize) {
-                        DB::table('posts')->insert($batch);
-                        $count += count($batch);
+                        $batch = $this->sanitizeForumPostBatchUsers($batch);
+
+                        try {
+                            DB::table('posts')->insert($batch);
+                            $count += count($batch);
+                        } catch (\Throwable $e) {
+                            $this->log('Forum posts batch insert failed; retrying row-by-row: ' . $this->formatError($e));
+
+                            foreach ($batch as $row) {
+                                try {
+                                    DB::table('posts')->insert($row);
+                                    $count++;
+                                } catch (\Throwable $rowError) {
+                                    $this->log('Skipping forum post row due to insert error: ' . $this->formatError($rowError));
+                                }
+                            }
+                        }
+
                         $batch = [];
                     }
                 } catch (\Throwable $e) {
@@ -1968,8 +2190,23 @@ class DatabaseMigrationService
             }
 
             if (!empty($batch)) {
-                DB::table('posts')->insert($batch);
-                $count += count($batch);
+                $batch = $this->sanitizeForumPostBatchUsers($batch);
+
+                try {
+                    DB::table('posts')->insert($batch);
+                    $count += count($batch);
+                } catch (\Throwable $e) {
+                    $this->log('Final forum posts batch insert failed; retrying row-by-row: ' . $this->formatError($e));
+
+                    foreach ($batch as $row) {
+                        try {
+                            DB::table('posts')->insert($row);
+                            $count++;
+                        } catch (\Throwable $rowError) {
+                            $this->log('Skipping forum post row due to insert error: ' . $this->formatError($rowError));
+                        }
+                    }
+                }
             }
 
             $this->log("Forum posts migration: {$count} posts migrated (offset={$offset})");

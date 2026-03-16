@@ -61,6 +61,13 @@ class RouteServiceProvider extends ServiceProvider
                 ->middleware(MiddlewareGroup::ANNOUNCE->value)
                 ->group(base_path('routes/announce.php'));
 
+            Route::prefix('scrape')
+                ->middleware(MiddlewareGroup::ANNOUNCE->value)
+                ->group(base_path('routes/scrape.php'));
+
+            Route::middleware(MiddlewareGroup::ANNOUNCE->value)
+                ->group(base_path('routes/announce_legacy.php'));
+
             Route::middleware(MiddlewareGroup::RSS->value)
                 ->group(base_path('routes/rss.php'));
         });
