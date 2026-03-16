@@ -1289,9 +1289,34 @@ class DatabaseMigrationService
             return 0;
         }
 
-        DB::table('torrents')->insert($toInsert);
+        try {
+            DB::table('torrents')->insert($toInsert);
 
-        return count($toInsert);
+            return count($toInsert);
+        } catch (\Throwable $e) {
+            $this->log('Torrent batch insert failed; retrying row-by-row: ' . $this->formatError($e));
+        }
+
+        $inserted = 0;
+
+        foreach ($toInsert as $row) {
+            try {
+                DB::table('torrents')->insert($row);
+                $inserted++;
+            } catch (\Throwable $e) {
+                $name = (string) ($row['name'] ?? 'unknown');
+                $infoHash = (string) ($row['info_hash'] ?? 'unknown');
+
+                $this->log(sprintf(
+                    'Skipping torrent "%s" [%s]: %s',
+                    mb_strimwidth($name, 0, 120, '...'),
+                    $infoHash,
+                    $this->formatError($e)
+                ));
+            }
+        }
+
+        return $inserted;
     }
 
     /**
