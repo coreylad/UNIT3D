@@ -8,10 +8,10 @@
             @include('cookie-consent::index')
             @include('partials.alerts')
         </div>
-        @if (in_array(auth()->user()->settings->style, [17, 18, 19], true))
-            @include('partials.banner', ['siteSetting' => \App\Models\SiteSetting::instance()])
-        @endif
         <header>
+            @if (in_array((int) auth()->user()->settings->style, [17, 18, 19], true))
+                @include('partials.banner', ['siteSetting' => \App\Models\SiteSetting::instance()])
+            @endif
             @include('partials.top-nav')
             <nav class="secondary-nav">
                 <ol class="breadcrumbsV2">
