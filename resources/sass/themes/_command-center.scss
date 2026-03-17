@@ -500,10 +500,7 @@ body > header {
     width: 100%;
     max-width: 1140px;
     margin: 0 auto 2px auto;
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    min-height: clamp(220px, 30vw, 360px);
+    height: clamp(150px, 18vw, 240px);
     border: 1px solid var(--cc-border);
     border-left: 3px solid var(--cc-accent);
     position: relative;
@@ -523,31 +520,23 @@ body > header {
     content: '';
     position: absolute;
     inset: 0;
-    background:
-        linear-gradient(180deg, hsl(222deg 22% 8% / 30%) 0%, hsl(222deg 22% 8% / 72%) 100%),
-        linear-gradient(90deg, hsl(222deg 22% 8% / 80%) 0%, hsl(222deg 22% 8% / 30%) 58%, hsl(222deg 22% 8% / 65%) 100%);
+    background: linear-gradient(180deg, hsl(222deg 22% 8% / 16%) 0%, hsl(222deg 22% 8% / 38%) 100%);
 }
 
 .banner--compact {
-    min-height: 240px;
+    height: clamp(150px, 18vw, 240px);
 }
 
 .banner--full {
-    min-height: clamp(320px, 44vw, 480px);
+    height: clamp(180px, 24vw, 300px);
 }
 
 .banner--inner {
-    min-height: 180px;
+    height: clamp(130px, 14vw, 190px);
 }
 
 .banner__content {
-    position: relative;
-    z-index: 1;
-    display: grid;
-    gap: 10px;
-    max-width: 720px;
-    padding: clamp(22px, 4vw, 48px);
-    color: hsl(222deg 8% 92%);
+    display: none;
 }
 
 .banner__eyebrow {
@@ -600,20 +589,20 @@ main > div > article {
 
 @media (max-width: 767px) {
     .banner {
-        min-height: 210px;
+        height: clamp(120px, 26vw, 170px);
         border-left-width: 2px;
     }
 
     .banner--full {
-        min-height: 260px;
+        height: clamp(140px, 32vw, 200px);
     }
 
     .banner--compact {
-        min-height: 220px;
+        height: clamp(120px, 26vw, 170px);
     }
 
-    .banner__description {
-        font-size: 14px;
+    .banner--inner {
+        height: clamp(100px, 22vw, 140px);
     }
 }
 
