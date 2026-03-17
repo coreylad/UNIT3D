@@ -103,6 +103,10 @@
             @vite('resources/sass/themes/_classic.scss')
 
             @break
+        @case(19)
+            @vite('resources/sass/themes/_command-center-mobile.scss')
+
+            @break
     @endswitch
 
     @if (isset(auth()->user()->settings->custom_css))

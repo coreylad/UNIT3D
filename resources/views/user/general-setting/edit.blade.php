@@ -188,6 +188,13 @@
                             >
                                 Classic (Desktop only)
                             </option>
+                            <option
+                                class="form__option"
+                                value="19"
+                                @selected($user->settings->style === 19)
+                            >
+                                Command Center Mobile
+                            </option>
                         </select>
                         <label class="form__label form__label--floating" for="style">Theme</label>
                     </p>

@@ -1,0 +1,237 @@
+/*
+ * Command Center Mobile
+ *
+ * Inherits the full Command Center aesthetic (deep navy + amber-gold), then
+ * patches out every fixed 1140 px constraint so the layout reflows correctly
+ * on phones and tablets.
+ *
+ * Breakpoints
+ *   ≤ 1140 px  — fluid containers (no more hard-coded 1140 px widths)
+ *   ≤  767 px  — hamburger nav, stacked sidebars, scrollable tables
+ */
+
+@use 'command-center';
+
+/* ── 1. Remove the hard minimum width ──────────────────────────────────── */
+/*
+ * command-center sets min-width: 1140px on body.
+ * That single rule forces horizontal scroll on every screen narrower than a
+ * large desktop. Unconditionally zeroing it re-enables all reflow below.
+ */
+body {
+    min-width: 0;
+}
+
+/* ── 2. Fluid containers below 1140 px ─────────────────────────────────── */
+/*
+ * Several elements are pinned to exactly 1140 px even when viewport is
+ * smaller. Switch them to 100 % so they never break out of the viewport.
+ */
+@media screen and (max-width: 1140px) {
+    .top-nav,
+    .secondary-nav,
+    main > article,
+    main > div > article {
+        max-width: 100%;
+        padding-inline: 12px;
+        box-sizing: border-box;
+    }
+
+    main.page__staff-dashboard--index {
+        max-width: 100%;
+        padding-inline: 12px;
+    }
+
+    .alert {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+
+    .footer {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        padding-inline: 16px;
+    }
+
+    /* User / request search filter bars */
+    .user-torrents__filters,
+    .user-peers__filters,
+    .user-uploads__filters,
+    .user-resurrections__filters,
+    .request-search__filters {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+}
+
+/* ── 3. Mobile layout (≤ 767 px) ────────────────────────────────────────── */
+@media screen and (max-width: 767px) {
+    /* ── 3a. Top nav: collapse to hamburger toggle ───────────────────────── */
+    /*
+     * Command Center uses display:contents on .top-nav__left / __right so
+     * that all children become direct grid items in its 3-row template.
+     * On mobile we need left and right to be real flex containers again so
+     * the base .mobile toggle logic (added by JS in _top_nav.scss) works.
+     */
+    .top-nav {
+        grid-template: 'left toggle' auto / 1fr auto;
+        grid-template-rows: auto;
+        column-gap: 0;
+        padding: 0 12px;
+    }
+
+    .top-nav.mobile {
+        grid-template:
+            'left    toggle'
+            'menus   menus'
+            'right   right'
+            auto / 1fr auto;
+    }
+
+    /* Restore left/right as real flex containers */
+    .top-nav__left {
+        display: flex;
+        column-gap: 12px;
+        align-items: center;
+        grid-area: left;
+    }
+
+    .top-nav__right {
+        display: flex;
+        column-gap: 12px;
+        align-items: center;
+        justify-content: end;
+        grid-area: right;
+    }
+
+    /* Icon bar: revert from display:contents so icons sit inside .right */
+    .top-nav__icon-bar {
+        display: flex;
+        column-gap: 4px;
+        align-items: center;
+    }
+
+    /* Undo the named-grid-area overrides from the 3-row desktop template */
+    .top-nav__icon-bar > li:nth-last-child(1),
+    .top-nav__icon-bar > li:nth-last-child(2),
+    .top-nav__icon-bar > li:nth-last-child(3),
+    .top-nav__icon-bar > li:nth-last-child(4),
+    .top-nav__icon-bar > li:nth-last-child(5) {
+        grid-area: unset;
+    }
+
+    /* Quick-search: remove its named grid-area so it lives in normal flow */
+    .quick-search {
+        grid-area: unset;
+    }
+
+    /*
+     * Ratio bar: the 9-column inline stat strip is too dense for a phone.
+     * Hide it on mobile; users can still see stats on their profile page.
+     */
+    .top-nav__ratio-bar.top-nav__ratio-bar {
+        display: none;
+    }
+
+    /*
+     * Undo hardcoded dropdown top-offsets that assume the 3-row nav height
+     * (62 + 44 + 51 = 157 px desktop, 198 px with ratio bar).
+     */
+    .top-nav__icon-bar > .top-nav__dropdown > ul {
+        top: auto;
+    }
+
+    .top-nav__dropdown > ul {
+        top: auto;
+    }
+
+    .nav-tab-menu__items {
+        top: auto;
+    }
+
+    /* ── 3b. Article & sidebar ───────────────────────────────────────────── */
+    /*
+     * On desktop, .sidebar2 puts the main column and the aside side by side.
+     * On mobile they stack vertically, aside below content.
+     */
+    .sidebar2 {
+        flex-direction: column;
+    }
+
+    .sidebar2 > div {
+        max-width: 100%;
+        width: 100%;
+    }
+
+    .sidebar2 > aside {
+        width: 100%;
+    }
+
+    /* Remove overflow-x:clip that cuts off wide content inside article */
+    main > article,
+    main > div > article {
+        overflow-x: visible;
+    }
+
+    /* ── 3c. Data tables ─────────────────────────────────────────────────── */
+    /*
+     * Wide tables become horizontally scrollable rather than cropped.
+     * -webkit-overflow-scrolling enables momentum scroll on iOS Safari.
+     */
+    .data-table {
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* ── 3d. Torrent list rows ───────────────────────────────────────────── */
+    /*
+     * The 10-column list row grid is too wide for a phone screen.
+     * Collapse to: poster | name+meta | buttons.
+     */
+    .torrent-search--list__row {
+        grid-template-columns: 37px 1fr auto;
+    }
+
+    /* Hide the separate format column – it's folded into the name area */
+    .torrent-search--list__category {
+        display: none;
+    }
+
+    /* ── 3e. Site logo – reduce size ─────────────────────────────────────── */
+    .top-nav__site-logo {
+        font-size: 22px;
+        letter-spacing: 0.08em;
+    }
+
+    /* ── 3f. Secondary nav ───────────────────────────────────────────────── */
+    .secondary-nav {
+        padding-inline: 8px;
+        white-space: normal;
+        height: auto;
+        line-height: normal;
+        padding-block: 8px;
+    }
+
+    /* ── 3g. Panel heading – allow wrapping ──────────────────────────────── */
+    .panel__heading {
+        white-space: normal;
+        height: auto;
+        padding-block: 10px;
+        line-height: 1.3;
+    }
+
+    /* ── 3h. Form layout – single column on narrow screens ──────────────── */
+    .form__group--horizontal,
+    .form__group--short-horizontal {
+        grid-template-columns: 1fr;
+    }
+
+    /* ── 3i. Stats grid – 2 columns max on phone ─────────────────────────── */
+    .dashboard__stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}

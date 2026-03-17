@@ -162,8 +162,10 @@ return [
     | 10 = Nord
     | 11 = Revel
     | 12 = Material Design v3 Light
+    | 17 = Command Center
+    | 19 = Command Center Mobile
     */
-    'default_style' => 12,
+    'default_style' => 17,
 
     /*
     |--------------------------------------------------------------------------
