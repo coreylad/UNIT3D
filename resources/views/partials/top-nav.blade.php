@@ -2,7 +2,9 @@
     <div class="top-nav__left">
         <a class="top-nav__branding" href="{{ route('home.index') }}">
             <img src="{{ url('/favicon.ico') }}" style="height: 35px" />
-            @if ($siteSetting->header_image && file_exists(public_path('img/' . $siteSetting->header_image)))
+            @if (in_array(auth()->user()->settings->style, [17, 19], true))
+                <span class="top-nav__site-logo">{{ $siteSetting->title }}</span>
+            @elseif ($siteSetting->header_image && file_exists(public_path('img/' . $siteSetting->header_image)))
                 <img
                     src="{{ url('img/' . $siteSetting->header_image) }}"
                     alt="{{ $siteSetting->title }}"

@@ -9,6 +9,7 @@
 /* ── CSS Custom Properties ──────────────────────────────────────────────── */
 
 :root {
+    --cc-shell-gutter: 12px;
     --text-color: hsl(222deg 8% 88%);
     --color-dark-magenta: hsl(300 10% 20%);
     --color-dark-green:   hsl(165 25% 18%);
@@ -495,6 +496,75 @@ body > header {
     margin: 0;
 }
 
+.banner {
+    width: 100%;
+    max-width: 1140px;
+    margin: 0 auto 2px auto;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    min-height: clamp(220px, 30vw, 360px);
+    border: 1px solid var(--cc-border);
+    border-left: 3px solid var(--cc-accent);
+    position: relative;
+    overflow: hidden;
+}
+
+.banner::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(180deg, hsl(222deg 22% 8% / 30%) 0%, hsl(222deg 22% 8% / 72%) 100%),
+        linear-gradient(90deg, hsl(222deg 22% 8% / 80%) 0%, hsl(222deg 22% 8% / 30%) 58%, hsl(222deg 22% 8% / 65%) 100%);
+}
+
+.banner--compact {
+    min-height: 240px;
+}
+
+.banner--full {
+    min-height: clamp(320px, 44vw, 480px);
+}
+
+.banner--inner {
+    min-height: 180px;
+}
+
+.banner__content {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    gap: 10px;
+    max-width: 720px;
+    padding: clamp(22px, 4vw, 48px);
+    color: hsl(222deg 8% 92%);
+}
+
+.banner__eyebrow {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: hsl(222deg 8% 72%);
+}
+
+.banner__title {
+    margin: 0;
+    font-size: clamp(28px, 4vw, 52px);
+    font-weight: 800;
+    line-height: 0.95;
+    color: hsl(222deg 8% 96%);
+}
+
+.banner__description {
+    margin: 0;
+    max-width: 60ch;
+    font-size: 15px;
+    line-height: 1.45;
+    color: hsl(222deg 8% 80%);
+}
+
 .top-nav,
 .secondary-nav,
 main > article,
@@ -502,6 +572,40 @@ main > div > article {
     max-width: 1140px;
     margin: 0 auto;
     padding: 0;
+}
+
+@media (max-width: 1140px) {
+    .banner,
+    .top-nav,
+    .secondary-nav,
+    main > article,
+    main > div > article {
+        padding-inline: var(--cc-shell-gutter);
+        box-sizing: border-box;
+    }
+
+    .banner {
+        max-width: 100%;
+    }
+}
+
+@media (max-width: 767px) {
+    .banner {
+        min-height: 210px;
+        border-left-width: 2px;
+    }
+
+    .banner--full {
+        min-height: 260px;
+    }
+
+    .banner--compact {
+        min-height: 220px;
+    }
+
+    .banner__description {
+        font-size: 14px;
+    }
 }
 
 /* Prevent any block content from escaping the 1140 px column */

@@ -8,7 +8,7 @@
             @include('cookie-consent::index')
             @include('partials.alerts')
         </div>
-        @if (auth()->user()->settings->style === 18)
+        @if (in_array(auth()->user()->settings->style, [17, 18, 19], true))
             @include('partials.banner', ['siteSetting' => \App\Models\SiteSetting::instance()])
         @endif
         <header>
