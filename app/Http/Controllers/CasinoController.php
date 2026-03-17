@@ -19,6 +19,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreCasinoWagerRequest;
 use App\Models\CasinoWager;
 use App\Services\CasinoService;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -33,6 +34,12 @@ class CasinoController extends Controller
     public function index(Request $request): Factory|View
     {
         abort_unless(config('casino.enabled'), 404);
+
+        try {
+            $this->casinoService->ensureAccess($request->user());
+        } catch (ValidationException) {
+            abort(403);
+        }
 
         return view('casino.index', [
             'allowedAmounts' => config('casino.allowed_amounts'),

@@ -22,6 +22,7 @@ use App\Models\User;
 use App\Services\CasinoService;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class CasinoController extends Controller
@@ -34,6 +35,12 @@ class CasinoController extends Controller
     {
         abort_unless($request->user()->is($user) || $request->user()->group->is_modo, 403);
         abort_unless(config('casino.enabled'), 404);
+
+        try {
+            $this->casinoService->ensureAccess($user, allowStaffBypass: $request->user()->group->is_modo);
+        } catch (ValidationException) {
+            abort(403);
+        }
 
         return view('user.casino.index', [
             'casinoWagers' => CasinoWager::query()

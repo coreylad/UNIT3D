@@ -43,7 +43,7 @@
                 });
                 window.addEventListener('keydown', e => {
                     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-                    const map = {'1':'overview','2':'links','3':'chat','4':'general','5':'torrents','6':'users','7':'logs','8':'config'};
+                    const map = {'1':'overview','2':'links','3':'chat','4':'general','5':'torrents','6':'users','7':'logs','8':'config','9':'casino'};
                     if (map[e.key] && !this.cmdOpen) { this.activePanel = map[e.key]; return; }
                     if (e.key === '[') { this.collapsed = !this.collapsed; return; }
                     if (e.key === '/' || ((e.metaKey || e.ctrlKey) && e.key === 'k')) {
@@ -202,6 +202,18 @@
                         <span class="staff-dashboard__nav-shortcut" x-show="!collapsed" x-cloak>8</span>
                     </button>
                 </li>
+                <li>
+                    <button
+                        class="staff-dashboard__nav-item"
+                        :class="{ 'staff-dashboard__nav-item--active': activePanel === 'casino' }"
+                        x-on:click="activePanel = 'casino'"
+                        title="Casino"
+                    >
+                        <i class="{{ config('other.font-awesome') }} fa-dice"></i>
+                        <span x-show="!collapsed" x-cloak>Casino</span>
+                        <span class="staff-dashboard__nav-shortcut" x-show="!collapsed" x-cloak>9</span>
+                    </button>
+                </li>
             </ul>
             {{-- Sidebar Footer --}}
             <div class="staff-dashboard__sidebar-footer">
@@ -221,7 +233,7 @@
                     <kbd>Ctrl+K</kbd>
                 </button>
                 <div class="staff-dashboard__shortcut-hint" x-show="!collapsed" x-cloak>
-                    <span class="staff-dashboard__hint-key">1–8</span><span>panels</span>
+                    <span class="staff-dashboard__hint-key">1–9</span><span>panels</span>
                     <span class="staff-dashboard__hint-key">[</span><span>collapse</span>
                 </div>
             </div>
@@ -796,6 +808,39 @@
                     <a class="staff-dashboard__link-card" href="{{ route('staff.email_settings.edit') }}">
                         <i class="{{ config('other.font-awesome') }} fa-envelope"></i>
                         <span>Email & SMTP</span>
+                    </a>
+                </div>
+            </div>
+
+            {{-- Casino Panel --}}
+            <div x-show="activePanel === 'casino'" x-cloak>
+                <h2 class="staff-dashboard__panel-title">
+                    <i class="{{ config('other.font-awesome') }} fa-dice"></i>
+                    Casino
+                </h2>
+                <div
+                    class="staff-dashboard__links-grid"
+                    x-effect="Array.from($el.querySelectorAll(':scope > .staff-dashboard__link-card')).forEach(c => c.style.display = (!search || c.querySelector('span')?.textContent.trim().toLowerCase().includes(search.toLowerCase())) ? '' : 'none')"
+                >
+                    <a class="staff-dashboard__link-card" href="{{ route('casino.index') }}">
+                        <i class="{{ config('other.font-awesome') }} fa-dice"></i>
+                        <span>Casino Lobby</span>
+                    </a>
+                    <a class="staff-dashboard__link-card" href="{{ route('users.casino.index', ['user' => auth()->user()]) }}">
+                        <i class="{{ config('other.font-awesome') }} fa-chart-line"></i>
+                        <span>My Casino History</span>
+                    </a>
+                    <a class="staff-dashboard__link-card" href="{{ route('staff.bots.index') }}">
+                        <i class="{{ config('other.font-awesome') }} fa-robot"></i>
+                        <span>Casino Bot</span>
+                    </a>
+                    <a class="staff-dashboard__link-card" href="{{ route('staff.site_settings.economy') }}">
+                        <i class="{{ config('other.font-awesome') }} fa-coins"></i>
+                        <span>Economy Settings</span>
+                    </a>
+                    <a class="staff-dashboard__link-card" href="{{ route('staff.groups.index') }}">
+                        <i class="{{ config('other.font-awesome') }} fa-user-shield"></i>
+                        <span>Casino Permissions</span>
                     </a>
                 </div>
             </div>

@@ -17,6 +17,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Helpers\StringHelper;
+use App\Models\Bot;
 use App\Models\CasinoWager;
 use App\Models\Conversation;
 use App\Models\PrivateMessage;
@@ -34,6 +35,7 @@ final class CasinoService
     public function createWager(User $creator, int $amount, ?string $message = null): CasinoWager
     {
         $this->ensureEnabled();
+        $this->ensureAccess($creator);
 
         return DB::transaction(function () use ($creator, $amount, $message): CasinoWager {
             /** @var User $creator */
@@ -52,7 +54,7 @@ final class CasinoService
             ]);
 
             if (config('casino.announce_to_chat')) {
-                $this->chatRepository->systemMessage(
+                $this->announceToShoutbox(
                     sprintf(
                         '[url=%s]%s[/url] opened a casino wager for %s.',
                         href_profile($creator),
@@ -69,6 +71,7 @@ final class CasinoService
     public function acceptWager(User $challenger, CasinoWager $wager): CasinoWager
     {
         $this->ensureEnabled();
+        $this->ensureAccess($challenger);
 
         return DB::transaction(function () use ($challenger, $wager): CasinoWager {
             /** @var CasinoWager $lockedWager */
@@ -120,7 +123,7 @@ final class CasinoService
             );
 
             if (config('casino.announce_to_chat')) {
-                $this->chatRepository->systemMessage(
+                $this->announceToShoutbox(
                     sprintf(
                         '[url=%s]%s[/url] won %s from [url=%s]%s[/url] in the casino.',
                         href_profile($winner),
@@ -139,6 +142,7 @@ final class CasinoService
     public function cancelWager(User $actor, CasinoWager $wager): CasinoWager
     {
         $this->ensureEnabled();
+        $this->ensureAccess($actor, allowStaffBypass: true);
 
         return DB::transaction(function () use ($actor, $wager): CasinoWager {
             /** @var CasinoWager $lockedWager */
@@ -216,6 +220,25 @@ final class CasinoService
     private function ensureEnabled(): void
     {
         abort_unless(config('casino.enabled'), 404);
+    }
+
+    public function ensureAccess(User $user, bool $allowStaffBypass = false): void
+    {
+        if ($allowStaffBypass && $user->group->is_modo) {
+            return;
+        }
+
+        if ($user->group->level < (int) config('casino.minimum_group_level')) {
+            throw ValidationException::withMessages([
+                'casino' => 'Your group does not have permission to use the casino.',
+            ]);
+        }
+
+        if ((bool) config('casino.require_can_download') && !($user->can_download ?? $user->group->can_download)) {
+            throw ValidationException::withMessages([
+                'casino' => 'Your account does not currently have casino permission.',
+            ]);
+        }
     }
 
     private function guardWagerLimits(User $user): void
@@ -299,5 +322,27 @@ final class CasinoService
             'sender_id'       => User::SYSTEM_USER_ID,
             'message'         => $message,
         ]);
+    }
+
+    private function announceToShoutbox(string $message): void
+    {
+        $botId = $this->resolveCasinoBotId();
+
+        $this->chatRepository->systemMessage($message, $botId);
+    }
+
+    private function resolveCasinoBotId(): ?int
+    {
+        $configuredCommand = (string) config('casino.bot_command', 'casinobot');
+        $configuredName = (string) config('casino.bot_name', 'casinoBOT');
+
+        $bot = Bot::query()
+            ->where('active', '=', true)
+            ->where(fn ($query) => $query
+                ->whereRaw('LOWER(command) = ?', [mb_strtolower($configuredCommand)])
+                ->orWhereRaw('LOWER(name) = ?', [mb_strtolower($configuredName)]))
+            ->first();
+
+        return $bot?->id;
     }
 }
