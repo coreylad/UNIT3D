@@ -89,6 +89,18 @@ None.
                 'is_systembot' => false,
                 'is_nerdbot'   => true,
             ],
+            [
+                'name'         => 'casinoBOT',
+                'emoji'        => '1f3b2',
+                'command'      => 'casinobot',
+                'position'     => 3,
+                'color'        => '#16a34a',
+                'icon'         => 'fas fa-dice',
+                'help'         => 'casinoBOT announces wager activity in the shoutbox.',
+                'is_protected' => false,
+                'is_systembot' => false,
+                'is_nerdbot'   => false,
+            ],
         ], ['id'], ['updated_at' => DB::raw('updated_at')]);
     }
 }
