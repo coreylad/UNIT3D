@@ -17,7 +17,7 @@ return [
 
     'max_open_wagers_total' => (int) env('CASINO_MAX_OPEN_WAGERS_TOTAL', 50),
 
-    'announce_to_chat' => (bool) env('CASINO_ANNOUNCE_TO_CHAT', false),
+    'announce_to_chat' => (bool) env('CASINO_ANNOUNCE_TO_CHAT', true),
 
     'bot_name' => env('CASINO_BOT_NAME', 'casinoBOT'),
 

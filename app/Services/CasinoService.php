@@ -343,6 +343,26 @@ final class CasinoService
                 ->orWhereRaw('LOWER(name) = ?', [mb_strtolower($configuredName)]))
             ->first();
 
+        if ($bot !== null) {
+            return $bot->id;
+        }
+
+        $bot = Bot::query()->updateOrCreate(
+            ['command' => $configuredCommand],
+            [
+                'name'         => $configuredName,
+                'position'     => 3,
+                'color'        => '#16a34a',
+                'icon'         => 'fas fa-dice',
+                'emoji'        => '1f3b2',
+                'help'         => 'casinoBOT announces wager activity in the shoutbox.',
+                'active'       => true,
+                'is_protected' => false,
+                'is_nerdbot'   => false,
+                'is_systembot' => false,
+            ]
+        );
+
         return $bot?->id;
     }
 }
