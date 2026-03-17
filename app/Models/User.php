@@ -857,6 +857,46 @@ final class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * Get the casino wagers created by the user.
+     *
+     * @return HasMany<CasinoWager, $this>
+     */
+    public function createdCasinoWagers(): HasMany
+    {
+        return $this->hasMany(CasinoWager::class, 'creator_id');
+    }
+
+    /**
+     * Get the casino wagers accepted by the user.
+     *
+     * @return HasMany<CasinoWager, $this>
+     */
+    public function challengedCasinoWagers(): HasMany
+    {
+        return $this->hasMany(CasinoWager::class, 'challenger_id');
+    }
+
+    /**
+     * Get the casino wagers won by the user.
+     *
+     * @return HasMany<CasinoWager, $this>
+     */
+    public function wonCasinoWagers(): HasMany
+    {
+        return $this->hasMany(CasinoWager::class, 'winner_id');
+    }
+
+    /**
+     * Get the casino wagers lost by the user.
+     *
+     * @return HasMany<CasinoWager, $this>
+     */
+    public function lostCasinoWagers(): HasMany
+    {
+        return $this->hasMany(CasinoWager::class, 'loser_id');
+    }
+
+    /**
      * Get the tips sent by the user.
      *
      * @return HasMany<PostTip, $this>

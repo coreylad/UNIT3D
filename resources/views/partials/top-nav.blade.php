@@ -211,6 +211,12 @@
                     </a>
                 </li>
                 <li>
+                    <a href="{{ route('casino.index') }}">
+                        <i class="{{ config('other.font-awesome') }} fa-dice"></i>
+                        Casino
+                    </a>
+                </li>
+                <li>
                     <a href="{{ route('internal') }}">
                         <i class="{{ config('other.font-awesome') }} fa-star-shooting"></i>
                         {{ __('common.internal') }}

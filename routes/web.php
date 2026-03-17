@@ -112,6 +112,14 @@ Route::middleware('language')->group(function (): void {
             Route::get('/user-icons/{user:username}', [App\Http\Controllers\AuthenticatedImageController::class, 'userIcon'])->name('user_icon');
         });
 
+        // Casino System
+        Route::prefix('casino')->name('casino.')->group(function (): void {
+            Route::get('/', [App\Http\Controllers\CasinoController::class, 'index'])->name('index');
+            Route::post('/', [App\Http\Controllers\CasinoController::class, 'store'])->name('store');
+            Route::patch('/{casinoWager}/accept', [App\Http\Controllers\CasinoController::class, 'accept'])->name('accept');
+            Route::patch('/{casinoWager}/cancel', [App\Http\Controllers\CasinoController::class, 'cancel'])->name('cancel');
+        });
+
         // Donation System
         Route::prefix('donations')->name('donations.')->group(function (): void {
             Route::get('/', [App\Http\Controllers\DonationController::class, 'index'])->name('index');
@@ -466,6 +474,11 @@ Route::middleware('language')->group(function (): void {
                 Route::get('/', [App\Http\Controllers\User\GiftController::class, 'index'])->name('index');
                 Route::get('/create', [App\Http\Controllers\User\GiftController::class, 'create'])->name('create');
                 Route::post('/', [App\Http\Controllers\User\GiftController::class, 'store'])->name('store');
+            });
+
+            // Casino
+            Route::prefix('casino')->name('casino.')->group(function (): void {
+                Route::get('/', [App\Http\Controllers\User\CasinoController::class, 'index'])->name('index');
             });
 
             // General settings

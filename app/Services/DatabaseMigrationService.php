@@ -2040,7 +2040,10 @@ class DatabaseMigrationService
                         continue;
                     }
 
-                    $existing = DB::table('forums')->where('name', $forumName)->first();
+                    $existing = DB::table('forums')
+                        ->where('forum_category_id', (int) $catId)
+                        ->where('name', $forumName)
+                        ->first();
 
                     if ($existing) {
                         $forumMap[$sourceId] = $existing->id;
@@ -2192,14 +2195,17 @@ class DatabaseMigrationService
                         'updated_at'           => $lastPostDate ?? $threadDate,
                     ];
 
-                    if ($sourceThreadId > 0 && !DB::table('topics')->where('id', $sourceThreadId)->exists()) {
-                        DB::table('topics')->insert(['id' => $sourceThreadId] + $topicData);
-                        $topicMap[$sourceThreadId] = $sourceThreadId;
+                    if ($sourceThreadId > 0) {
+                        if (DB::table('topics')->where('id', $sourceThreadId)->exists()) {
+                            DB::table('topics')->where('id', $sourceThreadId)->update($topicData);
+                            $topicMap[$sourceThreadId] = $sourceThreadId;
+                        } else {
+                            DB::table('topics')->insert(['id' => $sourceThreadId] + $topicData);
+                            $topicMap[$sourceThreadId] = $sourceThreadId;
+                        }
                     } else {
                         $newTopicId = DB::table('topics')->insertGetId($topicData);
-                        if ($sourceThreadId > 0) {
-                            $topicMap[$sourceThreadId] = $newTopicId;
-                        }
+                        $topicMap[$sourceThreadId] = $newTopicId;
                     }
 
                     $count++;
