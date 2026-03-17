@@ -834,14 +834,6 @@
                         <i class="{{ config('other.font-awesome') }} fa-robot"></i>
                         <span>Casino Bot</span>
                     </a>
-                    <a class="staff-dashboard__link-card" href="{{ route('staff.site_settings.economy') }}">
-                        <i class="{{ config('other.font-awesome') }} fa-coins"></i>
-                        <span>Economy Settings</span>
-                    </a>
-                    <a class="staff-dashboard__link-card" href="{{ route('staff.groups.index') }}">
-                        <i class="{{ config('other.font-awesome') }} fa-user-shield"></i>
-                        <span>Casino Permissions</span>
-                    </a>
                 </div>
             </div>
 
