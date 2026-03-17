@@ -272,6 +272,26 @@
         <div class="ss-divider"></div>
 
         <p class="ss-subheading">
+            <i class="{{ config('other.font-awesome') }} fa-shield-halved" style="margin-right: 0.35em;"></i>
+            Two-Factor Authentication
+        </p>
+
+        <div class="ss-field">
+            <p class="form__group">
+                <input id="two_factor_issuer" class="form__text" name="two_factor_issuer" type="text" maxlength="100"
+                    value="{{ old('two_factor_issuer', $siteSetting->two_factor_issuer) }}" placeholder=" " />
+                <label class="form__label form__label--floating" for="two_factor_issuer">Authenticator App Name (optional)</label>
+            </p>
+            <span class="form__hint">
+                The name displayed in Google Authenticator and other TOTP apps when users scan their setup QR code.
+                Defaults to <strong>{{ config('app.name') }}</strong> if left blank.
+                Only affects newly enrolled users.
+            </span>
+        </div>
+
+        <div class="ss-divider"></div>
+
+        <p class="ss-subheading">
             <i class="{{ config('other.font-awesome') }} fa-image" style="margin-right: 0.35em;"></i>
             Header Banner Image
         </p>

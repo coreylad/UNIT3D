@@ -27,6 +27,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property string           $meta_description
  * @property string|null      $login_message
  * @property string|null      $header_image
+ * @property string|null      $two_factor_issuer
  * @property string           $homepage_banner_style
  * @property string|null      $smtp_host
  * @property int              $smtp_port
@@ -172,6 +173,7 @@ final class SiteSetting extends Model
             $fallback->meta_description           = (string) config('other.meta_description');
             $fallback->login_message              = null;
             $fallback->header_image               = null;
+            $fallback->two_factor_issuer           = null;
             $fallback->homepage_banner_style      = 'compact';
             $fallback->smtp_host                  = null;
             $fallback->smtp_port                  = 587;

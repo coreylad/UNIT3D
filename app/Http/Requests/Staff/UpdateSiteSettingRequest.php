@@ -44,6 +44,7 @@ class UpdateSiteSettingRequest extends FormRequest
             'header_image'     => ['nullable', 'image', 'mimes:jpg,jpeg,png,gif,webp', 'max:2048'],
             'remove_header_image' => ['nullable', 'boolean'],
             'homepage_banner_style' => ['sometimes', 'required', 'string', 'in:compact,full'],
+            'two_factor_issuer' => ['nullable', 'string', 'max:100'],
 
             // Registration
             'registration_open'       => ['nullable', 'boolean'],

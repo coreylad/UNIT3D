@@ -32,6 +32,8 @@ use Illuminate\Database\Eloquent\Relations\Pivot;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Fortify\Contracts\TwoFactorAuthenticationProvider;
+use Laravel\Fortify\Fortify;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use AllowDynamicProperties;
 
@@ -158,6 +160,22 @@ final class User extends Authenticatable implements MustVerifyEmail
             'is_lifetime'             => 'bool',
             'legacy'                  => 'bool',
         ];
+    }
+
+    /**
+     * Override Fortify's default issuer so the 2FA name shown in Google
+     * Authenticator reflects the admin-configured value rather than the
+     * hard-coded app.name config key.
+     */
+    public function twoFactorQrCodeUrl(): string
+    {
+        $issuer = SiteSetting::instance()->two_factor_issuer;
+
+        return app(TwoFactorAuthenticationProvider::class)->qrCodeUrl(
+            $issuer ?: config('app.name'),
+            $this->{Fortify::username()},
+            Fortify::currentEncrypter()->decrypt($this->two_factor_secret),
+        );
     }
 
     /**
