@@ -53,16 +53,14 @@ final class CasinoService
                 'status'     => CasinoWager::STATUS_OPEN,
             ]);
 
-            if (config('casino.announce_to_chat')) {
-                $this->announceToShoutbox(
-                    sprintf(
-                        '[url=%s]%s[/url] opened a casino wager for %s.',
-                        href_profile($creator),
-                        $creator->username,
-                        StringHelper::formatBytes($amount, 2),
-                    )
-                );
-            }
+            $this->announceToShoutbox(
+                sprintf(
+                    '[url=%s]%s[/url] opened a casino wager for %s.',
+                    href_profile($creator),
+                    $creator->username,
+                    StringHelper::formatBytes($amount, 2),
+                )
+            );
 
             return $wager;
         }, 5);
@@ -122,18 +120,16 @@ final class CasinoService
                 pot: $pot,
             );
 
-            if (config('casino.announce_to_chat')) {
-                $this->announceToShoutbox(
-                    sprintf(
-                        '[url=%s]%s[/url] won %s from [url=%s]%s[/url] in the casino.',
-                        href_profile($winner),
-                        $winner->username,
-                        StringHelper::formatBytes($pot, 2),
-                        href_profile($loser),
-                        $loser->username,
-                    )
-                );
-            }
+            $this->announceToShoutbox(
+                sprintf(
+                    '[url=%s]%s[/url] won %s from [url=%s]%s[/url] in the casino.',
+                    href_profile($winner),
+                    $winner->username,
+                    StringHelper::formatBytes($pot, 2),
+                    href_profile($loser),
+                    $loser->username,
+                )
+            );
 
             return $lockedWager->fresh(['creator.group', 'challenger.group', 'winner.group', 'loser.group']);
         }, 5);
