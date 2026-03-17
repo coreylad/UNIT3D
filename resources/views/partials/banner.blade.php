@@ -5,10 +5,8 @@
     $bannerStyle = $siteSetting->homepage_banner_style === 'full' ? 'full' : 'compact';
 @endphp
 
-<div
-    class="banner banner--{{ $bannerStyle }} {{ Route::is('home.index') ? 'banner--homepage' : 'banner--inner' }}"
-    style="background-image: url('{{ $bannerImagePath }}');"
->
+<div class="banner banner--{{ $bannerStyle }} {{ Route::is('home.index') ? 'banner--homepage' : 'banner--inner' }}">
+    <img class="banner__image" src="{{ $bannerImagePath }}" alt="{{ $siteSetting->title }}" />
     @if (Route::is('home.index'))
         <div class="banner__content">
             <span class="banner__eyebrow">Welcome to {{ $siteSetting->title }}</span>
