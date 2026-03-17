@@ -740,6 +740,8 @@ main > article,
     column-gap: 13px;
     background-color: var(--cc-bg-deep);
     border-bottom: 1px solid var(--cc-border);
+    position: relative;
+    z-index: 20;
 }
 
 .top-nav__left  { display: contents; }
@@ -873,7 +875,7 @@ main > article,
 }
 
 .nav-tab-menu__items {
-    top: 198px;
+    top: 42px;
     box-shadow: 0 8px 24px rgba(0,0,0,.6);
     border-radius: 0;
     background: var(--cc-bg-card-alt);
@@ -895,6 +897,8 @@ main > article,
     white-space: nowrap;
     background: hsl(222deg 22% 8%);
     border-bottom: 1px solid var(--cc-border-sub);
+    position: relative;
+    z-index: 20;
 }
 
 .breadcrumbsV2 {
