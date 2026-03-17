@@ -1,18 +1,22 @@
+@php($hideTopNavBranding = in_array((int) auth()->user()->settings->style, [17, 18, 19], true))
+
 <nav class="top-nav" x-data="{ expanded: false }" x-bind:class="expanded && 'mobile'">
     <div class="top-nav__left">
-        <a class="top-nav__branding" href="{{ route('home.index') }}">
-            <img src="{{ url('/favicon.ico') }}" style="height: 35px" />
-            @if ($siteSetting->header_image && file_exists(public_path('img/' . $siteSetting->header_image)))
-                <img
-                    src="{{ url('img/' . $siteSetting->header_image) }}"
-                    alt="{{ $siteSetting->title }}"
-                    class="top-nav__site-logo"
-                    style="height: 40px; width: auto; object-fit: contain; vertical-align: middle;"
-                />
-            @else
-                <span class="top-nav__site-logo">{{ $siteSetting->title }}</span>
-            @endif
-        </a>
+        @unless ($hideTopNavBranding)
+            <a class="top-nav__branding" href="{{ route('home.index') }}">
+                <img src="{{ url('/favicon.ico') }}" style="height: 35px" />
+                @if ($siteSetting->header_image && file_exists(public_path('img/' . $siteSetting->header_image)))
+                    <img
+                        src="{{ url('img/' . $siteSetting->header_image) }}"
+                        alt="{{ $siteSetting->title }}"
+                        class="top-nav__site-logo"
+                        style="height: 40px; width: auto; object-fit: contain; vertical-align: middle;"
+                    />
+                @else
+                    <span class="top-nav__site-logo">{{ $siteSetting->title }}</span>
+                @endif
+            </a>
+        @endunless
         @include('partials.quick-search-dropdown')
     </div>
     <ul class="top-nav__main-menus" x-bind:class="expanded && 'mobile'">
