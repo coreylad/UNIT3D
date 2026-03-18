@@ -619,14 +619,20 @@ final class AnnounceController extends Controller
                         continue;
                     }
 
-                    switch (\strlen((string) $peer['ip'])) {
+                    $packedIp = $this->normalizePeerIpForResponse((string) $peer['ip']);
+
+                    if ($packedIp === null) {
+                        continue;
+                    }
+
+                    switch (\strlen($packedIp)) {
                         case 4:
-                            $peersIpv4 .= $peer['ip'].pack('n', (int) $peer['port']);
+                            $peersIpv4 .= $packedIp.pack('n', (int) $peer['port']);
                             $peerCount++;
 
                             break;
                         case 16:
-                            $peersIpv6 .= $peer['ip'].pack('n', (int) $peer['port']);
+                            $peersIpv6 .= $packedIp.pack('n', (int) $peer['port']);
                             $peerCount++;
                     }
 
@@ -649,14 +655,20 @@ final class AnnounceController extends Controller
                         continue;
                     }
 
-                    switch (\strlen((string) $peer['ip'])) {
+                    $packedIp = $this->normalizePeerIpForResponse((string) $peer['ip']);
+
+                    if ($packedIp === null) {
+                        continue;
+                    }
+
+                    switch (\strlen($packedIp)) {
                         case 4:
-                            $peersIpv4 .= $peer['ip'].pack('n', (int) $peer['port']);
+                            $peersIpv4 .= $packedIp.pack('n', (int) $peer['port']);
                             $peerCount++;
 
                             break;
                         case 16:
-                            $peersIpv6 .= $peer['ip'].pack('n', (int) $peer['port']);
+                            $peersIpv6 .= $packedIp.pack('n', (int) $peer['port']);
                             $peerCount++;
                     }
 
@@ -812,6 +824,36 @@ final class AnnounceController extends Controller
         $windowMinutes = max(1, (int) config('announce.interval.new_upload.minutes', self::DEFAULT_NEW_UPLOAD_MINUTES));
 
         return $torrent->created_at->gt(now()->subMinutes($windowMinutes));
+    }
+
+    private function normalizePeerIpForResponse(string $ip): ?string
+    {
+        $candidates = [$ip];
+        $trimmedIp = rtrim($ip, "\0");
+
+        if ($trimmedIp !== $ip) {
+            $candidates[] = $trimmedIp;
+        }
+
+        foreach ($candidates as $candidate) {
+            if ($candidate === '') {
+                continue;
+            }
+
+            $textIp = @inet_ntop($candidate);
+
+            if ($textIp === false) {
+                continue;
+            }
+
+            $packedIp = @inet_pton($textIp);
+
+            if ($packedIp !== false) {
+                return $packedIp;
+            }
+        }
+
+        return null;
     }
 
     /**
