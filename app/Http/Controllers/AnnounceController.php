@@ -522,6 +522,12 @@ final class AnnounceController extends Controller
      */
     private function checkMaxConnections(Torrent $torrent, User $user): void
     {
+        $limit = (int) config('announce.rate_limit');
+
+        if ($limit <= 0) {
+            return;
+        }
+
         // Pull Count On Users Peers Per Torrent For Rate Limiting
         $connections = $torrent->peers
             ->where('user_id', '=', $user->id)
@@ -529,8 +535,8 @@ final class AnnounceController extends Controller
             ->count();
 
         // If Users Peer Count On A Single Torrent Is Greater Than X Return Error to Client
-        if ($connections > config('announce.rate_limit')) {
-            throw new TrackerException(138, [':limit' => config('announce.rate_limit')]);
+        if ($connections > $limit) {
+            throw new TrackerException(138, [':limit' => $limit]);
         }
     }
 
