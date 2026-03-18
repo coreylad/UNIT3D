@@ -202,11 +202,6 @@ final class AnnounceController extends Controller
      */
     private function checkClient(Request $request): void
     {
-        // Query count check
-        if ($request->query->count() < 6) {
-            throw new TrackerException(129);
-        }
-
         // Miss Header User-Agent is not allowed.
         if (!$request->header('User-Agent')) {
             throw new TrackerException(120);
@@ -286,10 +281,15 @@ final class AnnounceController extends Controller
     private function checkAnnounceFields(Request $request): AnnounceQueryDTO
     {
         $queries = [];
+        $rawQueryString = (string) $request->server('QUERY_STRING');
 
         // Part.1 Validate required announce fields
         foreach (['info_hash', 'peer_id', 'port', 'uploaded', 'downloaded', 'left'] as $item) {
             $itemData = $request->query->get($item);
+
+            if ($itemData === null) {
+                $itemData = $this->extractSingleRawQueryValue($rawQueryString, $item);
+            }
 
             if (null !== $itemData) {
                 $queries[$item] = $itemData;
@@ -373,6 +373,19 @@ final class AnnounceController extends Controller
             (string) $queries['peer_id'],
             $ip,
         );
+    }
+
+    private function extractSingleRawQueryValue(string $queryString, string $key): ?string
+    {
+        if ($queryString === '') {
+            return null;
+        }
+
+        if (!preg_match('/(?:^|&)'.preg_quote($key, '/').'=([^&]*)/', $queryString, $matches)) {
+            return null;
+        }
+
+        return rawurldecode($matches[1]);
     }
 
     /**
