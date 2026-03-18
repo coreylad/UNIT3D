@@ -125,6 +125,21 @@
             showTechnical: false,
             showAdvanced: false,
         }"
+            x-data="{
+                cat: {{ old('category_id', (int) $category_id) }},
+                cats: JSON.parse(atob('{{ base64_encode(json_encode($categories)) }}')),
+                tmdb_movie_exists: true,
+                tmdb_tv_exists: true,
+                imdb_title_exists: true,
+                tvdb_tv_exists: true,
+                mal_anime_exists: true,
+                igdb_game_exists: true,
+                showArtwork: false,
+                showEpisode: false,
+                showMetadata: false,
+                showTechnical: false,
+                showAdvanced: false,
+            }"
     >
         <h2 class="upload-title panel__heading">
             <i class="{{ config('other.font-awesome') }} fa-file"></i>
@@ -215,7 +230,7 @@
                         </label>
                     </p>
 
-                    <p class="form__group">
+                    <p class="form__group" x-show="cats[cat].type === 'movie' || cats[cat].type === 'tv'" x-cloak>
                         <select name="resolution_id" id="autores" class="form__select">
                             <option hidden disabled selected value=""></option>
                             @foreach ($resolutions as $resolution)
@@ -255,15 +270,15 @@
                         <button
                             type="button"
                             class="upload-section__toggle"
-                            @click="showTechnical = !showTechnical"
+                            @click="showArtwork = !showArtwork"
                         >
-                            <i class="{{ config('other.font-awesome') }}" :class="showTechnical ? 'fa-chevron-down' : 'fa-chevron-right'" style="color: #4a9eff; width: 1em;"></i>
+                            <i class="{{ config('other.font-awesome') }}" :class="showArtwork ? 'fa-chevron-down' : 'fa-chevron-right'" style="color: #4a9eff; width: 1em;"></i>
                             Files &amp; Artwork
                         </button>
                         <span class="upload-section__hint">&mdash; NFO, cover image, banner</span>
                     </div>
 
-                    <div x-show="showTechnical" x-cloak class="upload-section__body">
+                    <div x-show="showArtwork" x-cloak class="upload-section__body">
                         <p class="form__group">
                             <label for="nfo" class="form__label">
                                 NFO {{ __('torrent.file') }} ({{ __('torrent.optional') }})
@@ -318,15 +333,15 @@
                         <button
                             type="button"
                             class="upload-section__toggle"
-                            @click="showAdvanced = !showAdvanced"
+                            @click="showEpisode = !showEpisode"
                         >
-                            <i class="{{ config('other.font-awesome') }}" :class="showAdvanced ? 'fa-chevron-down' : 'fa-chevron-right'" style="color: #4a9eff; width: 1em;"></i>
+                            <i class="{{ config('other.font-awesome') }}" :class="showEpisode ? 'fa-chevron-down' : 'fa-chevron-right'" style="color: #4a9eff; width: 1em;"></i>
                             Episode &amp; Release Details
                         </button>
                         <span class="upload-section__hint">&mdash; season, episode, distributor, region</span>
                     </div>
 
-                    <div x-show="showAdvanced" x-cloak class="upload-section__body">
+                    <div x-show="showEpisode" x-cloak class="upload-section__body">
                         <p class="upload-section__subheading" x-show="cats[cat].type === 'tv'">
                             {{ __('torrent.season-number') }} &amp; {{ __('torrent.episode-number') }}
                         </p>
@@ -545,15 +560,15 @@
                         <button
                             type="button"
                             class="upload-section__toggle"
-                            @click="showAdvanced = !showAdvanced"
+                            @click="showTechnical = !showTechnical"
                         >
-                            <i class="{{ config('other.font-awesome') }}" :class="showAdvanced ? 'fa-chevron-down' : 'fa-chevron-right'" style="color: #00bcd4; width: 1em;"></i>
+                            <i class="{{ config('other.font-awesome') }}" :class="showTechnical ? 'fa-chevron-down' : 'fa-chevron-right'" style="color: #00bcd4; width: 1em;"></i>
                             Technical Details
                         </button>
                         <span class="upload-section__hint">&mdash; MediaInfo, BDInfo</span>
                     </div>
 
-                    <div x-show="showAdvanced" x-cloak class="upload-section__body">
+                    <div x-show="showTechnical" x-cloak class="upload-section__body">
                         <p class="form__group">
                             <textarea id="upload-form-mediainfo" name="mediainfo" class="form__textarea" placeholder=" ">
 {{ old('mediainfo') }}</textarea>
@@ -577,15 +592,15 @@
                         <button
                             type="button"
                             class="upload-section__toggle"
-                            @click="showMetadata = !showMetadata"
+                            @click="showAdvanced = !showAdvanced"
                         >
-                            <i class="{{ config('other.font-awesome') }}" :class="showMetadata ? 'fa-chevron-down' : 'fa-chevron-right'" style="color: #ff6b6b; width: 1em;"></i>
+                            <i class="{{ config('other.font-awesome') }}" :class="showAdvanced ? 'fa-chevron-down' : 'fa-chevron-right'" style="color: #ff6b6b; width: 1em;"></i>
                             Advanced Options
                         </button>
                         <span class="upload-section__hint">&mdash; anonymous, internal, freeleech</span>
                     </div>
 
-                    <div x-show="showMetadata" x-cloak class="upload-section__body">
+                    <div x-show="showAdvanced" x-cloak class="upload-section__body">
                         <p class="form__group">
                             <input type="hidden" name="anon" value="0" />
                             <input type="checkbox" class="form__checkbox" id="anon" name="anon" value="1" @checked(old('anon')) />
