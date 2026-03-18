@@ -44,8 +44,11 @@ use Illuminate\Support\Facades\Redis;
 final class AnnounceController extends Controller
 {
     // Announce Intervals
-    private const DEFAULT_MIN = 60;
-    private const DEFAULT_MAX = 180;
+    private const DEFAULT_MIN = 1_800;
+    private const DEFAULT_MAX = 1_800;
+    private const DEFAULT_NEW_UPLOAD_MINUTES = 60;
+    private const DEFAULT_NEW_UPLOAD_MIN = 60;
+    private const DEFAULT_NEW_UPLOAD_MAX = 60;
 
     // Port Blacklist
     private const BLACK_PORTS = [
@@ -134,8 +137,8 @@ final class AnnounceController extends Controller
             // violation).  Return a valid response with 0 peers instead so
             // the client respects the timing and backs off properly.
             if ($exception->getCode() === 162 && isset($torrent)) {
-                $minInterval = $this->minAnnounceInterval();
-                $maxInterval = $this->maxAnnounceInterval();
+                $minInterval = $this->minAnnounceInterval($torrent);
+                $maxInterval = $this->maxAnnounceInterval($torrent);
                 $response = 'd8:completei'
                     .$torrent->seeders
                     .'e10:downloadedi'
@@ -415,7 +418,7 @@ final class AnnounceController extends Controller
             'announce-torrents:by-infohash:'.$infoHash,
             8 * 3600,
             fn () => Torrent::withoutGlobalScope(ApprovedScope::class)
-                ->select(['id', 'free', 'doubleup', 'seeders', 'leechers', 'times_completed', 'status'])
+                ->select(['id', 'free', 'doubleup', 'seeders', 'leechers', 'times_completed', 'status', 'created_at'])
                 ->where('info_hash', '=', $infoHash)
                 ->firstOr(fn (): string => '-1')
         );
@@ -509,7 +512,7 @@ final class AnnounceController extends Controller
 
         $lastAnnouncedKey = config('cache.prefix').'peer-last-announced:'.$user->id.'-'.$torrent->id.'-'.$queries->getPeerId();
 
-        $minInterval = $this->minAnnounceInterval();
+        $minInterval = $this->minAnnounceInterval($torrent);
         $randomMinInterval = random_int(max(1, intdiv($minInterval * 85, 100)), max(1, intdiv($minInterval * 95, 100)));
 
         $lastAnnouncedAt = Redis::connection('announce')->command('SET', [$lastAnnouncedKey, $now, ['NX', 'GET', 'EX' => $randomMinInterval]]);
@@ -591,8 +594,8 @@ final class AnnounceController extends Controller
      */
     private function generateSuccessAnnounceResponse(AnnounceQueryDTO $queries, Torrent $torrent, User $user): string
     {
-        $minInterval = $this->minAnnounceInterval();
-        $maxInterval = $this->maxAnnounceInterval();
+        $minInterval = $this->minAnnounceInterval($torrent);
+        $maxInterval = $this->maxAnnounceInterval($torrent);
         $peersIpv4 = '';
         $peersIpv6 = '';
         $peerCount = 0;
@@ -699,8 +702,8 @@ final class AnnounceController extends Controller
      */
     private function generateWarningAnnounceResponse(Torrent $torrent, TrackerException $trackerException): string
     {
-        $minInterval = $this->minAnnounceInterval();
-        $maxInterval = $this->maxAnnounceInterval();
+        $minInterval = $this->minAnnounceInterval($torrent);
+        $maxInterval = $this->maxAnnounceInterval($torrent);
         $message = $trackerException->getMessage();
 
         return 'd8:completei'
@@ -785,14 +788,36 @@ final class AnnounceController extends Controller
         return 'd14:failure reason'.\strlen($message).':'.$message.'8:intervali'.$minInterval.'e12:min intervali'.$minInterval.'ee';
     }
 
-    private function minAnnounceInterval(): int
+    private function minAnnounceInterval(?Torrent $torrent = null): int
     {
+        if ($this->isNewUploadIntervalWindow($torrent)) {
+            return max(30, (int) config('announce.interval.new_upload.min', self::DEFAULT_NEW_UPLOAD_MIN));
+        }
+
         return max(30, (int) config('announce.interval.min', self::DEFAULT_MIN));
     }
 
-    private function maxAnnounceInterval(): int
+    private function maxAnnounceInterval(?Torrent $torrent = null): int
     {
-        return max($this->minAnnounceInterval(), (int) config('announce.interval.max', self::DEFAULT_MAX));
+        if ($this->isNewUploadIntervalWindow($torrent)) {
+            return max(
+                $this->minAnnounceInterval($torrent),
+                (int) config('announce.interval.new_upload.max', self::DEFAULT_NEW_UPLOAD_MAX)
+            );
+        }
+
+        return max($this->minAnnounceInterval($torrent), (int) config('announce.interval.max', self::DEFAULT_MAX));
+    }
+
+    private function isNewUploadIntervalWindow(?Torrent $torrent = null): bool
+    {
+        if ($torrent === null || $torrent->created_at === null) {
+            return false;
+        }
+
+        $windowMinutes = max(1, (int) config('announce.interval.new_upload.minutes', self::DEFAULT_NEW_UPLOAD_MINUTES));
+
+        return $torrent->created_at->gt(now()->subMinutes($windowMinutes));
     }
 
     /**

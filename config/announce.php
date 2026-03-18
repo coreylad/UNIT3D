@@ -102,8 +102,13 @@ return [
     */
 
     'interval' => [
-        'min' => (int) env('ANNOUNCE_MIN_INTERVAL', 60),
-        'max' => (int) env('ANNOUNCE_MAX_INTERVAL', 180),
+        'min' => (int) env('ANNOUNCE_MIN_INTERVAL', 1800),
+        'max' => (int) env('ANNOUNCE_MAX_INTERVAL', 1800),
+        'new_upload' => [
+            'minutes' => (int) env('ANNOUNCE_NEW_UPLOAD_MINUTES', 60),
+            'min'     => (int) env('ANNOUNCE_NEW_UPLOAD_MIN_INTERVAL', 60),
+            'max'     => (int) env('ANNOUNCE_NEW_UPLOAD_MAX_INTERVAL', 60),
+        ],
     ],
 
     /*
