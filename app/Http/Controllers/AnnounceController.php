@@ -23,7 +23,6 @@ use App\DTO\AnnounceTorrentDTO;
 use App\DTO\AnnounceUserDTO;
 use App\Enums\ModerationStatus;
 use App\Exceptions\TrackerException;
-use App\Helpers\Bencode;
 use App\Jobs\ProcessAnnounce;
 use App\Models\BlacklistClient;
 use App\Models\Group;
@@ -45,14 +44,11 @@ use Illuminate\Support\Facades\Redis;
 final class AnnounceController extends Controller
 {
     // Announce Intervals
-    private const DEFAULT_MIN = 1_800;
-    private const DEFAULT_MAX = 1_800;
-    private const DEFAULT_NEW_UPLOAD_MINUTES = 60;
-    private const DEFAULT_NEW_UPLOAD_MIN = 60;
-    private const DEFAULT_NEW_UPLOAD_MAX = 60;
+    private const int MIN = 1_800;
+    private const int MAX = 3_600;
 
     // Port Blacklist
-    private const BLACK_PORTS = [
+    private const array BLACK_PORTS = [
         // Hyper Text Transfer Protocol (HTTP) - port used for web traffic
         8080,
         8081,
@@ -69,7 +65,7 @@ final class AnnounceController extends Controller
         6699,
     ];
 
-    private const HEADERS = [
+    private const array HEADERS = [
         'Content-Type'  => 'text/plain; charset=utf-8',
         'Cache-Control' => 'private, no-cache, no-store, must-revalidate, max-age=0',
         'Pragma'        => 'no-cache',
@@ -120,8 +116,6 @@ final class AnnounceController extends Controller
                 $visible = true;
             }
 
-            $this->upsertCurrentPeer($queries, $torrent, $user, $visible);
-
             // Process Announce Job.
             $this->processAnnounceJob($queries, $user, $group, $torrent, $visible);
 
@@ -132,80 +126,13 @@ final class AnnounceController extends Controller
                 $response = $this->generateWarningAnnounceResponse($torrent, new TrackerException(164, [':max' => $group->download_slots]));
             }
         } catch (TrackerException $exception) {
-            // rTorrent (and some other clients) aggressively retry on failure
-            // responses, ignoring interval / min interval — which creates an
-            // infinite loop of rapid announces for error 162 (min interval
-            // violation). Return a valid announce response (including peers)
-            // so clients can still discover peers while respecting intervals.
-            if ($exception->getCode() === 162 && isset($torrent, $queries, $user)) {
-                $response = $this->generateSuccessAnnounceResponse($queries, $torrent, $user);
-            } else {
-                $response = $this->generateFailedAnnounceResponse($exception);
-            }
-        } catch (Throwable) {
+            $response = $this->generateFailedAnnounceResponse($exception);
+        } catch (Exception) {
             // spell:disable-next-line
             $response = 'd14:failure reason21:Internal Server Error8:intervali5400e12:min intervali5400ee';
         }
 
         return $this->sendFinalAnnounceResponse($response);
-    }
-
-    /**
-     * Scrape Code.
-     *
-     * @throws Throwable
-     */
-    public function scrape(Request $request, string $passkey): Response
-    {
-        try {
-            $this->checkPasskey($passkey);
-
-            $user = $this->checkUserForScrape($passkey);
-            $this->checkGroup($user);
-
-            $infoHashes = $this->extractInfoHashesFromQueryString((string) $request->server('QUERY_STRING'));
-
-            if ($infoHashes === []) {
-                throw new TrackerException(130, [':attribute' => 'info_hash']);
-            }
-
-            $files = [];
-
-            foreach ($infoHashes as $infoHash) {
-                $torrent = Torrent::withoutGlobalScope(ApprovedScope::class)
-                    ->select(['id', 'times_completed', 'status'])
-                    ->where('info_hash', '=', $infoHash)
-                    ->first();
-
-                $complete = 0;
-                $incomplete = 0;
-
-                if ($torrent !== null && $torrent->status === ModerationStatus::APPROVED) {
-                    $peerStats = Peer::query()
-                        ->selectRaw('SUM(CASE WHEN active = 1 AND seeder = 1 THEN 1 ELSE 0 END) AS complete')
-                        ->selectRaw('SUM(CASE WHEN active = 1 AND seeder = 0 THEN 1 ELSE 0 END) AS incomplete')
-                        ->where('torrent_id', '=', $torrent->id)
-                        ->first();
-
-                    $complete = (int) ($peerStats?->complete ?? 0);
-                    $incomplete = (int) ($peerStats?->incomplete ?? 0);
-                }
-
-                $files[$infoHash] = [
-                    'complete'   => $complete,
-                    'downloaded' => ($torrent !== null && $torrent->status === ModerationStatus::APPROVED) ? (int) $torrent->times_completed : 0,
-                    'incomplete' => $incomplete,
-                ];
-            }
-
-            return $this->sendFinalAnnounceResponse(Bencode::bencode([
-                'files' => $files,
-            ]));
-        } catch (TrackerException $exception) {
-            return $this->sendFinalAnnounceResponse($this->generateFailedAnnounceResponse($exception));
-        } catch (Throwable) {
-            return $this->sendFinalAnnounceResponse('d14:failure reason21:Internal Server Errore');
-        }
     }
 
     /**
@@ -216,6 +143,11 @@ final class AnnounceController extends Controller
      */
     private function checkClient(Request $request): void
     {
+        // Query count check
+        if ($request->query->count() < 6) {
+            throw new TrackerException(129);
+        }
+
         // Miss Header User-Agent is not allowed.
         if (!$request->header('User-Agent')) {
             throw new TrackerException(120);
@@ -295,15 +227,10 @@ final class AnnounceController extends Controller
     private function checkAnnounceFields(Request $request): AnnounceQueryDTO
     {
         $queries = [];
-        $rawQueryString = (string) $request->server('QUERY_STRING');
 
         // Part.1 Validate required announce fields
         foreach (['info_hash', 'peer_id', 'port', 'uploaded', 'downloaded', 'left'] as $item) {
             $itemData = $request->query->get($item);
-
-            if ($itemData === null) {
-                $itemData = $this->extractSingleRawQueryValue($rawQueryString, $item);
-            }
 
             if (null !== $itemData) {
                 $queries[$item] = $itemData;
@@ -389,19 +316,6 @@ final class AnnounceController extends Controller
         );
     }
 
-    private function extractSingleRawQueryValue(string $queryString, string $key): ?string
-    {
-        if ($queryString === '') {
-            return null;
-        }
-
-        if (!preg_match('/(?:^|&)'.preg_quote($key, '/').'=([^&]*)/', $queryString, $matches)) {
-            return null;
-        }
-
-        return rawurldecode($matches[1]);
-    }
-
     /**
      * Get User Via Validated Passkey.
      *
@@ -427,51 +341,6 @@ final class AnnounceController extends Controller
         }
 
         return $user;
-    }
-
-    /**
-     * Get User Via Validated Passkey for scrape requests.
-     *
-     * @throws TrackerException
-     * @throws Throwable
-     */
-    private function checkUserForScrape(string $passkey): User
-    {
-        $user = cache()->remember('user:'.$passkey, 8 * 3600, fn () => User::query()
-            ->select(['id', 'group_id', 'can_download', 'is_donor', 'is_lifetime'])
-            ->where('passkey', '=', $passkey)
-            ->first());
-
-        if ($user === null) {
-            throw new TrackerException(140);
-        }
-
-        return $user;
-    }
-
-    /**
-     * @return list<string>
-     *
-     * @throws TrackerException
-     */
-    private function extractInfoHashesFromQueryString(string $queryString): array
-    {
-        preg_match_all('/(?:^|&)info_hash=([^&]*)/', $queryString, $matches);
-
-        $encodedInfoHashes = $matches[1] ?? [];
-        $infoHashes = [];
-
-        foreach ($encodedInfoHashes as $encodedInfoHash) {
-            $infoHash = rawurldecode($encodedInfoHash);
-
-            if (\strlen($infoHash) !== 20) {
-                throw new TrackerException(133, [':attribute' => 'info_hash', ':rule' => 20]);
-            }
-
-            $infoHashes[] = $infoHash;
-        }
-
-        return array_values(array_unique($infoHashes));
     }
 
     /**
@@ -523,7 +392,7 @@ final class AnnounceController extends Controller
             'announce-torrents:by-infohash:'.$infoHash,
             8 * 3600,
             fn () => Torrent::withoutGlobalScope(ApprovedScope::class)
-                ->select(['id', 'free', 'doubleup', 'seeders', 'leechers', 'times_completed', 'status', 'created_at'])
+                ->select(['id', 'free', 'doubleup', 'seeders', 'leechers', 'times_completed', 'status'])
                 ->where('info_hash', '=', $infoHash)
                 ->firstOr(fn (): string => '-1')
         );
@@ -557,7 +426,7 @@ final class AnnounceController extends Controller
         // If we use eager loading, then laravel will use `where torrent_id in (123)` instead of `where torrent_id = ?`
         $torrent->setRelation(
             'peers',
-            Peer::select(['torrent_id', 'peer_id', 'user_id', 'downloaded', 'uploaded', 'left', 'seeder', 'active', 'visible', 'connectable', 'ip', 'port', 'updated_at'])
+            Peer::select(['torrent_id', 'peer_id', 'user_id', 'downloaded', 'uploaded', 'left', 'seeder', 'active', 'visible', 'ip', 'port', 'updated_at'])
                 ->where('torrent_id', '=', $torrent->id)
                 ->get()
         );
@@ -609,25 +478,24 @@ final class AnnounceController extends Controller
 
         $lastAnnouncedAt = Redis::connection('announce')->command('SET', [$duplicateAnnounceKey, $now, ['NX', 'GET', 'EX' => 30]]);
 
-        if (is_numeric($lastAnnouncedAt)) {
-            throw new TrackerException(162, [':elapsed' => $now - (int) $lastAnnouncedAt]);
+        if ($lastAnnouncedAt !== false) {
+            throw new TrackerException(162, [':elapsed' => $now - $lastAnnouncedAt]);
         }
 
         // Block clients disrespecting the min interval
 
         $lastAnnouncedKey = config('cache.prefix').'peer-last-announced:'.$user->id.'-'.$torrent->id.'-'.$queries->getPeerId();
 
-        $minInterval = $this->minAnnounceInterval($torrent);
-        $randomMinInterval = random_int(max(1, intdiv($minInterval * 85, 100)), max(1, intdiv($minInterval * 95, 100)));
+        $randomMinInterval = random_int(intdiv(self::MIN * 85, 100), intdiv(self::MIN * 95, 100));
 
         $lastAnnouncedAt = Redis::connection('announce')->command('SET', [$lastAnnouncedKey, $now, ['NX', 'GET', 'EX' => $randomMinInterval]]);
 
         // Delete the timer if the user paused the torrent, and it's been at
         // least 5 minutes since they last announced.
-        if ($event === 'stopped' && is_numeric($lastAnnouncedAt) && (int) $lastAnnouncedAt < $now - 5 * 60) {
+        if ($event === 'stopped' && $lastAnnouncedAt < $now - 5 * 60) {
             Redis::connection('announce')->command('DEL', [$lastAnnouncedKey]);
-        } elseif (is_numeric($lastAnnouncedAt) && !\in_array($event, ['completed', 'stopped'])) {
-            throw new TrackerException(162, [':elapsed' => $now - (int) $lastAnnouncedAt]);
+        } elseif ($lastAnnouncedAt !== false && !\in_array($event, ['completed', 'stopped'])) {
+            throw new TrackerException(162, [':elapsed' => $now - $lastAnnouncedAt]);
         }
     }
 
@@ -639,12 +507,6 @@ final class AnnounceController extends Controller
      */
     private function checkMaxConnections(Torrent $torrent, User $user): void
     {
-        $limit = (int) config('announce.rate_limit');
-
-        if ($limit <= 0) {
-            return;
-        }
-
         // Pull Count On Users Peers Per Torrent For Rate Limiting
         $connections = $torrent->peers
             ->where('user_id', '=', $user->id)
@@ -652,8 +514,8 @@ final class AnnounceController extends Controller
             ->count();
 
         // If Users Peer Count On A Single Torrent Is Greater Than X Return Error to Client
-        if ($connections > $limit) {
-            throw new TrackerException(138, [':limit' => $limit]);
+        if ($connections > config('announce.rate_limit')) {
+            throw new TrackerException(138, [':limit' => config('announce.rate_limit')]);
         }
     }
 
@@ -705,9 +567,6 @@ final class AnnounceController extends Controller
      */
     private function generateSuccessAnnounceResponse(AnnounceQueryDTO $queries, Torrent $torrent, User $user): string
     {
-        $minInterval = $this->minAnnounceInterval($torrent);
-        $maxInterval = $this->maxAnnounceInterval($torrent);
-        $allowSameUserPeerMatching = (bool) config('announce.allow_same_user_peer_matching', false);
         $peersIpv4 = '';
         $peersIpv6 = '';
         $peerCount = 0;
@@ -732,32 +591,19 @@ final class AnnounceController extends Controller
                         $leecherCount++;
                     }
 
-                    // Don't include other seeders, inactive peers, invisible peers, the current client,
-                    // nor same-user peers unless testing mode explicitly allows it.
-                    if (
-                        $peer->seeder
-                        || !$peer->active
-                        || !$peer->visible
-                        || $peer->peer_id === $queries->getPeerId()
-                        || (!$allowSameUserPeerMatching && $peer->user_id === $user->id)
-                    ) {
+                    // Don't include other seeders, inactive peers, invisible peers nor other peers belonging to the same user
+                    if ($peer->seeder || !$peer->active || !$peer->visible || $peer->user_id === $user->id) {
                         continue;
                     }
 
-                    $packedIp = $this->normalizePeerIpForResponse((string) $peer['ip']);
-
-                    if ($packedIp === null) {
-                        continue;
-                    }
-
-                    switch (\strlen($packedIp)) {
+                    switch (\strlen((string) $peer['ip'])) {
                         case 4:
-                            $peersIpv4 .= $packedIp.pack('n', (int) $peer['port']);
+                            $peersIpv4 .= $peer['ip'].pack('n', (int) $peer['port']);
                             $peerCount++;
 
                             break;
                         case 16:
-                            $peersIpv6 .= $packedIp.pack('n', (int) $peer['port']);
+                            $peersIpv6 .= $peer['ip'].pack('n', (int) $peer['port']);
                             $peerCount++;
                     }
 
@@ -775,31 +621,19 @@ final class AnnounceController extends Controller
                         $leecherCount++;
                     }
 
-                    // Don't include inactive peers, invisible peers, the current client,
-                    // nor same-user peers unless testing mode explicitly allows it.
-                    if (
-                        !$peer->active
-                        || !$peer->visible
-                        || $peer->peer_id === $queries->getPeerId()
-                        || (!$allowSameUserPeerMatching && $peer->user_id === $user->id)
-                    ) {
+                    // Don't include inactive peers, invisible peers, nor other peers belonging to the same user
+                    if (!$peer->active || !$peer->visible || $peer->user_id === $user->id) {
                         continue;
                     }
 
-                    $packedIp = $this->normalizePeerIpForResponse((string) $peer['ip']);
-
-                    if ($packedIp === null) {
-                        continue;
-                    }
-
-                    switch (\strlen($packedIp)) {
+                    switch (\strlen((string) $peer['ip'])) {
                         case 4:
-                            $peersIpv4 .= $packedIp.pack('n', (int) $peer['port']);
+                            $peersIpv4 .= $peer['ip'].pack('n', (int) $peer['port']);
                             $peerCount++;
 
                             break;
                         case 16:
-                            $peersIpv6 .= $packedIp.pack('n', (int) $peer['port']);
+                            $peersIpv6 .= $peer['ip'].pack('n', (int) $peer['port']);
                             $peerCount++;
                     }
 
@@ -819,9 +653,9 @@ final class AnnounceController extends Controller
             .'e10:incompletei'
             .$leecherCount
             .'e8:intervali'
-            .random_int($minInterval, $maxInterval)
+            .random_int(self::MIN, self::MAX)
             .'e12:min intervali'
-            .random_int(max(1, intdiv($minInterval * 95, 100)), $minInterval)
+            .random_int(intdiv(self::MIN * 95, 100), self::MIN)
             .'e';
 
         if ($peersIpv6 === '') {
@@ -839,8 +673,6 @@ final class AnnounceController extends Controller
      */
     private function generateWarningAnnounceResponse(Torrent $torrent, TrackerException $trackerException): string
     {
-        $minInterval = $this->minAnnounceInterval($torrent);
-        $maxInterval = $this->maxAnnounceInterval($torrent);
         $message = $trackerException->getMessage();
 
         return 'd8:completei'
@@ -850,9 +682,9 @@ final class AnnounceController extends Controller
             .'e10:incompletei'
             .$torrent->leechers
             .'e8:intervali'
-            .random_int($minInterval, $maxInterval)
+            .random_int(self::MIN, self::MAX)
             .'e12:min intervali'
-            .random_int(max(1, intdiv($minInterval * 95, 100)), $minInterval)
+            .random_int(intdiv(self::MIN * 95, 100), self::MIN)
             .'e15:warning message'
             .\strlen($message)
             .':'
@@ -872,44 +704,6 @@ final class AnnounceController extends Controller
         ProcessAnnounce::dispatch($queries, $userDto, $torrentDto, $visible);
     }
 
-    private function upsertCurrentPeer(AnnounceQueryDTO $queries, Torrent $torrent, User $user, bool $visible): void
-    {
-        $currentPeer = $torrent->peers
-            ->where('peer_id', '=', $queries->getPeerId())
-            ->where('user_id', '=', $user->id)
-            ->first();
-
-        $peerAttributes = [
-            'peer_id'     => $queries->getPeerId(),
-            'ip'          => $queries->getIp(),
-            'port'        => $queries->port,
-            'agent'       => $queries->getAgent(),
-            'uploaded'    => $queries->uploaded,
-            'downloaded'  => $queries->downloaded,
-            'left'        => $queries->left,
-            'seeder'      => $queries->left === 0,
-            'torrent_id'  => $torrent->id,
-            'user_id'     => $user->id,
-            'active'      => $queries->event !== 'stopped',
-            'visible'     => $visible,
-            'connectable' => $currentPeer?->connectable ?? false,
-        ];
-
-        Peer::query()->upsert(
-            [$peerAttributes],
-            ['user_id', 'torrent_id', 'peer_id'],
-            ['ip', 'port', 'agent', 'uploaded', 'downloaded', 'left', 'seeder', 'active', 'visible', 'connectable'],
-        );
-
-        if ($currentPeer !== null) {
-            $currentPeer->forceFill($peerAttributes);
-
-            return;
-        }
-
-        $torrent->peers->push(new Peer($peerAttributes));
-    }
-
     private function generateFailedAnnounceResponse(TrackerException $trackerException): string
     {
         $message = $trackerException->getMessage();
@@ -920,71 +714,7 @@ final class AnnounceController extends Controller
             return 'd14:failure reason'.\strlen($message).':'.$message.'8:intervali30e12:min intervali30ee';
         }
 
-        $minInterval = $this->minAnnounceInterval();
-
-        return 'd14:failure reason'.\strlen($message).':'.$message.'8:intervali'.$minInterval.'e12:min intervali'.$minInterval.'ee';
-    }
-
-    private function minAnnounceInterval(?Torrent $torrent = null): int
-    {
-        if ($this->isNewUploadIntervalWindow($torrent)) {
-            return max(30, (int) config('announce.interval.new_upload.min', self::DEFAULT_NEW_UPLOAD_MIN));
-        }
-
-        return max(30, (int) config('announce.interval.min', self::DEFAULT_MIN));
-    }
-
-    private function maxAnnounceInterval(?Torrent $torrent = null): int
-    {
-        if ($this->isNewUploadIntervalWindow($torrent)) {
-            return max(
-                $this->minAnnounceInterval($torrent),
-                (int) config('announce.interval.new_upload.max', self::DEFAULT_NEW_UPLOAD_MAX)
-            );
-        }
-
-        return max($this->minAnnounceInterval($torrent), (int) config('announce.interval.max', self::DEFAULT_MAX));
-    }
-
-    private function isNewUploadIntervalWindow(?Torrent $torrent = null): bool
-    {
-        if ($torrent === null || $torrent->created_at === null) {
-            return false;
-        }
-
-        $windowMinutes = max(1, (int) config('announce.interval.new_upload.minutes', self::DEFAULT_NEW_UPLOAD_MINUTES));
-
-        return $torrent->created_at->gt(now()->subMinutes($windowMinutes));
-    }
-
-    private function normalizePeerIpForResponse(string $ip): ?string
-    {
-        $candidates = [$ip];
-        $trimmedIp = rtrim($ip, "\0");
-
-        if ($trimmedIp !== $ip) {
-            $candidates[] = $trimmedIp;
-        }
-
-        foreach ($candidates as $candidate) {
-            if ($candidate === '') {
-                continue;
-            }
-
-            $textIp = @inet_ntop($candidate);
-
-            if ($textIp === false) {
-                continue;
-            }
-
-            $packedIp = @inet_pton($textIp);
-
-            if ($packedIp !== false) {
-                return $packedIp;
-            }
-        }
-
-        return null;
+        return 'd14:failure reason'.\strlen($message).':'.$message.'8:intervali'.self::MIN.'e12:min intervali'.self::MIN.'ee';
     }
 
     /**
@@ -992,6 +722,6 @@ final class AnnounceController extends Controller
      */
     private function sendFinalAnnounceResponse(string $response): Response
     {
-        return response($response, 200, self::HEADERS);
+        return response($response, headers: self::HEADERS);
     }
 }

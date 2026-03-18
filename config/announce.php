@@ -89,39 +89,7 @@ return [
     |
     */
 
-    'rate_limit' => (int) env('ANNOUNCE_RATE_LIMIT', 25),
-
-    /*
-    |--------------------------------------------------------------------------
-    | Same-user peer matching
-    |--------------------------------------------------------------------------
-    |
-    | Allows the tracker to return peers from the same account for testing.
-    | Keep this disabled in normal operation to preserve anti-cheat behavior.
-    |
-    */
-
-    'allow_same_user_peer_matching' => (bool) env('ANNOUNCE_ALLOW_SAME_USER_PEER_MATCHING', false),
-
-    /*
-    |--------------------------------------------------------------------------
-    | Announce Intervals (seconds)
-    |--------------------------------------------------------------------------
-    |
-    | Controls tracker response interval and min interval given to clients.
-    | Lower values improve peer discovery speed on newly uploaded torrents.
-    |
-    */
-
-    'interval' => [
-        'min' => (int) env('ANNOUNCE_MIN_INTERVAL', 1800),
-        'max' => (int) env('ANNOUNCE_MAX_INTERVAL', 1800),
-        'new_upload' => [
-            'minutes' => (int) env('ANNOUNCE_NEW_UPLOAD_MINUTES', 60),
-            'min'     => (int) env('ANNOUNCE_NEW_UPLOAD_MIN_INTERVAL', 60),
-            'max'     => (int) env('ANNOUNCE_NEW_UPLOAD_MAX_INTERVAL', 60),
-        ],
-    ],
+    'rate_limit' => 3,
 
     /*
     |--------------------------------------------------------------------------
@@ -159,7 +127,7 @@ return [
     */
 
     'slots_system' => [
-        'enabled' => (bool) env('ANNOUNCE_SLOTS_SYSTEM_ENABLED', false),
+        'enabled' => true,
     ],
 
     /*
