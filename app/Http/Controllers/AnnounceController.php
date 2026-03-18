@@ -142,7 +142,7 @@ final class AnnounceController extends Controller
             } else {
                 $response = $this->generateFailedAnnounceResponse($exception);
             }
-        } catch (Exception) {
+        } catch (Throwable) {
             // spell:disable-next-line
             $response = 'd14:failure reason21:Internal Server Error8:intervali5400e12:min intervali5400ee';
         }
@@ -189,7 +189,7 @@ final class AnnounceController extends Controller
             ]));
         } catch (TrackerException $exception) {
             return $this->sendFinalAnnounceResponse($this->generateFailedAnnounceResponse($exception));
-        } catch (Exception) {
+        } catch (Throwable) {
             return $this->sendFinalAnnounceResponse('d14:failure reason21:Internal Server Errore');
         }
     }
@@ -951,6 +951,6 @@ final class AnnounceController extends Controller
      */
     private function sendFinalAnnounceResponse(string $response): Response
     {
-        return response($response, headers: self::HEADERS);
+        return response($response, 200, self::HEADERS);
     }
 }
