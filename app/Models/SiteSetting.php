@@ -57,6 +57,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property int              $mail_rate_allow
  * @property int              $mail_rate_every
  * @property int              $announce_interval
+ * @property bool             $announce_allow_same_user_peer_matching
  * @property bool             $category_filter_enabled
  * @property bool             $category_show_name
  * @property bool             $nerd_bot
@@ -128,6 +129,7 @@ final class SiteSetting extends Model
         'mail_rate_allow'             => 'integer',
         'mail_rate_every'             => 'integer',
         'announce_interval'           => 'integer',
+        'announce_allow_same_user_peer_matching' => 'boolean',
         'freeleech'                   => 'boolean',
         'doubleup'                    => 'boolean',
         'refundable'                  => 'boolean',
@@ -203,6 +205,7 @@ final class SiteSetting extends Model
             $fallback->mail_rate_allow            = 1;
             $fallback->mail_rate_every            = 5;
             $fallback->announce_interval          = 1800;
+            $fallback->announce_allow_same_user_peer_matching = false;
             $fallback->category_filter_enabled    = true;
             $fallback->category_show_name         = false;
             $fallback->nerd_bot                   = true;

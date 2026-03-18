@@ -93,6 +93,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Same-user peer matching
+    |--------------------------------------------------------------------------
+    |
+    | Allows the tracker to return peers from the same account for testing.
+    | Keep this disabled in normal operation to preserve anti-cheat behavior.
+    |
+    */
+
+    'allow_same_user_peer_matching' => (bool) env('ANNOUNCE_ALLOW_SAME_USER_PEER_MATCHING', false),
+
+    /*
+    |--------------------------------------------------------------------------
     | Announce Intervals (seconds)
     |--------------------------------------------------------------------------
     |

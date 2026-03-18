@@ -173,14 +173,28 @@ final class AnnounceController extends Controller
 
             foreach ($infoHashes as $infoHash) {
                 $torrent = Torrent::withoutGlobalScope(ApprovedScope::class)
-                    ->select(['seeders', 'leechers', 'times_completed', 'status'])
+                    ->select(['id', 'times_completed', 'status'])
                     ->where('info_hash', '=', $infoHash)
                     ->first();
 
+                $complete = 0;
+                $incomplete = 0;
+
+                if ($torrent !== null && $torrent->status === ModerationStatus::APPROVED) {
+                    $peerStats = Peer::query()
+                        ->selectRaw('SUM(CASE WHEN active = 1 AND seeder = 1 THEN 1 ELSE 0 END) AS complete')
+                        ->selectRaw('SUM(CASE WHEN active = 1 AND seeder = 0 THEN 1 ELSE 0 END) AS incomplete')
+                        ->where('torrent_id', '=', $torrent->id)
+                        ->first();
+
+                    $complete = (int) ($peerStats?->complete ?? 0);
+                    $incomplete = (int) ($peerStats?->incomplete ?? 0);
+                }
+
                 $files[$infoHash] = [
-                    'complete'   => ($torrent !== null && $torrent->status === ModerationStatus::APPROVED) ? (int) $torrent->seeders : 0,
+                    'complete'   => $complete,
                     'downloaded' => ($torrent !== null && $torrent->status === ModerationStatus::APPROVED) ? (int) $torrent->times_completed : 0,
-                    'incomplete' => ($torrent !== null && $torrent->status === ModerationStatus::APPROVED) ? (int) $torrent->leechers : 0,
+                    'incomplete' => $incomplete,
                 ];
             }
 
@@ -693,6 +707,7 @@ final class AnnounceController extends Controller
     {
         $minInterval = $this->minAnnounceInterval($torrent);
         $maxInterval = $this->maxAnnounceInterval($torrent);
+        $allowSameUserPeerMatching = (bool) config('announce.allow_same_user_peer_matching', false);
         $peersIpv4 = '';
         $peersIpv6 = '';
         $peerCount = 0;
@@ -717,8 +732,15 @@ final class AnnounceController extends Controller
                         $leecherCount++;
                     }
 
-                    // Don't include other seeders, inactive peers, invisible peers nor other peers belonging to the same user
-                    if ($peer->seeder || !$peer->active || !$peer->visible || $peer->user_id === $user->id) {
+                    // Don't include other seeders, inactive peers, invisible peers, the current client,
+                    // nor same-user peers unless testing mode explicitly allows it.
+                    if (
+                        $peer->seeder
+                        || !$peer->active
+                        || !$peer->visible
+                        || $peer->peer_id === $queries->getPeerId()
+                        || (!$allowSameUserPeerMatching && $peer->user_id === $user->id)
+                    ) {
                         continue;
                     }
 
@@ -753,8 +775,14 @@ final class AnnounceController extends Controller
                         $leecherCount++;
                     }
 
-                    // Don't include inactive peers, invisible peers, nor other peers belonging to the same user
-                    if (!$peer->active || !$peer->visible || $peer->user_id === $user->id) {
+                    // Don't include inactive peers, invisible peers, the current client,
+                    // nor same-user peers unless testing mode explicitly allows it.
+                    if (
+                        !$peer->active
+                        || !$peer->visible
+                        || $peer->peer_id === $queries->getPeerId()
+                        || (!$allowSameUserPeerMatching && $peer->user_id === $user->id)
+                    ) {
                         continue;
                     }
 

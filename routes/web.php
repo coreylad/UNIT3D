@@ -658,6 +658,9 @@ Route::middleware('language')->group(function (): void {
             // Staff Dashboard
             Route::name('dashboard.')->group(function (): void {
                 Route::get('/', [App\Http\Controllers\Staff\HomeController::class, 'index'])->name('index');
+                Route::post('/torrent-tools/toggle-same-user-peer-matching', [App\Http\Controllers\Staff\SiteSettingController::class, 'toggleSameUserPeerMatching'])
+                    ->middleware('admin')
+                    ->name('toggle-same-user-peer-matching');
             });
 
             // Announces

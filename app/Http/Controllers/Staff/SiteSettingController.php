@@ -19,6 +19,7 @@ namespace App\Http\Controllers\Staff;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Staff\UpdateSiteSettingRequest;
 use App\Models\SiteSetting;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 
 class SiteSettingController extends Controller
@@ -222,5 +223,21 @@ class SiteSettingController extends Controller
 
         return redirect()->back()
             ->with('success', 'Site settings have been updated successfully.');
+    }
+
+    public function toggleSameUserPeerMatching(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $setting = SiteSetting::firstOrCreate([]);
+        $setting->announce_allow_same_user_peer_matching = ! (bool) $setting->announce_allow_same_user_peer_matching;
+        $setting->save();
+
+        Cache::forget('site_settings');
+
+        return to_route('staff.dashboard.index')->with(
+            'success',
+            $setting->announce_allow_same_user_peer_matching
+                ? 'Same-account peer matching is now enabled for tracker testing.'
+                : 'Same-account peer matching has been disabled.'
+        );
     }
 }

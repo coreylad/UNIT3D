@@ -123,6 +123,9 @@ class AppServiceProvider extends ServiceProvider
                 'other.mail.allow'                   => $siteSetting->mail_rate_allow ?? 1,
                 'other.mail.every'                   => $siteSetting->mail_rate_every ?? 5,
 
+                // Tracker
+                'announce.allow_same_user_peer_matching' => (bool) ($siteSetting->announce_allow_same_user_peer_matching ?? false),
+
                 // External chat link
                 'unit3d.chat-link-name'              => $siteSetting->chat_link_name ?? 'Discord',
                 'unit3d.chat-link-icon'              => $siteSetting->chat_link_icon ?? 'fab fa-discord',

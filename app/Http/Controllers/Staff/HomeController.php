@@ -20,6 +20,7 @@ use App\Enums\ModerationStatus;
 use App\Helpers\SystemInformation;
 use App\Http\Controllers\Controller;
 use App\Models\Group;
+use App\Models\SiteSetting;
 use App\Models\User;
 use App\Services\Unit3dAnnounce;
 use Illuminate\Http\Request;
@@ -85,6 +86,7 @@ class HomeController extends Controller
             'basic'                    => $systemInformation->basic(),
             'file_permissions'         => $systemInformation->directoryPermissions(),
             'externalTrackerStats'     => Unit3dAnnounce::getStats(),
+            'siteSetting'              => SiteSetting::instance(),
         ]);
     }
 }

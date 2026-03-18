@@ -29,8 +29,10 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\Middleware\RateLimited;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Facades\Image;
+use MarcReichel\IGDBLaravel\Exceptions\AuthenticationException;
 use Throwable;
 use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Queue\SerializesModels;
@@ -73,26 +75,35 @@ class ProcessIgdbGameJob implements ShouldQueue
 
     public function handle(): void
     {
-        $fetchedGame = Game::select([
-            'id',
-            'name',
-            'summary',
-            'first_release_date',
-            'url',
-            'rating',
-            'rating_count',
-        ])
-            ->with([
-                'cover'                           => ['image_id'],
-                'artworks'                        => ['image_id'],
-                'genres'                          => ['id', 'name'],
-                'videos'                          => ['video_id', 'name'],
-                'involved_companies.company'      => ['id', 'name', 'url'],
-                'involved_companies.company.logo' => ['image_id'],
-                'platforms'                       => ['id', 'name'],
-                'platforms.platform_logo'         => ['image_id']
+        try {
+            $fetchedGame = Game::select([
+                'id',
+                'name',
+                'summary',
+                'first_release_date',
+                'url',
+                'rating',
+                'rating_count',
             ])
-            ->findOrFail($this->id);
+                ->with([
+                    'cover'                           => ['image_id'],
+                    'artworks'                        => ['image_id'],
+                    'genres'                          => ['id', 'name'],
+                    'videos'                          => ['video_id', 'name'],
+                    'involved_companies.company'      => ['id', 'name', 'url'],
+                    'involved_companies.company.logo' => ['image_id'],
+                    'platforms'                       => ['id', 'name'],
+                    'platforms.platform_logo'         => ['image_id']
+                ])
+                ->findOrFail($this->id);
+        } catch (AuthenticationException $exception) {
+            Log::warning('IGDB authentication failed; skipping metadata refresh.', [
+                'igdb_id' => $this->id,
+                'error'   => $exception->getMessage(),
+            ]);
+
+            return;
+        }
 
         IgdbGame::query()->upsert([[
             'id'                     => $this->id,

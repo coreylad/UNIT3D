@@ -917,6 +917,22 @@
                 @if (! config('announce.external_tracker.is_enabled'))
                     <div class="staff-dashboard__actions-section">
                         <h3 class="staff-dashboard__section-subtitle">Actions</h3>
+                        @if (auth()->user()->group->is_admin)
+                            <form method="POST" action="{{ route('staff.dashboard.toggle-same-user-peer-matching') }}" style="margin-bottom: 1rem;">
+                                @csrf
+                                <button
+                                    type="submit"
+                                    class="staff-dashboard__danger-btn"
+                                    style="width: 100%; justify-content: space-between; background: {{ $siteSetting->announce_allow_same_user_peer_matching ? '#8a3b12' : '#2f5f2f' }};"
+                                >
+                                    <span>
+                                        <i class="{{ config('other.font-awesome') }} fa-random"></i>
+                                        {{ $siteSetting->announce_allow_same_user_peer_matching ? 'Disable Same-Account Peer Matching' : 'Enable Same-Account Peer Matching' }}
+                                    </span>
+                                    <span>{{ $siteSetting->announce_allow_same_user_peer_matching ? 'Testing ON' : 'Testing OFF' }}</span>
+                                </button>
+                            </form>
+                        @endif
                         <form
                             method="POST"
                             action="{{ route('staff.flush.peers') }}"
