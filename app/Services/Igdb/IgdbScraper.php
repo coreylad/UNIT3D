@@ -17,19 +17,21 @@ declare(strict_types=1);
 namespace App\Services\Igdb;
 
 use App\Jobs\ProcessIgdbGameJob;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Queue\SerializesModels;
 
-class IgdbScraper implements ShouldQueue
+class IgdbScraper
 {
-    use SerializesModels;
-
     public function __construct()
     {
     }
 
-    public function game(int $id): void
+    public function game(int $id, bool $synchronous = false): void
     {
+        if ($synchronous || config('queue.default') === 'sync') {
+            ProcessIgdbGameJob::dispatchSync($id);
+
+            return;
+        }
+
         ProcessIgdbGameJob::dispatch($id);
     }
 }

@@ -144,7 +144,8 @@ class StoreTorrentRequest extends FormRequest
                 'exists:categories,id',
             ],
             'type_id' => [
-                'required',
+                Rule::when($category->movie_meta || $category->tv_meta, 'required'),
+                Rule::when(!$category->movie_meta && !$category->tv_meta, 'nullable'),
                 'exists:types,id',
             ],
             'resolution_id' => [

@@ -413,7 +413,7 @@ class TorrentController extends Controller
         match (true) {
             $torrent->tmdb_tv_id !== null    => new TMDBScraper()->tv($torrent->tmdb_tv_id),
             $torrent->tmdb_movie_id !== null => new TMDBScraper()->movie($torrent->tmdb_movie_id),
-            $torrent->igdb !== null          => new IgdbScraper()->game($torrent->igdb),
+            $torrent->igdb !== null          => new IgdbScraper()->game($torrent->igdb, true),
             default                          => null,
         };
 
@@ -602,7 +602,7 @@ class TorrentController extends Controller
         match (true) {
             $torrent->tmdb_tv_id !== null    => new TMDBScraper()->tv($torrent->tmdb_tv_id),
             $torrent->tmdb_movie_id !== null => new TMDBScraper()->movie($torrent->tmdb_movie_id),
-            $torrent->igdb !== null          => new IgdbScraper()->game($torrent->igdb),
+            $torrent->igdb !== null          => new IgdbScraper()->game($torrent->igdb, true),
             default                          => null,
         };
 

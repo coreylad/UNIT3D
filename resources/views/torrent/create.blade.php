@@ -213,8 +213,8 @@
                         </label>
                     </p>
 
-                    <p class="form__group">
-                        <select name="type_id" id="autotype" class="form__select" required>
+                    <p class="form__group" x-show="cats[cat].type === 'movie' || cats[cat].type === 'tv'" x-cloak>
+                        <select name="type_id" id="autotype" class="form__select" x-bind:required="cats[cat].type === 'movie' || cats[cat].type === 'tv'">
                             <option hidden disabled selected value=""></option>
                             @foreach ($types as $type)
                                 <option
