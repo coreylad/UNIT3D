@@ -1,9 +1,15 @@
 @extends('layout.with-main')
 
+@php
+    $similarTitle = $meta->title ?? $meta->name ?? 'Unknown';
+    $similarDate = $meta->release_date ?? $meta->first_air_date ?? $meta->first_release_date ?? '';
+    $similarYear = $similarDate !== '' ? \substr((string) $similarDate, 0, 4) : '----';
+@endphp
+
 @section('title')
     <title>
-        {{ __('common.similar') }} - {{ $meta->title ?? $meta->name }}
-        ({{ substr($meta->release_date ?? $meta->first_air_date, 0, 4) }}) -
+        {{ __('common.similar') }} - {{ $similarTitle }}
+        ({{ $similarYear }}) -
         {{ config('other.title') }}
     </title>
 @endsection
@@ -11,7 +17,7 @@
 @section('meta')
     <meta
         name="description"
-        content="{{ __('common.similar') }} - {{ $meta->title ?? $meta->name }} ({{ substr($meta->release_date ?? $meta->first_air_date, 0, 4) }})"
+        content="{{ __('common.similar') }} - {{ $similarTitle }} ({{ $similarYear }})"
     />
 @endsection
 
@@ -22,8 +28,8 @@
         </a>
     </li>
     <li class="breadcrumb--active">
-        {{ __('common.similar') }} - {{ $meta->title ?? $meta->name }}
-        ({{ \substr($meta->release_date ?? $meta->first_air_date, 0, 4) }})
+        {{ __('common.similar') }} - {{ $similarTitle }}
+        ({{ $similarYear }})
     </li>
 @endsection
 

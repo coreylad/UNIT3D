@@ -201,15 +201,15 @@ class ProcessIgdbGameJob implements ShouldQueue
         foreach ($torrents as $torrent) {
             $description = $torrent->description ?? '';
             $newVideoBlocks = [];
+            preg_match_all('/\[(?:youtube|video)(?:=&quot;youtube&quot;)?]([a-z0-9_-]{11})\[\/(?:youtube|video)]/i', $description, $matches);
+            $existingVideoIds = array_map('strtolower', $matches[1] ?? []);
 
             foreach ($videoIds as $videoId) {
-                $bbcode = '[video=&quot;youtube&quot;]'.$videoId.'[/video]';
-
-                if (str_contains($description, $bbcode)) {
+                if (in_array(strtolower($videoId), $existingVideoIds, true)) {
                     continue;
                 }
 
-                $newVideoBlocks[] = $bbcode;
+                $newVideoBlocks[] = '[video]'.$videoId.'[/video]';
             }
 
             if ($newVideoBlocks === []) {
