@@ -28,6 +28,10 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\Middleware\RateLimited;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
+use Intervention\Image\Facades\Image;
+use Throwable;
 use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Queue\SerializesModels;
 use MarcReichel\IGDBLaravel\Models\Game;
@@ -158,10 +162,47 @@ class ProcessIgdbGameJob implements ShouldQueue
 
         $this->appendVideosToTorrentDescriptions($fetchedGame->videos ?? []);
 
+        $this->applyCoversToTorrents($fetchedGame['cover']['image_id'] ?? null);
+
         // Although IGDB doesn't publicly state they cache their api responses,
         // use the same value as tmdb to not abuse them with too many requests
 
         cache()->put("igdb-game-scraper:{$this->id}", now(), 8 * 3600);
+    }
+
+    private function applyCoversToTorrents(?string $coverImageId): void
+    {
+        if ($coverImageId === null) {
+            return;
+        }
+
+        $torrents = Torrent::query()
+            ->where('igdb', '=', $this->id)
+            ->whereRelation('category', 'game_meta', '=', true)
+            ->get(['id']);
+
+        if ($torrents->isEmpty()) {
+            return;
+        }
+
+        try {
+            $response = Http::timeout(20)
+                ->accept('image/*')
+                ->get('https://images.igdb.com/igdb/image/upload/t_original/'.$coverImageId.'.jpg');
+
+            if (!$response->successful() || $response->body() === '') {
+                return;
+            }
+
+            $imageData = $response->body();
+
+            foreach ($torrents as $torrent) {
+                $pathCover = Storage::disk('torrent-covers')->path('torrent-cover_'.$torrent->id.'.jpg');
+                Image::make($imageData)->fit(400, 600)->encode('jpg', 90)->save($pathCover);
+            }
+        } catch (Throwable) {
+            // Cover download failure is non-fatal; the job succeeds regardless
+        }
     }
 
     /**
