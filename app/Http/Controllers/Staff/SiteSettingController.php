@@ -24,13 +24,11 @@ use Illuminate\Support\Facades\Cache;
 class SiteSettingController extends Controller
 {
     /**
-     * Show the site settings edit form (all sections).
+     * Redirect the generic edit URL to the branding section.
      */
-    public function edit(): \Illuminate\Contracts\View\Factory|\Illuminate\View\View
+    public function edit(): \Illuminate\Http\RedirectResponse
     {
-        return view('Staff.site-setting.edit', [
-            'siteSetting' => SiteSetting::instance(),
-        ]);
+        return redirect()->route('staff.site_settings.branding');
     }
 
     /**

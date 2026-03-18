@@ -1558,3 +1558,53 @@ main[class*='page__staff-']:not(.page__staff-dashboard--index) {
 .-col-span-2 {
     grid-column: span 2;
 }
+
+/* Site Settings sidebar nav */
+
+.ss-settings-nav {
+    display: flex;
+    flex-direction: column;
+    padding: 0.35rem 0 0.5rem;
+}
+
+.ss-settings-nav__link {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.6rem 1rem;
+    font-size: 0.88rem;
+    font-weight: 500;
+    text-decoration: none;
+    color: inherit;
+    border-left: 3px solid transparent;
+    transition: background 0.15s;
+
+    i {
+        width: 14px;
+        text-align: center;
+        opacity: 0.5;
+        flex-shrink: 0;
+        font-size: 0.85rem;
+    }
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.04);
+    }
+}
+
+.ss-settings-nav__link--active {
+    background: hsl(38deg 90% 50% / 8%);
+    border-left-color: hsl(38deg 90% 50%);
+    font-weight: 600;
+
+    i {
+        opacity: 1;
+        color: hsl(38deg 90% 50%);
+    }
+}
+
+.ss-settings-nav__divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.06);
+    margin: 0.3rem 0;
+}

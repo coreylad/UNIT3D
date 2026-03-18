@@ -757,7 +757,7 @@
                     class="staff-dashboard__links-grid"
                     x-effect="Array.from($el.querySelectorAll(':scope > .staff-dashboard__link-card')).forEach(c => c.style.display = (!search || c.querySelector('span')?.textContent.trim().toLowerCase().includes(search.toLowerCase())) ? '' : 'none')"
                 >
-                    <a class="staff-dashboard__link-card" href="{{ route('staff.site_settings.edit') }}">
+                    <a class="staff-dashboard__link-card" href="{{ route('staff.site_settings.branding') }}">
                         <i class="{{ config('other.font-awesome') }} fa-paintbrush"></i>
                         <span>Branding & Identity</span>
                     </a>

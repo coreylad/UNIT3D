@@ -1,4 +1,4 @@
-@extends('layout.with-main')
+@extends('layout.with-main-and-sidebar')
 
 @section('title')
     <title>Torrent Settings - {{ __('staff.staff-dashboard') }} - {{ config('other.title') }}</title>
@@ -14,12 +14,15 @@
             {{ __('staff.staff-dashboard') }}
         </a>
     </li>
+    <li class="breadcrumbV2">
+        <a href="{{ route('staff.site_settings.branding') }}" class="breadcrumb__link">Site Settings</a>
+    </li>
     <li class="breadcrumb--active">Torrent Settings</li>
 @endsection
 
 @section('page', 'page__staff-site-setting--torrent')
 
-@section('styles')
+@section('stylesheets')
     <style>
         .page__staff-site-setting--torrent {
             padding: 2rem 0 3rem;
@@ -328,4 +331,8 @@
             </button>
         </div>
     </form>
+@endsection
+
+@section('sidebar')
+    @include('Staff.site-setting.partials.nav')
 @endsection

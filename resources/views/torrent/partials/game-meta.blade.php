@@ -1,5 +1,11 @@
 <section class="meta">
-    @if (isset($meta) && $meta->artworks)
+    @if (Storage::disk('torrent-banners')->exists("torrent-banner_{$torrent->id}.jpg"))
+        <img
+            class="meta__backdrop"
+            src="{{ route('authenticated_images.torrent_banner', ['id' => $torrent->id]) }}"
+            alt=""
+        />
+    @elseif (isset($meta) && $meta->first_artwork_image_id)
         <img
             class="meta__backdrop"
             src="https://images.igdb.com/igdb/image/upload/t_screenshot_big/{{ $meta->first_artwork_image_id }}.jpg"
@@ -21,7 +27,13 @@
         href="{{ $igdb ? route('torrents.similar', ['category_id' => $category->id, 'tmdb' => $igdb]) : '#' }}"
     >
         <img
-            src="{{ $meta?->cover_image_id ? 'https://images.igdb.com/igdb/image/upload/t_original/' . $meta->cover_image_id . '.jpg' : 'https://via.placeholder.com/400x600' }}"
+            src="{{
+                Storage::disk('torrent-covers')->exists("torrent-cover_{$torrent->id}.jpg")
+                    ? route('authenticated_images.torrent_cover', ['id' => $torrent->id])
+                    : ($meta?->cover_image_id
+                        ? 'https://images.igdb.com/igdb/image/upload/t_original/' . $meta->cover_image_id . '.jpg'
+                        : 'https://via.placeholder.com/400x600')
+            }}"
             class="meta__poster"
         />
     </a>
