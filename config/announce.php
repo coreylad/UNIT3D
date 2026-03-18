@@ -147,7 +147,7 @@ return [
     */
 
     'slots_system' => [
-        'enabled' => true,
+        'enabled' => (bool) env('ANNOUNCE_SLOTS_SYSTEM_ENABLED', false),
     ],
 
     /*

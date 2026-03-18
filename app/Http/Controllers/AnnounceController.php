@@ -134,10 +134,10 @@ final class AnnounceController extends Controller
             // rTorrent (and some other clients) aggressively retry on failure
             // responses, ignoring interval / min interval — which creates an
             // infinite loop of rapid announces for error 162 (min interval
-            // violation).  Return a valid response with 0 peers instead so
-            // the client respects the timing and backs off properly.
-            if ($exception->getCode() === 162 && isset($torrent)) {
-                $response = $this->generateWarningAnnounceResponse($torrent, $exception);
+            // violation). Return a valid announce response (including peers)
+            // so clients can still discover peers while respecting intervals.
+            if ($exception->getCode() === 162 && isset($torrent, $queries, $user)) {
+                $response = $this->generateSuccessAnnounceResponse($queries, $torrent, $user);
             } else {
                 $response = $this->generateFailedAnnounceResponse($exception);
             }
