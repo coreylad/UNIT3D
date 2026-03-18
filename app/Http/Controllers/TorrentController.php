@@ -601,29 +601,6 @@ class TorrentController extends Controller
 
         Unit3dAnnounce::addTorrent($torrent);
 
-        // Metadata updates come after tracker updates in case TMDB or IGDB is offline
-
-        // Meta
-        match (true) {
-            $torrent->tmdb_tv_id !== null    => new TMDBScraper()->tv($torrent->tmdb_tv_id),
-            $torrent->tmdb_movie_id !== null => new TMDBScraper()->movie($torrent->tmdb_movie_id),
-            $torrent->igdb !== null          => new IgdbScraper()->game($torrent->igdb, true),
-            default                          => null,
-        };
-
-        $this->applyIgdbCoverAsTorrentCover($torrent);
-
-        // Torrent Keywords System
-        $keywords = [];
-
-        foreach (TorrentTools::parseKeywords($request->string('keywords')) as $keyword) {
-            $keywords[] = ['torrent_id' => $torrent->id, 'name' => $keyword];
-        }
-
-        foreach (collect($keywords)->chunk(intdiv(65_000, 2)) as $keywords) {
-            Keyword::upsert($keywords->toArray(), ['torrent_id', 'name']);
-        }
-
         // check for trusted user and update torrent
         if ($user->group->is_trusted && !$request->boolean('mod_queue_opt_in')) {
             $appurl = config('app.url');
@@ -649,6 +626,30 @@ class TorrentController extends Controller
             }
 
             TorrentHelper::approveHelper($torrent->id);
+        }
+
+        // Refresh torrent model after potential status/freeleech changes from approveHelper().
+        $torrent->refresh();
+
+        // Metadata updates come after tracker updates in case TMDB or IGDB is offline
+
+        // Meta
+        match (true) {
+            $torrent->tmdb_tv_id !== null    => new TMDBScraper()->tv($torrent->tmdb_tv_id),
+            $torrent->tmdb_movie_id !== null => new TMDBScraper()->movie($torrent->tmdb_movie_id),
+            $torrent->igdb !== null          => new IgdbScraper()->game($torrent->igdb),
+            default                          => null,
+        };
+
+        // Torrent Keywords System
+        $keywords = [];
+
+        foreach (TorrentTools::parseKeywords($request->string('keywords')) as $keyword) {
+            $keywords[] = ['torrent_id' => $torrent->id, 'name' => $keyword];
+        }
+
+        foreach (collect($keywords)->chunk(intdiv(65_000, 2)) as $keywords) {
+            Keyword::upsert($keywords->toArray(), ['torrent_id', 'name']);
         }
 
         return to_route('download_check', ['id' => $torrent->id])
