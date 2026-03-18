@@ -93,6 +93,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Announce Intervals (seconds)
+    |--------------------------------------------------------------------------
+    |
+    | Controls tracker response interval and min interval given to clients.
+    | Lower values improve peer discovery speed on newly uploaded torrents.
+    |
+    */
+
+    'interval' => [
+        'min' => (int) env('ANNOUNCE_MIN_INTERVAL', 60),
+        'max' => (int) env('ANNOUNCE_MAX_INTERVAL', 180),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Client Connectable Check
     |--------------------------------------------------------------------------
     |

@@ -44,11 +44,11 @@ use Illuminate\Support\Facades\Redis;
 final class AnnounceController extends Controller
 {
     // Announce Intervals
-    private const int MIN = 1_800;
-    private const int MAX = 3_600;
+    private const DEFAULT_MIN = 60;
+    private const DEFAULT_MAX = 180;
 
     // Port Blacklist
-    private const array BLACK_PORTS = [
+    private const BLACK_PORTS = [
         // Hyper Text Transfer Protocol (HTTP) - port used for web traffic
         8080,
         8081,
@@ -65,7 +65,7 @@ final class AnnounceController extends Controller
         6699,
     ];
 
-    private const array HEADERS = [
+    private const HEADERS = [
         'Content-Type'  => 'text/plain; charset=utf-8',
         'Cache-Control' => 'private, no-cache, no-store, must-revalidate, max-age=0',
         'Pragma'        => 'no-cache',
@@ -134,6 +134,8 @@ final class AnnounceController extends Controller
             // violation).  Return a valid response with 0 peers instead so
             // the client respects the timing and backs off properly.
             if ($exception->getCode() === 162 && isset($torrent)) {
+                $minInterval = $this->minAnnounceInterval();
+                $maxInterval = $this->maxAnnounceInterval();
                 $response = 'd8:completei'
                     .$torrent->seeders
                     .'e10:downloadedi'
@@ -141,9 +143,9 @@ final class AnnounceController extends Controller
                     .'e10:incompletei'
                     .$torrent->leechers
                     .'e8:intervali'
-                    .random_int(self::MIN, self::MAX)
+                    .random_int($minInterval, $maxInterval)
                     .'e12:min intervali'
-                    .random_int(intdiv(self::MIN * 95, 100), self::MIN)
+                    .random_int(max(1, intdiv($minInterval * 95, 100)), $minInterval)
                     .'e5:peers0:e';
             } else {
                 $response = $this->generateFailedAnnounceResponse($exception);
@@ -507,7 +509,8 @@ final class AnnounceController extends Controller
 
         $lastAnnouncedKey = config('cache.prefix').'peer-last-announced:'.$user->id.'-'.$torrent->id.'-'.$queries->getPeerId();
 
-        $randomMinInterval = random_int(intdiv(self::MIN * 85, 100), intdiv(self::MIN * 95, 100));
+        $minInterval = $this->minAnnounceInterval();
+        $randomMinInterval = random_int(max(1, intdiv($minInterval * 85, 100)), max(1, intdiv($minInterval * 95, 100)));
 
         $lastAnnouncedAt = Redis::connection('announce')->command('SET', [$lastAnnouncedKey, $now, ['NX', 'GET', 'EX' => $randomMinInterval]]);
 
@@ -588,6 +591,8 @@ final class AnnounceController extends Controller
      */
     private function generateSuccessAnnounceResponse(AnnounceQueryDTO $queries, Torrent $torrent, User $user): string
     {
+        $minInterval = $this->minAnnounceInterval();
+        $maxInterval = $this->maxAnnounceInterval();
         $peersIpv4 = '';
         $peersIpv6 = '';
         $peerCount = 0;
@@ -674,9 +679,9 @@ final class AnnounceController extends Controller
             .'e10:incompletei'
             .$leecherCount
             .'e8:intervali'
-            .random_int(self::MIN, self::MAX)
+            .random_int($minInterval, $maxInterval)
             .'e12:min intervali'
-            .random_int(intdiv(self::MIN * 95, 100), self::MIN)
+            .random_int(max(1, intdiv($minInterval * 95, 100)), $minInterval)
             .'e';
 
         if ($peersIpv6 === '') {
@@ -694,6 +699,8 @@ final class AnnounceController extends Controller
      */
     private function generateWarningAnnounceResponse(Torrent $torrent, TrackerException $trackerException): string
     {
+        $minInterval = $this->minAnnounceInterval();
+        $maxInterval = $this->maxAnnounceInterval();
         $message = $trackerException->getMessage();
 
         return 'd8:completei'
@@ -703,9 +710,9 @@ final class AnnounceController extends Controller
             .'e10:incompletei'
             .$torrent->leechers
             .'e8:intervali'
-            .random_int(self::MIN, self::MAX)
+            .random_int($minInterval, $maxInterval)
             .'e12:min intervali'
-            .random_int(intdiv(self::MIN * 95, 100), self::MIN)
+            .random_int(max(1, intdiv($minInterval * 95, 100)), $minInterval)
             .'e15:warning message'
             .\strlen($message)
             .':'
@@ -773,7 +780,19 @@ final class AnnounceController extends Controller
             return 'd14:failure reason'.\strlen($message).':'.$message.'8:intervali30e12:min intervali30ee';
         }
 
-        return 'd14:failure reason'.\strlen($message).':'.$message.'8:intervali'.self::MIN.'e12:min intervali'.self::MIN.'ee';
+        $minInterval = $this->minAnnounceInterval();
+
+        return 'd14:failure reason'.\strlen($message).':'.$message.'8:intervali'.$minInterval.'e12:min intervali'.$minInterval.'ee';
+    }
+
+    private function minAnnounceInterval(): int
+    {
+        return max(30, (int) config('announce.interval.min', self::DEFAULT_MIN));
+    }
+
+    private function maxAnnounceInterval(): int
+    {
+        return max($this->minAnnounceInterval(), (int) config('announce.interval.max', self::DEFAULT_MAX));
     }
 
     /**
