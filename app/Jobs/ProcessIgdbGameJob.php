@@ -21,6 +21,7 @@ use App\Models\IgdbCompany;
 use App\Models\IgdbGame;
 use App\Models\IgdbGenre;
 use App\Models\IgdbPlatform;
+use App\Models\Torrent;
 use DateTime;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -157,9 +158,69 @@ class ProcessIgdbGameJob implements ShouldQueue
         IgdbCompany::query()->upsert($companies, ['id']);
         $game->companies()->sync(array_unique(array_column($companies, 'id')));
 
+        $this->appendVideosToTorrentDescriptions($fetchedGame->videos ?? []);
+
         // Although IGDB doesn't publicly state they cache their api responses,
         // use the same value as tmdb to not abuse them with too many requests
 
         cache()->put("igdb-game-scraper:{$this->id}", now(), 8 * 3600);
+    }
+
+    /**
+     * @param iterable<array<string, mixed>> $videos
+     */
+    private function appendVideosToTorrentDescriptions(iterable $videos): void
+    {
+        $videoIds = [];
+
+        foreach ($videos as $video) {
+            $videoId = $video['video_id'] ?? null;
+
+            if (!\is_string($videoId)) {
+                continue;
+            }
+
+            if (!preg_match('/^[a-zA-Z0-9_-]{11}$/', $videoId)) {
+                continue;
+            }
+
+            $videoIds[] = $videoId;
+        }
+
+        $videoIds = array_values(array_unique($videoIds));
+
+        if ($videoIds === []) {
+            return;
+        }
+
+        $torrents = Torrent::query()
+            ->where('igdb', '=', $this->id)
+            ->whereRelation('category', 'game_meta', '=', true)
+            ->get(['id', 'description']);
+
+        foreach ($torrents as $torrent) {
+            $description = $torrent->description ?? '';
+            $newVideoBlocks = [];
+
+            foreach ($videoIds as $videoId) {
+                $bbcode = '[video=&quot;youtube&quot;]'.$videoId.'[/video]';
+
+                if (str_contains($description, $bbcode)) {
+                    continue;
+                }
+
+                $newVideoBlocks[] = $bbcode;
+            }
+
+            if ($newVideoBlocks === []) {
+                continue;
+            }
+
+            $separator = trim($description) === '' ? '' : "\n\n";
+
+            $torrent->forceFill([
+                'description' => $description.$separator.implode("\n", $newVideoBlocks),
+            ])->save();
+        }
     }
 }
