@@ -506,10 +506,6 @@ class TorrentController extends BaseController
 
         $filenameCover = 'torrent-cover_'.$torrent->id.'.jpg';
 
-        if (Storage::disk('torrent-covers')->exists($filenameCover)) {
-            return;
-        }
-
         $coverImageId = IgdbGame::query()
             ->whereKey($torrent->igdb)
             ->value('cover_image_id');

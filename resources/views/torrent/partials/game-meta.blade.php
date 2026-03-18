@@ -1,8 +1,14 @@
+@php
+    $sourceTorrent = $torrent ?? null;
+    $sourceTorrentId = $sourceTorrent?->id;
+    $sourceIgdbId = $igdb ?? $meta?->id ?? $sourceTorrent?->igdb;
+@endphp
+
 <section class="meta">
-    @if (Storage::disk('torrent-banners')->exists("torrent-banner_{$torrent->id}.jpg"))
+    @if ($sourceTorrentId !== null && Storage::disk('torrent-banners')->exists("torrent-banner_{$sourceTorrentId}.jpg"))
         <img
             class="meta__backdrop"
-            src="{{ route('authenticated_images.torrent_banner', ['id' => $torrent->id]) }}"
+            src="{{ route('authenticated_images.torrent_banner', ['id' => $sourceTorrentId]) }}"
             alt=""
         />
     @elseif (isset($meta) && $meta->first_artwork_image_id)
@@ -15,7 +21,7 @@
 
     <a
         class="meta__title-link"
-        href="{{ $igdb ? route('torrents.similar', ['category_id' => $category->id, 'tmdb' => $igdb]) : '#' }}"
+        href="{{ $sourceIgdbId ? route('torrents.similar', ['category_id' => $category->id, 'tmdb' => $sourceIgdbId]) : '#' }}"
     >
         <h1 class="meta__title">
             {{ $meta->name ?? 'No meta found' }}
@@ -24,14 +30,14 @@
     </a>
     <a
         class="meta__poster-link"
-        href="{{ $igdb ? route('torrents.similar', ['category_id' => $category->id, 'tmdb' => $igdb]) : '#' }}"
+        href="{{ $sourceIgdbId ? route('torrents.similar', ['category_id' => $category->id, 'tmdb' => $sourceIgdbId]) : '#' }}"
     >
         <img
             src="{{
-                Storage::disk('torrent-covers')->exists("torrent-cover_{$torrent->id}.jpg")
-                    ? route('authenticated_images.torrent_cover', ['id' => $torrent->id])
-                    : ($meta?->cover_image_id
-                        ? 'https://images.igdb.com/igdb/image/upload/t_original/' . $meta->cover_image_id . '.jpg'
+                $meta?->cover_image_id
+                    ? 'https://images.igdb.com/igdb/image/upload/t_original/' . $meta->cover_image_id . '.jpg'
+                    : ($sourceTorrentId !== null && Storage::disk('torrent-covers')->exists("torrent-cover_{$sourceTorrentId}.jpg")
+                        ? route('authenticated_images.torrent_cover', ['id' => $sourceTorrentId])
                         : 'https://via.placeholder.com/400x600')
             }}"
             class="meta__poster"
@@ -48,12 +54,12 @@
                         route('torrents.create', [
                             'category_id' => $category->id,
                             'title' => rawurlencode(($meta?->name ?? '') . ' ' . ($meta?->first_release_date?->format('Y') ?? '')),
-                            'imdb' => $torrent->imdb ?? '',
-                            'tmdb_movie_id' => $torrent->tmdb_movie_id ?? '',
-                            'tmdb_tv_id' => $torrent->tmdb_tv_id ?? '',
-                            'mal' => $torrent->mal ?? '',
-                            'tvdb' => $torrent->tvdb ?? '',
-                            'igdb' => $torrent->igdb ?? '',
+                            'imdb' => $sourceTorrent?->imdb ?? '',
+                            'tmdb_movie_id' => $sourceTorrent?->tmdb_movie_id ?? '',
+                            'tmdb_tv_id' => $sourceTorrent?->tmdb_tv_id ?? '',
+                            'mal' => $sourceTorrent?->mal ?? '',
+                            'tvdb' => $sourceTorrent?->tvdb ?? '',
+                            'igdb' => $sourceIgdbId ?? '',
                         ])
                     }}"
                 >
@@ -66,34 +72,28 @@
                         route('requests.create', [
                             'category_id' => $category->id,
                             'title' => rawurlencode(($meta?->name ?? '') . ' ' . ($meta?->first_release_date?->format('Y') ?? '')),
-                            'imdb' => $torrent->imdb ?? '',
-                            'tmdb_movie_id' => $torrent->tmdb_movie_id ?? '',
-                            'tmdb_tv_id' => $torrent->tmdb_tv_id ?? '',
-                            'mal' => $torrent->mal ?? '',
-                            'tvdb' => $torrent->tvdb ?? '',
-                            'igdb' => $torrent->igdb ?? '',
+                            'imdb' => $sourceTorrent?->imdb ?? '',
+                            'tmdb_movie_id' => $sourceTorrent?->tmdb_movie_id ?? '',
+                            'tmdb_tv_id' => $sourceTorrent?->tmdb_tv_id ?? '',
+                            'mal' => $sourceTorrent?->mal ?? '',
+                            'tvdb' => $sourceTorrent?->tvdb ?? '',
+                            'igdb' => $sourceIgdbId ?? '',
                         ])
                     }}"
                 >
                     Request similar
                 </a>
             </li>
-            @if ($meta?->id || $torrent?->igdb ?? null)
+            @if ($meta?->id || $sourceIgdbId)
                 <li>
                     <form
-                        action="{{ route('torrents.similar.update', ['category' => $category, 'metaId' => $meta?->id ?? $torrent->igdb]) }}"
+                        action="{{ route('torrents.similar.update', ['category' => $category, 'metaId' => $meta?->id ?? $sourceIgdbId]) }}"
                         method="post"
                     >
                         @csrf
                         @method('PATCH')
 
-                        <button
-                            @if (cache()->has('igdb-game-scraper:' . ($meta?->id ?? $torrent->igdb)))
-                                disabled
-                                title="This item was recently updated. Try again tomorrow."
-                            @endif
-                            style="cursor: pointer"
-                        >
+                        <button style="cursor: pointer">
                             Update metadata
                         </button>
                     </form>
@@ -102,12 +102,12 @@
         </ul>
     </div>
     <ul class="meta__ids">
-        @if ($igdb > 0 && $meta?->url)
+        @if (($sourceIgdbId ?? 0) > 0 && $meta?->url)
             <li class="meta__igdb">
                 <a
                     class="meta-id-tag"
                     href="{{ $meta->url }}"
-                    title="IGDB: {{ $igdb }}"
+                    title="IGDB: {{ $sourceIgdbId }}"
                     target="_blank"
                 >
                     <img src="{{ url('/img/meta/igdb.svg') }}" />
@@ -195,7 +195,7 @@
     </div>
 </section>
 
-@if ($meta?->trailer)
+@if ($meta?->first_video_video_id)
     <script nonce="{{ HDVinnie\SecureHeaders\SecureHeaders::nonce() }}">
         document.getElementsByClassName('show-trailer')[0].addEventListener('click', (e) => {
             e.preventDefault();
@@ -204,8 +204,8 @@
                 showCloseButton: true,
                 background: 'rgb(35,35,35)',
                 width: 970,
-                html: '<iframe width="930" height="523" src="https://www.youtube-nocookie.com/embed/{{ $meta->trailer }}" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>',
-                title: '<i style="color: #a5a5a5;">{{ $meta->title }} trailer</i>',
+                html: '<iframe width="930" height="523" src="https://www.youtube-nocookie.com/embed/{{ $meta->first_video_video_id }}" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>',
+                title: '<i style="color: #a5a5a5;">{{ $meta->name }} trailer</i>',
                 text: '',
             });
         });

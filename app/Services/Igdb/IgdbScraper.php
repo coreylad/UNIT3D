@@ -24,8 +24,12 @@ class IgdbScraper
     {
     }
 
-    public function game(int $id, bool $synchronous = false): void
+    public function game(int $id, bool $synchronous = false, bool $force = false): void
     {
+        if ($force) {
+            cache()->forget("igdb-game-scraper:{$id}");
+        }
+
         if ($synchronous || config('queue.default') === 'sync') {
             ProcessIgdbGameJob::dispatchSync($id);
 

@@ -150,7 +150,7 @@ class SimilarTorrentController extends Controller
         match (true) {
             $category->movie_meta => new TMDBScraper()->movie($metaId),
             $category->tv_meta    => new TMDBScraper()->tv($metaId),
-            $category->game_meta  => new IgdbScraper()->game($metaId, true),
+            $category->game_meta  => new IgdbScraper()->game($metaId, true, true),
         };
 
         return back()->with('success', 'Metadata update completed successfully.');
