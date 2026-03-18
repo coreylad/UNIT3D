@@ -30,4 +30,5 @@ if (config('unit3d.root_url_override')) {
     URL::forceRootUrl(config('unit3d.root_url_override'));
 }
 // Announce System
+Route::get('{passkey}/scrape', [App\Http\Controllers\AnnounceController::class, 'scrape'])->name('announce.scrape');
 Route::get('{passkey}', [App\Http\Controllers\AnnounceController::class, 'index'])->name('announce');

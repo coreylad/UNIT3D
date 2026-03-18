@@ -23,6 +23,7 @@ use App\DTO\AnnounceTorrentDTO;
 use App\DTO\AnnounceUserDTO;
 use App\Enums\ModerationStatus;
 use App\Exceptions\TrackerException;
+use App\Helpers\Bencode;
 use App\Jobs\ProcessAnnounce;
 use App\Models\BlacklistClient;
 use App\Models\Group;
@@ -147,6 +148,50 @@ final class AnnounceController extends Controller
         }
 
         return $this->sendFinalAnnounceResponse($response);
+    }
+
+    /**
+     * Scrape Code.
+     *
+     * @throws Throwable
+     */
+    public function scrape(Request $request, string $passkey): Response
+    {
+        try {
+            $this->checkPasskey($passkey);
+
+            $user = $this->checkUserForScrape($passkey);
+            $this->checkGroup($user);
+
+            $infoHashes = $this->extractInfoHashesFromQueryString((string) $request->server('QUERY_STRING'));
+
+            if ($infoHashes === []) {
+                throw new TrackerException(130, [':attribute' => 'info_hash']);
+            }
+
+            $files = [];
+
+            foreach ($infoHashes as $infoHash) {
+                $torrent = Torrent::withoutGlobalScope(ApprovedScope::class)
+                    ->select(['seeders', 'leechers', 'times_completed', 'status'])
+                    ->where('info_hash', '=', $infoHash)
+                    ->first();
+
+                $files[$infoHash] = [
+                    'complete'   => ($torrent !== null && $torrent->status === ModerationStatus::APPROVED) ? (int) $torrent->seeders : 0,
+                    'downloaded' => ($torrent !== null && $torrent->status === ModerationStatus::APPROVED) ? (int) $torrent->times_completed : 0,
+                    'incomplete' => ($torrent !== null && $torrent->status === ModerationStatus::APPROVED) ? (int) $torrent->leechers : 0,
+                ];
+            }
+
+            return $this->sendFinalAnnounceResponse(Bencode::bencode([
+                'files' => $files,
+            ]));
+        } catch (TrackerException $exception) {
+            return $this->sendFinalAnnounceResponse($this->generateFailedAnnounceResponse($exception));
+        } catch (Exception) {
+            return $this->sendFinalAnnounceResponse('d14:failure reason21:Internal Server Errore');
+        }
     }
 
     /**
@@ -355,6 +400,51 @@ final class AnnounceController extends Controller
         }
 
         return $user;
+    }
+
+    /**
+     * Get User Via Validated Passkey for scrape requests.
+     *
+     * @throws TrackerException
+     * @throws Throwable
+     */
+    private function checkUserForScrape(string $passkey): User
+    {
+        $user = cache()->remember('user:'.$passkey, 8 * 3600, fn () => User::query()
+            ->select(['id', 'group_id', 'can_download', 'is_donor', 'is_lifetime'])
+            ->where('passkey', '=', $passkey)
+            ->first());
+
+        if ($user === null) {
+            throw new TrackerException(140);
+        }
+
+        return $user;
+    }
+
+    /**
+     * @return list<string>
+     *
+     * @throws TrackerException
+     */
+    private function extractInfoHashesFromQueryString(string $queryString): array
+    {
+        preg_match_all('/(?:^|&)info_hash=([^&]*)/', $queryString, $matches);
+
+        $encodedInfoHashes = $matches[1] ?? [];
+        $infoHashes = [];
+
+        foreach ($encodedInfoHashes as $encodedInfoHash) {
+            $infoHash = rawurldecode($encodedInfoHash);
+
+            if (\strlen($infoHash) !== 20) {
+                throw new TrackerException(133, [':attribute' => 'info_hash', ':rule' => 20]);
+            }
+
+            $infoHashes[] = $infoHash;
+        }
+
+        return array_values(array_unique($infoHashes));
     }
 
     /**
