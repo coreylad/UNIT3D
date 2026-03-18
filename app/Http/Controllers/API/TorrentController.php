@@ -41,9 +41,14 @@ use Exception;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Intervention\Image\Facades\Image;
+use MarcReichel\IGDBLaravel\Models\Game;
 use Meilisearch\Endpoints\Indexes;
+use Throwable;
 
 /**
  * @see \Tests\Todo\Feature\Http\Controllers\TorrentControllerTest
@@ -407,6 +412,8 @@ class TorrentController extends BaseController
             default                                              => null,
         };
 
+        $this->applyIgdbCoverAsTorrentCover($torrent);
+
         // Torrent Keywords System
         $keywords = [];
 
@@ -489,6 +496,64 @@ class TorrentController extends BaseController
         }
 
         return $this->sendResponse(route('torrent.download.rsskey', ['id' => $torrent->id, 'rsskey' => auth(AuthGuard::API->value)->user()->rsskey]), 'Torrent uploaded successfully.');
+    }
+
+    private function applyIgdbCoverAsTorrentCover(Torrent $torrent): void
+    {
+        if (!$torrent->category->game_meta || $torrent->igdb === null) {
+            return;
+        }
+
+        $filenameCover = 'torrent-cover_'.$torrent->id.'.jpg';
+
+        if (Storage::disk('torrent-covers')->exists($filenameCover)) {
+            return;
+        }
+
+        $coverImageId = IgdbGame::query()
+            ->whereKey($torrent->igdb)
+            ->value('cover_image_id');
+
+        if ($coverImageId === null) {
+            try {
+                $fetchedGame = Game::select(['id'])
+                    ->with([
+                        'cover' => ['image_id'],
+                    ])
+                    ->find($torrent->igdb);
+
+                $coverImageId = $fetchedGame['cover']['image_id'] ?? null;
+            } catch (Throwable) {
+                $coverImageId = null;
+            }
+        }
+
+        if ($coverImageId === null) {
+            return;
+        }
+
+        try {
+            $response = Http::timeout(20)
+                ->accept('image/*')
+                ->get('https://images.igdb.com/igdb/image/upload/t_original/'.$coverImageId.'.jpg');
+
+            if (!$response->successful() || $response->body() === '') {
+                return;
+            }
+
+            $pathCover = Storage::disk('torrent-covers')->path($filenameCover);
+
+            Image::make($response->body())
+                ->fit(400, 600)
+                ->encode('jpg', 90)
+                ->save($pathCover);
+        } catch (Throwable $exception) {
+            Log::warning('Unable to auto-apply IGDB cover image for API torrent upload.', [
+                'torrent_id' => $torrent->id,
+                'igdb_id'    => $torrent->igdb,
+                'error'      => $exception->getMessage(),
+            ]);
+        }
     }
 
     /**
