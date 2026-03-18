@@ -137,19 +137,7 @@ final class AnnounceController extends Controller
             // violation).  Return a valid response with 0 peers instead so
             // the client respects the timing and backs off properly.
             if ($exception->getCode() === 162 && isset($torrent)) {
-                $minInterval = $this->minAnnounceInterval($torrent);
-                $maxInterval = $this->maxAnnounceInterval($torrent);
-                $response = 'd8:completei'
-                    .$torrent->seeders
-                    .'e10:downloadedi'
-                    .$torrent->times_completed
-                    .'e10:incompletei'
-                    .$torrent->leechers
-                    .'e8:intervali'
-                    .random_int($minInterval, $maxInterval)
-                    .'e12:min intervali'
-                    .random_int(max(1, intdiv($minInterval * 95, 100)), $minInterval)
-                    .'e5:peers0:e';
+                $response = $this->generateWarningAnnounceResponse($torrent, $exception);
             } else {
                 $response = $this->generateFailedAnnounceResponse($exception);
             }
@@ -504,8 +492,8 @@ final class AnnounceController extends Controller
 
         $lastAnnouncedAt = Redis::connection('announce')->command('SET', [$duplicateAnnounceKey, $now, ['NX', 'GET', 'EX' => 30]]);
 
-        if ($lastAnnouncedAt !== false) {
-            throw new TrackerException(162, [':elapsed' => $now - $lastAnnouncedAt]);
+        if (is_numeric($lastAnnouncedAt)) {
+            throw new TrackerException(162, [':elapsed' => $now - (int) $lastAnnouncedAt]);
         }
 
         // Block clients disrespecting the min interval
@@ -519,10 +507,10 @@ final class AnnounceController extends Controller
 
         // Delete the timer if the user paused the torrent, and it's been at
         // least 5 minutes since they last announced.
-        if ($event === 'stopped' && $lastAnnouncedAt < $now - 5 * 60) {
+        if ($event === 'stopped' && is_numeric($lastAnnouncedAt) && (int) $lastAnnouncedAt < $now - 5 * 60) {
             Redis::connection('announce')->command('DEL', [$lastAnnouncedKey]);
-        } elseif ($lastAnnouncedAt !== false && !\in_array($event, ['completed', 'stopped'])) {
-            throw new TrackerException(162, [':elapsed' => $now - $lastAnnouncedAt]);
+        } elseif (is_numeric($lastAnnouncedAt) && !\in_array($event, ['completed', 'stopped'])) {
+            throw new TrackerException(162, [':elapsed' => $now - (int) $lastAnnouncedAt]);
         }
     }
 
