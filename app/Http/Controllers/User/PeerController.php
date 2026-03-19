@@ -16,6 +16,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\User;
 
+use App\Helpers\TrackerUrl;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -51,7 +52,7 @@ class PeerController extends Controller
     {
         abort_unless($request->user()->is($user), 403);
 
-        if (config('announce.external_tracker.is_enabled')) {
+        if (TrackerUrl::usesExternalAnnounce()) {
             return redirect()->back()->withErrors("The external tracker doesn't support flushing peers.");
         }
 

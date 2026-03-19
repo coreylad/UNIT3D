@@ -671,11 +671,11 @@
                     {{ __('torrent.announce-url') }}:
                     <a
                         x-data="upload"
-                        data-announce-url="{{ route('announce', ['passkey' => $user->passkey]) }}"
+                        data-announce-url="{{ \App\Helpers\TrackerUrl::announce($user->passkey) }}"
                         x-on:click.prevent="copy"
-                        href="{{ route('announce', ['passkey' => $user->passkey]) }}"
+                        href="{{ \App\Helpers\TrackerUrl::announce($user->passkey) }}"
                     >
-                        {{ route('announce', ['passkey' => $user->passkey]) }}
+                        {{ \App\Helpers\TrackerUrl::announce($user->passkey) }}
                     </a>
                 </p>
                 <p>

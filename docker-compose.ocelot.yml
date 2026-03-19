@@ -1,0 +1,13 @@
+services:
+    ocelot:
+        image: '${OCELOT_IMAGE:-ghcr.io/hdinnovations/ocelot:latest}'
+        restart: unless-stopped
+        ports:
+            - '${OCELOT_FORWARD_PORT:-3400}:3400'
+        env_file:
+            - .env
+        networks:
+            - sail
+        depends_on:
+            - mysql
+            - redis

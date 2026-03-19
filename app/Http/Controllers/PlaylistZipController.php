@@ -17,6 +17,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Helpers\Bencode;
+use App\Helpers\TrackerUrl;
 use App\Models\Playlist;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
@@ -45,7 +46,7 @@ class PlaylistZipController extends Controller
             function () use ($zipFileName, $user, $playlist): void {
                 $zip = new ZipStream(outputName: sanitize_filename($zipFileName));
 
-                $announceUrl = route('announce', ['passkey' => $user->passkey]);
+                $announceUrl = TrackerUrl::announce($user->passkey);
 
                 $playlist->torrents()->chunk(100, function ($torrents) use ($announceUrl, $zip): void {
                     foreach ($torrents as $torrent) {

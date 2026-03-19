@@ -170,7 +170,7 @@ class TmdbPersonCredit extends Component
                     'comments',
                 ])
                 ->when(
-                    !config('announce.external_tracker.is_enabled'),
+                    !\App\Helpers\TrackerUrl::usesExternalAnnounce(),
                     fn ($query) => $query->withCount([
                         'seeds'   => fn ($query) => $query->where('active', '=', true)->where('visible', '=', true),
                         'leeches' => fn ($query) => $query->where('active', '=', true)->where('visible', '=', true),

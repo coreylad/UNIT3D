@@ -19,6 +19,7 @@ namespace App\Http\Controllers\API;
 use App\DTO\TorrentSearchFiltersDTO;
 use App\Enums\AuthGuard;
 use App\Helpers\Bencode;
+use App\Helpers\TrackerUrl;
 use App\Helpers\TorrentHelper;
 use App\Helpers\TorrentTools;
 use App\Http\Resources\TorrentResource;
@@ -776,7 +777,7 @@ class TorrentController extends BaseController
         // Auth keys must not be cached
         $torrents->through(function ($torrent) {
             $torrent['attributes']['download_link'] = route('torrent.download.rsskey', ['id' => $torrent['id'], 'rsskey' => auth(AuthGuard::API->value)->user()->rsskey]);
-            $torrent['attributes']['magnet_link'] = config('torrent.magnet') ? 'magnet:?dn='.$torrent['attributes']['name'].'&xt=urn:btih:'.$torrent['attributes']['info_hash'].'&as='.route('torrent.download.rsskey', ['id' => $torrent['id'], 'rsskey' => auth(AuthGuard::API->value)->user()->rsskey]).'&tr='.route('announce', ['passkey' => auth('api')->user()->passkey]).'&xl='.$torrent['attributes']['size'] : null;
+            $torrent['attributes']['magnet_link'] = config('torrent.magnet') ? 'magnet:?dn='.$torrent['attributes']['name'].'&xt=urn:btih:'.$torrent['attributes']['info_hash'].'&as='.route('torrent.download.rsskey', ['id' => $torrent['id'], 'rsskey' => auth(AuthGuard::API->value)->user()->rsskey]).'&tr='.TrackerUrl::announce(auth('api')->user()->passkey).'&xl='.$torrent['attributes']['size'] : null;
 
             return $torrent;
         });

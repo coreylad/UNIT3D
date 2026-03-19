@@ -16,6 +16,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Helpers\TrackerUrl;
 use App\Models\History;
 use App\Models\Peer;
 use Illuminate\Console\Command;
@@ -75,7 +76,7 @@ class AutoFlushPeers extends Command
         // Keep peers that stopped being announced without a `stopped` event
         // in case a user has internet issues and comes back online within the
         // next 2 days
-        if (config('announce.external_tracker.is_enabled')) {
+        if (TrackerUrl::usesExternalAnnounce()) {
             Peer::query()
                 ->where('updated_at', '<', $carbon->copy()->subDays(2))
                 ->where('active', '=', 0)

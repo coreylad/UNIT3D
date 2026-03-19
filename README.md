@@ -38,6 +38,26 @@ A new option has been added to the Staff **Site Settings** admin panel to enable
 
 The official script is no longer available at this time. A new one will be provided soon.
 
+### Optional: Ocelot Tracker Mode
+
+Linux is the default deployment target for BAS3D.
+
+Fastest production setup (one command):
+
+`bash scripts/ocelot.sh "https://tracker.example.com/announce/{passkey}"`
+
+This updates `.env` (`ANNOUNCE_DRIVER=ocelot`, `OCELOT_ANNOUNCE_URL=...`) and clears Laravel caches.
+
+After switching drivers, re-download `.torrent` files so clients receive the new announce URL.
+
+Optional local container (if needed):
+
+`bash scripts/ocelot.sh --start-container`
+
+To switch back to the internal tracker mode:
+
+`bash scripts/ocelot.sh --internal`
+
 ## <a name="updating"></a> 🖥️ Updating
 
 To update your installation to the latest version, run the following command. This will pull the latest changes from the repository and update your instance:

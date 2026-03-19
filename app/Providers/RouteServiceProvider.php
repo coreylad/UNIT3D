@@ -57,16 +57,18 @@ class RouteServiceProvider extends ServiceProvider
                 ->middleware(MiddlewareGroup::API->value)
                 ->group(base_path('routes/api.php'));
 
-            Route::prefix('announce')
-                ->middleware(MiddlewareGroup::ANNOUNCE->value)
-                ->group(base_path('routes/announce.php'));
+            if (config('announce.driver') === 'internal') {
+                Route::prefix('announce')
+                    ->middleware(MiddlewareGroup::ANNOUNCE->value)
+                    ->group(base_path('routes/announce.php'));
 
-            Route::prefix('scrape')
-                ->middleware(MiddlewareGroup::ANNOUNCE->value)
-                ->group(base_path('routes/scrape.php'));
+                Route::prefix('scrape')
+                    ->middleware(MiddlewareGroup::ANNOUNCE->value)
+                    ->group(base_path('routes/scrape.php'));
 
-            Route::middleware(MiddlewareGroup::ANNOUNCE->value)
-                ->group(base_path('routes/announce_legacy.php'));
+                Route::middleware(MiddlewareGroup::ANNOUNCE->value)
+                    ->group(base_path('routes/announce_legacy.php'));
+            }
 
             Route::middleware(MiddlewareGroup::RSS->value)
                 ->group(base_path('routes/rss.php'));

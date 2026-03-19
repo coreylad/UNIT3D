@@ -16,6 +16,33 @@ declare(strict_types=1);
 return [
     /*
     |--------------------------------------------------------------------------
+    | Tracker Driver
+    |--------------------------------------------------------------------------
+    |
+    | Select which announce implementation torrent files and magnets should use.
+    | Supported: internal, ocelot
+    |
+    */
+
+    'driver' => env('ANNOUNCE_DRIVER', 'internal'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Ocelot Tracker
+    |--------------------------------------------------------------------------
+    |
+    | External announce URL template used when driver=ocelot.
+    | Use {passkey} placeholder, example:
+    | https://tracker.example.com/announce/{passkey}
+    |
+    */
+
+    'ocelot' => [
+        'announce_url' => env('OCELOT_ANNOUNCE_URL'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | External tracker
     |--------------------------------------------------------------------------
     |
@@ -32,7 +59,7 @@ return [
         |
         */
 
-        'is_enabled' => false,
+        'is_enabled' => env('TRACKER_EXTERNAL_ENABLED', false),
 
         /*
         |--------------------------------------------------------------------------

@@ -17,6 +17,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Staff;
 
 use App\Events\MessageDeleted;
+use App\Helpers\TrackerUrl;
 use App\Http\Controllers\Controller;
 use App\Models\History;
 use App\Models\Message;
@@ -45,7 +46,7 @@ class FlushController extends Controller
      */
     public function peers(): \Illuminate\Http\RedirectResponse
     {
-        if (config('announce.external_tracker.is_enabled')) {
+        if (TrackerUrl::usesExternalAnnounce()) {
             return redirect()->back()->withErrors("The external tracker doesn't support flushing peers.");
         }
 

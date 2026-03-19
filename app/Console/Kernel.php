@@ -66,7 +66,7 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        if (! config('announce.external_tracker.is_enabled')) {
+        if (config('announce.driver') === 'internal' && ! config('announce.external_tracker.is_enabled')) {
             $schedule->command(AutoUpsertPeers::class)->everyFiveSeconds()->withoutOverlapping(2);
             $schedule->command(AutoUpsertHistories::class)->everyFiveSeconds()->withoutOverlapping(2);
             $schedule->command(AutoUpsertAnnounces::class)->everyFiveSeconds()->withoutOverlapping(2);

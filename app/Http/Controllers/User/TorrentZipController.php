@@ -17,6 +17,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\User;
 
 use App\Helpers\Bencode;
+use App\Helpers\TrackerUrl;
 use App\Http\Controllers\Controller;
 use App\Models\Torrent;
 use App\Models\User;
@@ -49,7 +50,7 @@ class TorrentZipController extends Controller
             function () use ($zipFileName, $user, $request): void {
                 $zip = new ZipStream(outputName: sanitize_filename($zipFileName));
 
-                $announceUrl = route('announce', ['passkey' => $user->passkey]);
+                $announceUrl = TrackerUrl::announce($user->passkey);
 
                 Torrent::query()
                     ->when(

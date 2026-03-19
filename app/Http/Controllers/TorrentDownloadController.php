@@ -18,6 +18,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\ModerationStatus;
 use App\Helpers\Bencode;
+use App\Helpers\TrackerUrl;
 use App\Models\Scopes\ApprovedScope;
 use App\Models\Torrent;
 use App\Models\TorrentDownload;
@@ -90,7 +91,7 @@ class TorrentDownloadController extends Controller
                 $dict = Bencode::bdecode(Storage::disk('torrent-files')->get($torrent->file_name));
 
                 // Set the announce key and add the user passkey
-                $dict['announce'] = route('announce', ['passkey' => $user->passkey]);
+                $dict['announce'] = TrackerUrl::announce($user->passkey);
 
                 // Set link to torrent as the comment
                 if (config('torrent.comment')) {
