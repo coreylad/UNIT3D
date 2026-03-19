@@ -58,6 +58,90 @@ To switch back to the internal tracker mode:
 
 `bash scripts/ocelot.sh --internal`
 
+#### Detailed Linux Deployment Instructions (Recommended)
+
+Use this when you want a predictable production rollout with validation and rollback.
+
+##### 1) Prerequisites
+
+- Linux host with `bash`, `php`, and a configured BAS3D `.env`
+- Application dependencies installed (`composer install` already completed)
+- Queue worker and scheduler process manager in place (for example `systemd` or `supervisor`)
+- If using local Ocelot container: Docker Engine + Docker Compose plugin
+
+##### 2) Choose Your Ocelot Endpoint
+
+You have two deployment patterns:
+
+- **Remote/existing Ocelot service**
+    - Use a URL such as:
+        - `https://tracker.example.com/announce/{passkey}`
+- **Local Ocelot sidecar on the same host**
+    - Use:
+        - `http://127.0.0.1:3400/announce/{passkey}`
+
+##### 3) Switch BAS3D to Ocelot Driver
+
+Run one of the following:
+
+- Remote/existing Ocelot:
+    - `bash scripts/ocelot.sh "https://tracker.example.com/announce/{passkey}"`
+- Local sidecar URL:
+    - `bash scripts/ocelot.sh "http://127.0.0.1:3400/announce/{passkey}"`
+
+This writes:
+
+- `ANNOUNCE_DRIVER=ocelot`
+- `OCELOT_ANNOUNCE_URL=...`
+- `TRACKER_EXTERNAL_ENABLED=false`
+
+##### 4) (Optional) Start Local Ocelot Container
+
+If you are running Ocelot on the same server via Docker:
+
+- `bash scripts/ocelot.sh --start-container`
+
+Compose file used:
+
+- `docker-compose.yml`
+- `docker-compose.ocelot.yml`
+
+##### 5) Reload Runtime Processes
+
+After switching tracker mode, reload long-running Laravel processes so they pick up new env/config:
+
+- Restart queue workers (example):
+    - `php artisan queue:restart`
+- Restart your process manager units (examples):
+    - `sudo systemctl restart php8.4-fpm`
+    - `sudo systemctl restart nginx`
+    - restart scheduler/worker services used in your stack
+
+##### 6) Client Migration Step (Required)
+
+Existing `.torrent` files already downloaded by users still contain old announce URLs.
+
+- Re-download `.torrent` files from BAS3D after switching.
+- Inform users they must refresh torrent files in their clients.
+
+##### 7) Verify the Deployment
+
+Use these checks:
+
+- Confirm env values:
+    - `grep -E "^(ANNOUNCE_DRIVER|OCELOT_ANNOUNCE_URL|TRACKER_EXTERNAL_ENABLED)=" .env`
+- Confirm Ocelot health (adjust host/port):
+    - `curl -I http://127.0.0.1:3400`
+- Download one torrent and verify announce URL contains Ocelot endpoint + passkey.
+
+##### 8) Rollback to Internal Tracker
+
+If needed, revert immediately:
+
+- `bash scripts/ocelot.sh --internal`
+
+Then restart workers/services and re-download `.torrent` files again.
+
 ## <a name="updating"></a> 🖥️ Updating
 
 To update your installation to the latest version, run the following command. This will pull the latest changes from the repository and update your instance:
