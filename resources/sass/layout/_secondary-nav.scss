@@ -1,6 +1,8 @@
 /* Secondary nav */
 
 .secondary-nav {
+    position: relative;
+    z-index: 1;
     display: grid;
     grid-template-columns: 1fr auto 1fr;
     box-shadow: var(--secondary-nav-box-shadow);
