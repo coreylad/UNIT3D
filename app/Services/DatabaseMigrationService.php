@@ -3136,12 +3136,30 @@ class DatabaseMigrationService
         }
 
         try {
-            // Build a lookup map: info_hash (40-char lowercase hex) → expected file_name
-            // Uses HEX() so this works whether info_hash is stored as binary SHA1 or legacy hex-ASCII
-            $dbMap = DB::table('torrents')
+            // Build a lookup map: normalized info_hash (40-char lowercase hex) → expected file_name
+            // Supports both correct binary(20) rows and legacy rows where hex ASCII was inserted into binary column.
+            $rawDbMap = DB::table('torrents')
                 ->selectRaw('LOWER(HEX(info_hash)) AS ih, file_name')
                 ->pluck('file_name', 'ih')
                 ->all();
+
+            $dbMap = [];
+            foreach ($rawDbMap as $rawHex => $fileName) {
+                $normalized = strtolower((string) $rawHex);
+
+                // Legacy-bad case: info_hash stored as ASCII hex inside binary column -> HEX() returns 80 chars.
+                // Decode once to recover the original 40-char hex hash.
+                if (strlen($normalized) === 80 && ctype_xdigit($normalized)) {
+                    $decoded = @hex2bin($normalized);
+                    if (is_string($decoded) && strlen($decoded) === 40 && ctype_xdigit($decoded)) {
+                        $normalized = strtolower($decoded);
+                    }
+                }
+
+                if (strlen($normalized) === 40 && ctype_xdigit($normalized) && !isset($dbMap[$normalized])) {
+                    $dbMap[$normalized] = $fileName;
+                }
+            }
 
             $linked    = 0;
             $alreadyOk = 0;
@@ -3162,6 +3180,8 @@ class DatabaseMigrationService
                 if (strtolower($fileInfo->getExtension()) !== 'torrent') {
                     continue;
                 }
+
+                $processed++;
 
                 $filePath = $fileInfo->getPathname();
 
@@ -3220,8 +3240,6 @@ class DatabaseMigrationService
                         $errors[] = "Error on " . $fileInfo->getFilename() . ": " . $e->getMessage();
                     }
                 }
-
-                $processed++;
 
                 if ($processed % $batchSize === 0) {
                     $this->log("relinkTorrentFiles: processed {$processed} files (linked={$linked}, alreadyOk={$alreadyOk}, noMatch={$noMatch})");
