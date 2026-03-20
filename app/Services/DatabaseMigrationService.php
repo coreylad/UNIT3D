@@ -16,6 +16,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Helpers\Bencode;
 use App\Models\User;
 use Exception;
 use Illuminate\Support\Facades\Cache;
@@ -955,9 +956,9 @@ class DatabaseMigrationService
         return $map;
     }
 
-    public function migrateTorrents(array $sourceConfig, int $offset = 0, int $limit = 500, bool $dryRun = false): array
+    public function migrateTorrents(array $sourceConfig, int $offset = 0, int $limit = 500, bool $dryRun = false, ?string $sourceTorrentPath = null, ?string $sourceImagesPath = null): array
     {
-        $this->log("Starting torrent migration (offset={$offset}, limit={$limit})" . ($dryRun ? ' [DRY RUN]' : ''));
+        $this->log("Starting torrent migration (offset={$offset}, limit={$limit})" . ($dryRun ? ' [DRY RUN]' : '') . ($sourceTorrentPath ? ' [FILE COPY ENABLED]' : '') . ($sourceImagesPath ? ' [IMAGE COPY ENABLED]' : ''));
 
         if ($dryRun) {
             $this->log('DRY RUN: Skipping database writes.');
@@ -984,7 +985,12 @@ class DatabaseMigrationService
             $fetched   = count($torrents);
             $count     = 0;
             $skipped   = 0;
+            $filesCopied = 0;
+            $filesMissing = 0;
+            $imagesCopied = 0;
+            $imagesMissing = 0;
             $batch     = [];
+            $sourceTorrentIds = [];  // Track source IDs for image copying
             $batchSize = 100;
 
             $parseDate = static function (?string $value): ?string {
@@ -1070,11 +1076,46 @@ class DatabaseMigrationService
                         'updated_at'      => now()->toDateTimeString(),
                     ];
 
+                    // Track source torrent ID for image/file copying
+                    $sourceTorrentIds[$infoHash] = (int) $torrent['id'];
+
                     if (count($batch) >= $batchSize) {
                         $inserted = $this->insertNewTorrents($batch);
                         $count   += $inserted;
                         $skipped += count($batch) - $inserted;
+
+                        // Copy files if requested
+                        if ($sourceTorrentPath && !$dryRun) {
+                            foreach ($batch as $infoHash => $data) {
+                                if ($this->copyTorrentFile($data['file_name'], $sourceTorrentPath)) {
+                                    $filesCopied++;
+                                } else {
+                                    $filesMissing++;
+                                }
+                            }
+                        }
+
+                        // Copy images if requested
+                        if ($sourceImagesPath && !$dryRun) {
+                            foreach ($batch as $infoHash => $data) {
+                                $srcId = $sourceTorrentIds[$infoHash] ?? null;
+                                if ($srcId === null) {
+                                    continue;
+                                }
+                                // Look up the UNIT3D torrent ID using info_hash
+                                $unit3dId = DB::table('torrents')
+                                    ->where('info_hash', $infoHash)
+                                    ->value('id');
+                                if ($unit3dId !== null) {
+                                    $copied = $this->copyTorrentImages($srcId, (int) $unit3dId, $sourceImagesPath);
+                                    $imagesCopied += $copied['covers'];
+                                    $imagesMissing += $copied['missing'];
+                                }
+                            }
+                        }
+
                         $batch    = [];
+                        $sourceTorrentIds = [];
                     }
                 } catch (\Throwable $e) {
                     $this->log("Error on torrent id={$torrent['id']}: " . $e->getMessage());
@@ -1085,16 +1126,52 @@ class DatabaseMigrationService
                 $inserted = $this->insertNewTorrents($batch);
                 $count   += $inserted;
                 $skipped += count($batch) - $inserted;
+
+                // Copy files if requested
+                if ($sourceTorrentPath && !$dryRun) {
+                    foreach ($batch as $infoHash => $data) {
+                        if ($this->copyTorrentFile($data['file_name'], $sourceTorrentPath)) {
+                            $filesCopied++;
+                        } else {
+                            $filesMissing++;
+                        }
+                    }
+                }
+
+                // Copy images if requested
+                if ($sourceImagesPath && !$dryRun) {
+                    foreach ($batch as $infoHash => $data) {
+                        $srcId = $sourceTorrentIds[$infoHash] ?? null;
+                        if ($srcId === null) {
+                            continue;
+                        }
+                        // Look up the UNIT3D torrent ID using info_hash
+                        $unit3dId = DB::table('torrents')
+                            ->where('info_hash', $infoHash)
+                            ->value('id');
+                        if ($unit3dId !== null) {
+                            $copied = $this->copyTorrentImages($srcId, (int) $unit3dId, $sourceImagesPath);
+                            $imagesCopied += $copied['covers'];
+                            $imagesMissing += $copied['missing'];
+                        }
+                    }
+                }
             }
 
-            $this->log("Torrent migration: {$count} inserted, {$skipped} skipped (offset={$offset})");
+            $this->log("Torrent migration: {$count} inserted, {$skipped} skipped (offset={$offset})"
+                . ($sourceTorrentPath ? " | files copied: {$filesCopied}, missing: {$filesMissing}" : '')
+                . ($sourceImagesPath ? " | images copied: {$imagesCopied}, missing: {$imagesMissing}" : ''));
 
             return [
-                'success' => true,
-                'count'   => $count,
-                'skipped' => $skipped,
-                'done'    => $fetched < $limit,
-                'logs'    => $this->migrationLog,
+                'success'         => true,
+                'count'           => $count,
+                'skipped'         => $skipped,
+                'files_copied'    => $filesCopied,
+                'files_missing'   => $filesMissing,
+                'images_copied'   => $imagesCopied,
+                'images_missing'  => $imagesMissing,
+                'done'            => $fetched < $limit,
+                'logs'            => $this->migrationLog,
             ];
         } catch (\Throwable $e) {
             $msg = $this->formatError($e);
@@ -2784,6 +2861,223 @@ class DatabaseMigrationService
         $lines = array_map(static fn (string $line): string => rtrim($line), explode("\n", $description));
 
         return trim(implode("\n", $lines));
+    }
+
+    /**
+     * Copy a single .torrent file from source to destination.
+     * Returns true if copied successfully, false if source file not found.
+     */
+    private function copyTorrentFile(string $destFileName, string $sourcePath): bool
+    {
+        try {
+            $sourceFile = rtrim($sourcePath, '/\\') . \DIRECTORY_SEPARATOR . $destFileName;
+            
+            if (!file_exists($sourceFile)) {
+                return false;
+            }
+
+            $destPath = storage_path('app/files/torrents/files');
+            if (!is_dir($destPath)) {
+                mkdir($destPath, 0755, true);
+            }
+
+            $destFile = $destPath . \DIRECTORY_SEPARATOR . $destFileName;
+
+            // Handle naming conflicts by appending counter
+            $counter = 1;
+            $baseName = $destFileName;
+            $extension = pathinfo($destFileName, PATHINFO_EXTENSION);
+            $nameWithoutExt = pathinfo($destFileName, PATHINFO_FILENAME);
+
+            while (file_exists($destFile) && md5_file($sourceFile) !== md5_file($destFile)) {
+                $destFileName = "{$nameWithoutExt}-{$counter}.{$extension}";
+                $destFile = $destPath . \DIRECTORY_SEPARATOR . $destFileName;
+                $counter++;
+            }
+
+            // If file exists with same content, skip
+            if (file_exists($destFile)) {
+                return true;
+            }
+
+            // Copy file
+            return copy($sourceFile, $destFile);
+        } catch (\Throwable $e) {
+            $this->log("Error copying torrent file {$destFileName}: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Copy torrent cover and banner images from source to destination.
+     * Returns array with ['covers' => copied_count, 'missing' => not_found_count]
+     */
+    private function copyTorrentImages(int $srcTorrentId, int $unit3dTorrentId, string $sourcePath): array
+    {
+        $copied = 0;
+        $missing = 0;
+
+        try {
+            $sourcePath = rtrim($sourcePath, '/\\');
+
+            // Try to copy cover image
+            $coverPatterns = [
+                "torrent-cover_{$srcTorrentId}.jpg",
+                "cover_{$srcTorrentId}.jpg",
+                "torrent_{$srcTorrentId}_cover.jpg",
+            ];
+
+            $coverSource = null;
+            foreach ($coverPatterns as $pattern) {
+                $fullPath = $sourcePath . \DIRECTORY_SEPARATOR . $pattern;
+                if (file_exists($fullPath)) {
+                    $coverSource = $fullPath;
+                    break;
+                }
+            }
+
+            if ($coverSource !== null) {
+                $destDir = storage_path('app/images/torrents/covers');
+                if (!is_dir($destDir)) {
+                    mkdir($destDir, 0755, true);
+                }
+
+                $destFile = $destDir . \DIRECTORY_SEPARATOR . "torrent-cover_{$unit3dTorrentId}.jpg";
+                if (copy($coverSource, $destFile)) {
+                    $copied++;
+                    $this->log("Copied cover image for torrent {$unit3dTorrentId}");
+                }
+            } else {
+                $missing++;
+            }
+
+            // Try to copy banner image
+            $bannerPatterns = [
+                "torrent-banner_{$srcTorrentId}.jpg",
+                "banner_{$srcTorrentId}.jpg",
+                "torrent_{$srcTorrentId}_banner.jpg",
+            ];
+
+            $bannerSource = null;
+            foreach ($bannerPatterns as $pattern) {
+                $fullPath = $sourcePath . \DIRECTORY_SEPARATOR . $pattern;
+                if (file_exists($fullPath)) {
+                    $bannerSource = $fullPath;
+                    break;
+                }
+            }
+
+            if ($bannerSource !== null) {
+                $destDir = storage_path('app/images/torrents/banners');
+                if (!is_dir($destDir)) {
+                    mkdir($destDir, 0755, true);
+                }
+
+                $destFile = $destDir . \DIRECTORY_SEPARATOR . "torrent-banner_{$unit3dTorrentId}.jpg";
+                if (copy($bannerSource, $destFile)) {
+                    $copied++;
+                    $this->log("Copied banner image for torrent {$unit3dTorrentId}");
+                }
+            } else {
+                $missing++;
+            }
+
+            return ['covers' => $copied, 'missing' => $missing];
+        } catch (\Throwable $e) {
+            $this->log("Error copying images for torrent {$unit3dTorrentId}: " . $e->getMessage());
+            return ['covers' => 0, 'missing' => 2];
+        }
+    }
+
+    /**
+     * Verify that migrated torrents have valid .torrent files and matching info_hash.
+     * Returns validation report with counts of valid/missing/mismatched files.
+     */
+    public function verifyTorrentFileIntegrity(int $offset = 0, int $limit = 500): array
+    {
+        $this->log("Starting torrent file integrity verification (offset={$offset}, limit={$limit})");
+
+        try {
+            $torrents = DB::table('torrents')
+                ->select(['id', 'info_hash', 'file_name'])
+                ->orderBy('id')
+                ->offset($offset)
+                ->limit($limit)
+                ->get();
+
+            $fetched = $torrents->count();
+            $valid = 0;
+            $missing = 0;
+            $hashMismatch = 0;
+            $errors = [];
+
+            $filesDir = storage_path('app/files/torrents/files');
+
+            foreach ($torrents as $torrent) {
+                $filePath = $filesDir . \DIRECTORY_SEPARATOR . $torrent->file_name;
+
+                // Check if file exists
+                if (!file_exists($filePath)) {
+                    $missing++;
+                    $errors[] = "Torrent #{$torrent->id} ({$torrent->file_name}): FILE NOT FOUND";
+                    continue;
+                }
+
+                // Verify info_hash matches actual file content
+                try {
+                    $fileContent = file_get_contents($filePath);
+                    $decoded = Bencode::decode($fileContent);
+                    
+                    if ($decoded && isset($decoded['info'])) {
+                        // Get infohash from the actual file (returns binary SHA1)
+                        $calculatedHashBinary = Bencode::get_infohash($decoded);
+                        // Convert to hex for comparison with database
+                        $calculatedHash = strtolower(bin2hex($calculatedHashBinary));
+                        $storedHash = strtolower($torrent->info_hash);
+
+                        if ($calculatedHash !== $storedHash) {
+                            $hashMismatch++;
+                            $errors[] = "Torrent #{$torrent->id}: INFO_HASH MISMATCH (db={$storedHash}, file={$calculatedHash})";
+                        } else {
+                            $valid++;
+                        }
+                    } else {
+                        $hashMismatch++;
+                        $errors[] = "Torrent #{$torrent->id}: INVALID TORRENT FILE (missing 'info' dict)";
+                    }
+                } catch (\Throwable $e) {
+                    $hashMismatch++;
+                    $errors[] = "Torrent #{$torrent->id}: ERROR PARSING FILE - {$e->getMessage()}";
+                }
+            }
+
+            $this->log("Integrity check: {$valid} valid, {$missing} missing, {$hashMismatch} hash mismatches");
+
+            if (!empty($errors)) {
+                foreach (array_slice($errors, 0, 10) as $error) {
+                    $this->log("  ⚠️ {$error}");
+                }
+                if (count($errors) > 10) {
+                    $this->log("  ... and " . (count($errors) - 10) . " more errors");
+                }
+            }
+
+            return [
+                'success'        => true,
+                'valid'          => $valid,
+                'missing'        => $missing,
+                'hash_mismatch'  => $hashMismatch,
+                'total'          => $fetched,
+                'done'           => $fetched < $limit,
+                'errors'         => $errors,
+                'logs'           => $this->migrationLog,
+            ];
+        } catch (\Throwable $e) {
+            $msg = $this->formatError($e);
+            $this->log('Integrity verification failed: ' . $msg);
+
+            return ['success' => false, 'error' => $msg, 'done' => true, 'logs' => $this->migrationLog];
+        }
     }
 
     private function formatError(\Throwable $e): string

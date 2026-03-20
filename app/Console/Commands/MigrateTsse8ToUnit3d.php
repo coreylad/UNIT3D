@@ -37,6 +37,10 @@ class MigrateTsse8ToUnit3d extends Command
                             {--page-size=500 : Batch/page size for paginated stages}
                             {--offset=0 : Starting offset for paginated stages}
                             {--group-map= : Optional JSON source_group_id->unit3d_group_id map (users only)}
+                            {--source-torrent-path= : Path to TSSE8 torrent files directory (for --copy-files)}
+                            {--source-images-path= : Path to TSSE8 images directory (for --copy-images)}
+                            {--copy-files : Copy .torrent files from source during torrents migration}
+                            {--copy-images : Copy torrent cover and banner images from source}
                             {--force : Reconcile existing users by username and update imported stats}
                             {--dry-run : Dry-run users/torrents only}';
 
@@ -54,7 +58,8 @@ class MigrateTsse8ToUnit3d extends Command
 
     final public function handle(): int
     {
-        $allowedTables = ['users', 'torrents', 'peers', 'snatched', 'comments', 'forums', 'forum_threads', 'forum_posts', 'cleanup_torrent_descriptions'];
+        $allowedTables = ['users', 'torrents', 'peers', 'snatched', 'comments', 'forums', 'forum_threads', 'forum_posts', 'cleanup_torrent_descriptions', 'verify_torrent_files'];
+
 
         $sourceConfig = [
             'host'     => (string) $this->option('host'),
@@ -78,7 +83,7 @@ class MigrateTsse8ToUnit3d extends Command
             return self::FAILURE;
         }
 
-        $requiresSourceConnection = array_values(array_diff($tables, ['cleanup_torrent_descriptions'])) !== [];
+        $requiresSourceConnection = array_values(array_diff($tables, ['cleanup_torrent_descriptions', 'verify_torrent_files'])) !== [];
 
         if ($requiresSourceConnection) {
             foreach (['host', 'database', 'username', 'password'] as $required) {
@@ -94,6 +99,30 @@ class MigrateTsse8ToUnit3d extends Command
         $initialOffset = max(0, (int) $this->option('offset'));
         $dryRun = (bool) $this->option('dry-run');
         $force = (bool) $this->option('force');
+        $copyFiles = (bool) $this->option('copy-files');
+        $copyImages = (bool) $this->option('copy-images');
+        $sourceTorrentPath = (string) ($this->option('source-torrent-path') ?? '');
+        $sourceImagesPath = (string) ($this->option('source-images-path') ?? '');
+
+        if ($copyFiles && $sourceTorrentPath === '') {
+            $this->error('--copy-files requires --source-torrent-path to be specified.');
+            return self::FAILURE;
+        }
+
+        if ($copyImages && $sourceImagesPath === '') {
+            $this->error('--copy-images requires --source-images-path to be specified.');
+            return self::FAILURE;
+        }
+
+        if ($copyFiles && !in_array('torrents', $tables, true)) {
+            $this->warn('--copy-files ignored: torrents table not in migration stages.');
+            $copyFiles = false;
+        }
+
+        if ($copyImages && !in_array('torrents', $tables, true)) {
+            $this->warn('--copy-images ignored: torrents table not in migration stages.');
+            $copyImages = false;
+        }
 
         $groupMap = [];
         $rawGroupMap = (string) ($this->option('group-map') ?? '');
@@ -151,16 +180,57 @@ class MigrateTsse8ToUnit3d extends Command
                 }
 
                 if ($table === 'torrents') {
+                    if ($copyFiles) {
+                        $this->info('File copying enabled. Validating source directory ...');
+                        if (!is_dir($sourceTorrentPath)) {
+                            $this->error("Source torrent path not found: {$sourceTorrentPath}");
+                            return self::FAILURE;
+                        }
+                        $this->info("Source directory verified: {$sourceTorrentPath}");
+                    }
+
+                    if ($copyImages) {
+                        $this->info('Image copying enabled. Validating source directory ...');
+                        if (!is_dir($sourceImagesPath)) {
+                            $this->error("Source images path not found: {$sourceImagesPath}");
+                            return self::FAILURE;
+                        }
+                        $this->info("Source images directory verified: {$sourceImagesPath}");
+                    }
+
                     $offset = $initialOffset;
                     do {
-                        $result = $this->migrationService->migrateTorrents($sourceConfig, $offset, $pageSize, $dryRun);
+                        $result = $this->migrationService->migrateTorrents(
+                            $sourceConfig,
+                            $offset,
+                            $pageSize,
+                            $dryRun,
+                            $copyFiles ? $sourceTorrentPath : null,
+                            $copyImages ? $sourceImagesPath : null
+                        );
                         if (($result['success'] ?? false) !== true) {
                             $this->error(($result['error'] ?? 'Torrent migration failed without message.'));
 
                             return self::FAILURE;
                         }
 
-                        $this->info("torrents: migrated {$result['count']}, skipped {$result['skipped']} (offset {$offset})");
+                        $imported = $result['count'] ?? 0;
+                        $skipped = $result['skipped'] ?? 0;
+                        $filesCopied = $result['files_copied'] ?? 0;
+                        $filesMissing = $result['files_missing'] ?? 0;
+                        $imagesCopied = $result['images_copied'] ?? 0;
+                        $imagesMissing = $result['images_missing'] ?? 0;
+
+                        $summary = "torrents: migrated {$imported}, skipped {$skipped}";
+                        if ($copyFiles) {
+                            $summary .= " | files: copied {$filesCopied}, missing {$filesMissing}";
+                        }
+                        if ($copyImages) {
+                            $summary .= " | images: copied {$imagesCopied}, missing {$imagesMissing}";
+                        }
+                        $summary .= " (offset {$offset})";
+
+                        $this->info($summary);
                         gc_collect_cycles();
                         $offset += $pageSize;
                     } while (($result['done'] ?? true) !== true);
@@ -182,6 +252,59 @@ class MigrateTsse8ToUnit3d extends Command
                         gc_collect_cycles();
                         $offset += $pageSize;
                     } while (($result['done'] ?? true) !== true);
+
+                    continue;
+                }
+
+                if ($table === 'verify_torrent_files') {
+                    $this->info('Verifying torrent file integrity and info_hash consistency...');
+                    $offset = $initialOffset;
+                    $totalValid = 0;
+                    $totalMissing = 0;
+                    $totalMismatch = 0;
+
+                    do {
+                        $result = $this->migrationService->verifyTorrentFileIntegrity($offset, $pageSize);
+                        if (($result['success'] ?? false) !== true) {
+                            $this->error(($result['error'] ?? 'Torrent verification failed without message.'));
+
+                            return self::FAILURE;
+                        }
+
+                        $valid = $result['valid'] ?? 0;
+                        $missing = $result['missing'] ?? 0;
+                        $mismatch = $result['hash_mismatch'] ?? 0;
+
+                        $totalValid += $valid;
+                        $totalMissing += $missing;
+                        $totalMismatch += $mismatch;
+
+                        if ($missing > 0 || $mismatch > 0) {
+                            $this->warn("verify_torrent_files: {$valid} valid, {$missing} MISSING, {$mismatch} HASH MISMATCHES (offset {$offset})");
+                        } else {
+                            $this->info("verify_torrent_files: {$valid} valid (offset {$offset})");
+                        }
+
+                        gc_collect_cycles();
+                        $offset += $pageSize;
+                    } while (($result['done'] ?? true) !== true);
+
+                    $this->newLine();
+                    $this->info("=== Verification Summary ===");
+                    $this->info("✓ Valid torrents: {$totalValid}");
+                    if ($totalMissing > 0) {
+                        $this->error("✗ Missing files: {$totalMissing} (users CANNOT download/seed these torrents)");
+                    }
+                    if ($totalMismatch > 0) {
+                        $this->error("✗ Hash mismatches: {$totalMismatch} (info_hash does NOT match file content)");
+                    }
+
+                    if ($totalMissing === 0 && $totalMismatch === 0) {
+                        $this->info("🎉 All torrent files are valid and consistent!");
+                    } else {
+                        $this->warn("⚠️  Some torrent files have issues. Migration is incomplete.");
+                        $this->line("See MIGRATION_TORRENT_FILES.md for recovery instructions.");
+                    }
 
                     continue;
                 }
@@ -221,16 +344,39 @@ class MigrateTsse8ToUnit3d extends Command
                 }
 
                 if ($table === 'comments') {
+                    if ($copyFiles) {
+                        $this->info('File copying enabled. Validating source directory ...');
+                        if (!is_dir($sourceTorrentPath)) {
+                            $this->error("Source torrent path not found: {$sourceTorrentPath}");
+                            return self::FAILURE;
+                        }
+                        $this->info("Source directory verified: {$sourceTorrentPath}");
+                    }
+
                     $offset = $initialOffset;
                     do {
-                        $result = $this->migrationService->migrateComments($sourceConfig, $offset, $pageSize);
+                        $result = $this->migrationService->migrateTorrents(
+                            $sourceConfig,
+                            $offset,
+                            $pageSize,
+                            $dryRun,
+                            $copyFiles ? $sourceTorrentPath : null
+                        );
                         if (($result['success'] ?? false) !== true) {
-                            $this->error(($result['error'] ?? 'Comments migration failed without message.'));
+                            $this->error(($result['error'] ?? 'Torrent migration failed without message.'));
 
                             return self::FAILURE;
                         }
 
-                        $this->info("comments: migrated {$result['count']} (offset {$offset})");
+                        $imported = $result['count'] ?? 0;
+                        $filesCopied = $result['files_copied'] ?? 0;
+                        $filesMissing = $result['files_missing'] ?? 0;
+
+                        if ($copyFiles) {
+                            $this->info("torrents: migrated {$imported} torrents, copied {$filesCopied} files, {$filesMissing} missing (offset {$offset})");
+                        } else {
+                            $this->info("torrents: migrated {$imported} (offset {$offset})");
+                        }
                         gc_collect_cycles();
                         $offset += $pageSize;
                     } while (($result['done'] ?? true) !== true);
