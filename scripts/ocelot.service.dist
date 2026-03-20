@@ -1,0 +1,16 @@
+[Unit]
+Description=Ocelot BitTorrent Tracker
+After=network.target mysql.service mariadb.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/etc/ocelot
+ExecStart=/usr/local/bin/ocelot -c /etc/ocelot/ocelot.conf
+Restart=always
+RestartSec=2
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target

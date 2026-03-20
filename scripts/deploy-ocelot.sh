@@ -9,6 +9,31 @@ MODE="ocelot"
 START_CONTAINER="false"
 TRACKER_URL=""
 
+extract_host_port_from_url() {
+  local url="$1"
+  local authority
+  local host
+  local port
+
+  authority="${url#*://}"
+  authority="${authority%%/*}"
+
+  if [[ "$authority" == *":"* ]]; then
+    host="${authority%%:*}"
+    port="${authority##*:}"
+  else
+    host="$authority"
+
+    if [[ "$url" == https://* ]]; then
+      port="443"
+    else
+      port="80"
+    fi
+  fi
+
+  printf '%s;%s\n' "$host" "$port"
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --internal)
@@ -61,16 +86,26 @@ set_env_value() {
 if [[ "$MODE" == "internal" ]]; then
   set_env_value "ANNOUNCE_DRIVER" "internal"
   set_env_value "TRACKER_EXTERNAL_ENABLED" "false"
+  set_env_value "TRACKER_HOST" ""
+  set_env_value "TRACKER_PORT" ""
+  set_env_value "TRACKER_UNIX_SOCKET" ""
+  set_env_value "TRACKER_KEY" ""
 
   echo "Tracker mode set to internal."
 else
   if [[ -z "$TRACKER_URL" ]]; then
-    TRACKER_URL="http://127.0.0.1:3400/announce/{passkey}"
+    TRACKER_URL="http://127.0.0.1:3400/{passkey}/announce"
   fi
+
+  IFS=';' read -r TRACKER_HOST TRACKER_PORT <<< "$(extract_host_port_from_url "$TRACKER_URL")"
 
   set_env_value "ANNOUNCE_DRIVER" "ocelot"
   set_env_value "OCELOT_ANNOUNCE_URL" "$TRACKER_URL"
-  set_env_value "TRACKER_EXTERNAL_ENABLED" "false"
+  set_env_value "TRACKER_EXTERNAL_ENABLED" "true"
+  set_env_value "TRACKER_HOST" "$TRACKER_HOST"
+  set_env_value "TRACKER_PORT" "$TRACKER_PORT"
+  set_env_value "TRACKER_UNIX_SOCKET" ""
+  set_env_value "TRACKER_KEY" ""
 
   echo "Ocelot tracker configured: $TRACKER_URL"
 

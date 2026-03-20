@@ -40,6 +40,7 @@
         "spatie/ssl-certificate": "^2.6.10",
         "symfony/dom-crawler": "^6.4.25",
         "theodorejb/polycast": "dev-master",
+        "predis/predis": "^2.3",
         "vstelmakh/url-highlight": "^3.1.2"
     },
     "require-dev": {

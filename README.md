@@ -44,9 +44,17 @@ Linux is the default deployment target for BAS3D.
 
 Fastest production setup (one command):
 
-`bash scripts/ocelot.sh "https://tracker.example.com/announce/{passkey}"`
+`bash scripts/ocelot.sh "https://tracker.example.com/{passkey}/announce"`
 
 This updates `.env` (`ANNOUNCE_DRIVER=ocelot`, `OCELOT_ANNOUNCE_URL=...`) and clears Laravel caches.
+
+Native upstream Ocelot (build + systemd service) installer:
+
+`sudo bash scripts/install-ocelot-service.sh --mysql-host 127.0.0.1 --mysql-user unit3d --mysql-pass "YOUR_DB_PASSWORD" --mysql-db unit3d --listen-port 3400`
+
+Native upstream Ocelot uninstall/rollback:
+
+`sudo bash scripts/uninstall-ocelot-service.sh`
 
 After switching drivers, re-download `.torrent` files so clients receive the new announce URL.
 
@@ -75,25 +83,54 @@ You have two deployment patterns:
 
 - **Remote/existing Ocelot service**
     - Use a URL such as:
-        - `https://tracker.example.com/announce/{passkey}`
+        - `https://tracker.example.com/{passkey}/announce`
 - **Local Ocelot sidecar on the same host**
     - Use:
-        - `http://127.0.0.1:3400/announce/{passkey}`
+        - `http://127.0.0.1:3400/{passkey}/announce`
 
 ##### 3) Switch BAS3D to Ocelot Driver
 
 Run one of the following:
 
 - Remote/existing Ocelot:
-    - `bash scripts/ocelot.sh "https://tracker.example.com/announce/{passkey}"`
+    - `bash scripts/ocelot.sh "https://tracker.example.com/{passkey}/announce"`
 - Local sidecar URL:
-    - `bash scripts/ocelot.sh "http://127.0.0.1:3400/announce/{passkey}"`
+    - `bash scripts/ocelot.sh "http://127.0.0.1:3400/{passkey}/announce"`
 
 This writes:
 
 - `ANNOUNCE_DRIVER=ocelot`
 - `OCELOT_ANNOUNCE_URL=...`
-- `TRACKER_EXTERNAL_ENABLED=false`
+- `TRACKER_EXTERNAL_ENABLED=true`
+
+##### 3.1) (Recommended) Install Native Ocelot as a systemd Service
+
+Use the built-in installer script (upstream WhatCD/Ocelot source):
+
+- `sudo bash scripts/install-ocelot-service.sh --mysql-host 127.0.0.1 --mysql-user unit3d --mysql-pass "YOUR_DB_PASSWORD" --mysql-db unit3d --listen-port 3400`
+
+What it does:
+
+- Installs build dependencies
+- Clones/updates upstream Ocelot source
+- Builds and installs Ocelot to `/usr/local/bin/ocelot`
+- Creates `/etc/ocelot/ocelot.conf` from `scripts/ocelot.conf.dist`
+- Writes and enables `ocelot.service`
+
+Validation commands:
+
+- `systemctl status ocelot.service --no-pager`
+- `journalctl -u ocelot.service -f`
+
+##### 3.2) Uninstall / Rollback Native Ocelot Service
+
+Standard uninstall (stops + disables service, removes systemd unit and binary, switches BAS3D back to internal tracker):
+
+- `sudo bash scripts/uninstall-ocelot-service.sh`
+
+Full purge (also removes Ocelot config and source checkout):
+
+- `sudo bash scripts/uninstall-ocelot-service.sh --purge-config --purge-source`
 
 ##### 4) (Optional) Start Local Ocelot Container
 

@@ -23,7 +23,7 @@ use Illuminate\Support\Facades\File;
 class UseOcelotTracker extends Command
 {
     protected $signature = 'tracker:use-ocelot
-        {announce_url? : Ocelot announce URL template. Example: https://tracker.example.com/announce/{passkey}}
+        {announce_url? : Ocelot announce URL template. Example: https://tracker.example.com/{passkey}/announce}
         {--internal : Switch back to the internal tracker}';
 
     protected $description = 'Configure announce driver for Ocelot or switch back to internal tracker';
@@ -41,6 +41,10 @@ class UseOcelotTracker extends Command
         if ($this->option('internal')) {
             $this->setEnvValue($envPath, 'ANNOUNCE_DRIVER', 'internal');
             $this->setEnvValue($envPath, 'TRACKER_EXTERNAL_ENABLED', 'false', false);
+            $this->setEnvValue($envPath, 'TRACKER_HOST', '', false);
+            $this->setEnvValue($envPath, 'TRACKER_PORT', '', false);
+            $this->setEnvValue($envPath, 'TRACKER_UNIX_SOCKET', '', false);
+            $this->setEnvValue($envPath, 'TRACKER_KEY', '', false);
 
             $this->clearConfigCache();
             $this->info('Tracker driver set to internal.');
@@ -52,14 +56,29 @@ class UseOcelotTracker extends Command
         $announceUrl = trim($announceUrl);
 
         if ($announceUrl === '') {
-            $this->error('Provide announce_url. Example: php artisan tracker:use-ocelot "https://tracker.example.com/announce/{passkey}"');
+            $this->error('Provide announce_url. Example: php artisan tracker:use-ocelot "https://tracker.example.com/{passkey}/announce"');
 
             return self::FAILURE;
         }
 
+        $parsedUrl = parse_url($announceUrl);
+
+        if (!is_array($parsedUrl) || !isset($parsedUrl['host'])) {
+            $this->error('Invalid announce_url. Expected full URL like https://tracker.example.com/announce/{passkey}');
+
+            return self::FAILURE;
+        }
+
+        $trackerHost = (string) $parsedUrl['host'];
+        $trackerPort = (string) ($parsedUrl['port'] ?? (($parsedUrl['scheme'] ?? 'http') === 'https' ? 443 : 80));
+
         $this->setEnvValue($envPath, 'ANNOUNCE_DRIVER', 'ocelot');
         $this->setEnvValue($envPath, 'OCELOT_ANNOUNCE_URL', $announceUrl);
-        $this->setEnvValue($envPath, 'TRACKER_EXTERNAL_ENABLED', 'false', false);
+        $this->setEnvValue($envPath, 'TRACKER_EXTERNAL_ENABLED', 'true', false);
+        $this->setEnvValue($envPath, 'TRACKER_HOST', $trackerHost, false);
+        $this->setEnvValue($envPath, 'TRACKER_PORT', $trackerPort, false);
+        $this->setEnvValue($envPath, 'TRACKER_UNIX_SOCKET', '', false);
+        $this->setEnvValue($envPath, 'TRACKER_KEY', '', false);
 
         $this->clearConfigCache();
         $this->info('Tracker driver set to ocelot.');

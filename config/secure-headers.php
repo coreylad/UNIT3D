@@ -1,6 +1,24 @@
 <?php
 
 declare(strict_types=1);
+
+$viteEchoAddress = env('VITE_ECHO_ADDRESS');
+$viteEchoSocketOrigins = [];
+
+if (\is_string($viteEchoAddress) && $viteEchoAddress !== '') {
+    $viteEchoHost = parse_url($viteEchoAddress, PHP_URL_HOST);
+
+    if (\is_string($viteEchoHost) && $viteEchoHost !== '') {
+        $viteEchoPort = parse_url($viteEchoAddress, PHP_URL_PORT);
+        $viteEchoPortSegment = \is_int($viteEchoPort) ? ':'.$viteEchoPort : '';
+
+        $viteEchoSocketOrigins = [
+            'https://'.$viteEchoHost.$viteEchoPortSegment.'/socket.io/',
+            'wss://'.$viteEchoHost.$viteEchoPortSegment.'/socket.io/',
+        ];
+    }
+}
+
 /**
  * NOTICE OF LICENSE.
  *
@@ -487,8 +505,7 @@ return [
             'self' => true,
 
             'allow' => [
-                'https://'.parse_url(env('VITE_ECHO_ADDRESS'), PHP_URL_HOST).(parse_url(env('VITE_ECHO_ADDRESS'), PHP_URL_PORT) === null ? '' : ':'.parse_url(env('VITE_ECHO_ADDRESS'), PHP_URL_PORT)).'/socket.io/',
-                'wss://'.parse_url(env('VITE_ECHO_ADDRESS'), PHP_URL_HOST).(parse_url(env('VITE_ECHO_ADDRESS'), PHP_URL_PORT) === null ? '' : ':'.parse_url(env('VITE_ECHO_ADDRESS'), PHP_URL_PORT)).'/socket.io/',
+                ...$viteEchoSocketOrigins,
                 'https://api.themoviedb.org/',
             ],
         ],
