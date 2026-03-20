@@ -3025,6 +3025,7 @@ class DatabaseMigrationService
             $maxStoredErrors = 200;
 
             $filesDir = storage_path('app/files/torrents/files');
+            $maxTorrentBytes = 5 * 1024 * 1024; // 5MB safety guard; normal .torrent files are typically far smaller
 
             foreach ($torrents as $torrent) {
                 $filePath = $filesDir . \DIRECTORY_SEPARATOR . $torrent->file_name;
@@ -3034,6 +3035,15 @@ class DatabaseMigrationService
                     $missing++;
                     if (count($errors) < $maxStoredErrors) {
                         $errors[] = "Torrent #{$torrent->id} ({$torrent->file_name}): FILE NOT FOUND";
+                    }
+                    continue;
+                }
+
+                $fileSize = @filesize($filePath);
+                if ($fileSize !== false && $fileSize > $maxTorrentBytes) {
+                    $hashMismatch++;
+                    if (count($errors) < $maxStoredErrors) {
+                        $errors[] = "Torrent #{$torrent->id}: SKIPPED LARGE FILE ({$fileSize} bytes)";
                     }
                     continue;
                 }
@@ -3139,6 +3149,7 @@ class DatabaseMigrationService
             $errors    = [];
             $maxStoredErrors = 200;
             $processed = 0;
+            $maxTorrentBytes = 5 * 1024 * 1024; // 5MB safety guard for malformed/abusive files
 
             // Use DirectoryIterator to avoid loading all paths into memory at once
             $iter = new \DirectoryIterator($destDir);
@@ -3153,6 +3164,15 @@ class DatabaseMigrationService
                 }
 
                 $filePath = $fileInfo->getPathname();
+
+                $fileSize = $fileInfo->getSize();
+                if ($fileSize > $maxTorrentBytes) {
+                    $noMatch++;
+                    if (count($errors) < $maxStoredErrors) {
+                        $errors[] = "Skipped large file: " . $fileInfo->getFilename() . " ({$fileSize} bytes)";
+                    }
+                    continue;
+                }
 
                 try {
                     $content = file_get_contents($filePath);
