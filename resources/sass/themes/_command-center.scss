@@ -867,7 +867,8 @@ main > article,
     box-shadow: 0 8px 24px rgba(0,0,0,.6);
     border-top-left-radius: 0;
     border-top-right-radius: 0;
-    top: 157px;
+    top: calc(100% - 5px);
+    left: 0;
     width: auto;
     padding: 0;
     background: var(--cc-bg-card-alt);

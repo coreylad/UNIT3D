@@ -885,7 +885,8 @@ a:hover {
     box-shadow: none;
     border-top-left-radius: 0;
     border-top-right-radius: 0;
-    top: 142px;
+    top: calc(100% - 5px);
+    left: 0;
     width: auto;
     padding: 0;
 }
