@@ -3304,6 +3304,8 @@ class DatabaseMigrationService
             $alreadyOk          = 0;
             $sourceMissing      = 0;
             $sourceNoHashMatch  = 0;
+            $sourceFilenameMatch = 0;
+            $hashesRepaired     = 0;
             $copyErrors         = 0;
             $errors             = [];
             $maxStoredErrors    = 200;
@@ -3352,6 +3354,7 @@ class DatabaseMigrationService
 
                 // Source lookup: info_hash(binary) -> source torrent id
                 $sourceIdByHash = [];
+                $sourceHashByHash = [];
                 $hashList       = array_keys($normalizedHashes);
 
                 if ($hashList !== []) {
@@ -3372,6 +3375,37 @@ class DatabaseMigrationService
 
                         if (strlen($sourceHash) === 40 && ctype_xdigit($sourceHash)) {
                             $sourceIdByHash[$sourceHash] = (int) $srcRow['id'];
+                            $sourceHashByHash[$sourceHash] = $sourceHash;
+                        }
+                    }
+                }
+
+                // Source lookup fallback: filename -> (id, info_hash)
+                $sourceByFilename = [];
+                $filenameList = [];
+                foreach ($rows as $row) {
+                    $filename = (string) ($row->file_name ?? '');
+                    if ($filename !== '') {
+                        $filenameList[$filename] = true;
+                    }
+                }
+
+                if ($filenameList !== []) {
+                    $filenames = array_keys($filenameList);
+                    $placeholders = implode(',', array_fill(0, count($filenames), '?'));
+                    $sourceRowsByFilename = $this->sourceQuery(
+                        "SELECT id, filename, LOWER(HEX(info_hash)) AS ih FROM torrents WHERE filename IN ({$placeholders})",
+                        $filenames
+                    );
+
+                    foreach ($sourceRowsByFilename as $srcRow) {
+                        $filename = (string) ($srcRow['filename'] ?? '');
+                        $sourceHash = strtolower((string) ($srcRow['ih'] ?? ''));
+                        if ($filename !== '' && strlen($sourceHash) === 40 && ctype_xdigit($sourceHash)) {
+                            $sourceByFilename[$filename] = [
+                                'id' => (int) $srcRow['id'],
+                                'hash' => $sourceHash,
+                            ];
                         }
                     }
                 }
@@ -3385,6 +3419,28 @@ class DatabaseMigrationService
                     }
 
                     $sourceId = $sourceIdByHash[$unitHash] ?? null;
+                    $sourceHash = $sourceHashByHash[$unitHash] ?? null;
+
+                    if ($sourceId === null) {
+                        $filename = (string) ($row->file_name ?? '');
+                        $fallback = $sourceByFilename[$filename] ?? null;
+
+                        if (is_array($fallback)) {
+                            $sourceId   = (int) ($fallback['id'] ?? 0);
+                            $sourceHash = (string) ($fallback['hash'] ?? '');
+                            $sourceFilenameMatch++;
+
+                            // Repair broken UNIT3D info_hash when filename mapping proves source row.
+                            if (strlen($sourceHash) === 40 && ctype_xdigit($sourceHash) && $unitHash !== $sourceHash) {
+                                DB::table('torrents')
+                                    ->where('id', (int) $row->id)
+                                    ->update(['info_hash' => hex2bin($sourceHash)]);
+                                $hashesRepaired++;
+                                $unitHash = $sourceHash;
+                            }
+                        }
+                    }
+
                     if ($sourceId === null) {
                         $sourceNoHashMatch++;
                         continue;
@@ -3416,7 +3472,7 @@ class DatabaseMigrationService
                 gc_collect_cycles();
             } while ($fetched === $batchSize);
 
-            $this->log("recoverTorrentFilesBySourceId complete: processed={$processed}, linked={$linked}, alreadyOk={$alreadyOk}, sourceMissing={$sourceMissing}, sourceNoHashMatch={$sourceNoHashMatch}, copyErrors={$copyErrors}");
+            $this->log("recoverTorrentFilesBySourceId complete: processed={$processed}, linked={$linked}, alreadyOk={$alreadyOk}, sourceMissing={$sourceMissing}, sourceNoHashMatch={$sourceNoHashMatch}, sourceFilenameMatch={$sourceFilenameMatch}, hashesRepaired={$hashesRepaired}, copyErrors={$copyErrors}");
 
             return [
                 'success'              => true,
@@ -3425,6 +3481,8 @@ class DatabaseMigrationService
                 'already_ok'           => $alreadyOk,
                 'source_missing'       => $sourceMissing,
                 'source_no_hash_match' => $sourceNoHashMatch,
+                'source_filename_match'=> $sourceFilenameMatch,
+                'hashes_repaired'      => $hashesRepaired,
                 'copy_errors'          => $copyErrors,
                 'errors'               => $errors,
                 'done'                 => true,

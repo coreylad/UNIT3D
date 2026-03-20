@@ -421,6 +421,8 @@ class MigrateTsse8ToUnit3d extends Command
                     $alreadyOk          = $result['already_ok'] ?? 0;
                     $sourceMissing      = $result['source_missing'] ?? 0;
                     $sourceNoHashMatch  = $result['source_no_hash_match'] ?? 0;
+                    $sourceFilenameMatch = $result['source_filename_match'] ?? 0;
+                    $hashesRepaired      = $result['hashes_repaired'] ?? 0;
                     $copyErrors         = $result['copy_errors'] ?? 0;
 
                     $this->newLine();
@@ -430,6 +432,8 @@ class MigrateTsse8ToUnit3d extends Command
                     $this->info("✓ Already present:     {$alreadyOk}");
                     $this->line("  Missing on source:   {$sourceMissing}");
                     $this->line("  No hash match in TSSE DB: {$sourceNoHashMatch}");
+                    $this->line("  Filename fallback matches: {$sourceFilenameMatch}");
+                    $this->line("  UNIT3D hashes repaired: {$hashesRepaired}");
                     $this->line("  Copy errors:         {$copyErrors}");
 
                     if (!empty($result['errors'] ?? [])) {
