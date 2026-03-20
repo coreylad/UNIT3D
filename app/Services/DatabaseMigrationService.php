@@ -3033,7 +3033,7 @@ class DatabaseMigrationService
                 // Verify info_hash matches actual file content
                 try {
                     $fileContent = file_get_contents($filePath);
-                    $decoded = Bencode::decode($fileContent);
+                    $decoded = Bencode::bdecode($fileContent);
                     
                     if ($decoded && isset($decoded['info'])) {
                         // Get infohash from the actual file (returns binary SHA1)
@@ -3138,7 +3138,7 @@ class DatabaseMigrationService
                         continue;
                     }
 
-                    $decoded = Bencode::decode($content);
+                    $decoded = Bencode::bdecode($content);
 
                     if (!$decoded || !isset($decoded['info'])) {
                         $noMatch++;
