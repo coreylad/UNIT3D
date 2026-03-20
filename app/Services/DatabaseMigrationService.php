@@ -3271,6 +3271,177 @@ class DatabaseMigrationService
         }
     }
 
+    /**
+     * Recover missing UNIT3D torrent files from a TSSE source folder that stores files as {source_id}.torrent.
+     *
+     * Matching logic:
+     * - UNIT3D torrent info_hash -> TSSE torrent id (via source DB lookup)
+     * - source file path       -> {$sourceTorrentPath}/{$sourceId}.torrent
+     * - destination file path  -> storage/app/files/torrents/files/{unit3d_file_name}
+     */
+    public function recoverTorrentFilesBySourceId(array $sourceConfig, string $sourceTorrentPath, int $batchSize = 500): array
+    {
+        $destDir = storage_path('app/files/torrents/files');
+
+        if (!is_dir($destDir)) {
+            return ['success' => false, 'error' => "Destination torrent files directory not found: {$destDir}", 'done' => true, 'logs' => $this->migrationLog];
+        }
+
+        if (!is_dir($sourceTorrentPath)) {
+            return ['success' => false, 'error' => "Source torrent path not found: {$sourceTorrentPath}", 'done' => true, 'logs' => $this->migrationLog];
+        }
+
+        $previousMemoryLimit = ini_get('memory_limit');
+        if ($previousMemoryLimit !== false) {
+            @ini_set('memory_limit', '768M');
+        }
+
+        try {
+            $this->ensureConnected($sourceConfig);
+
+            $processed          = 0;
+            $linked             = 0;
+            $alreadyOk          = 0;
+            $sourceMissing      = 0;
+            $sourceNoHashMatch  = 0;
+            $copyErrors         = 0;
+            $errors             = [];
+            $maxStoredErrors    = 200;
+
+            $offset = 0;
+
+            do {
+                $rows = DB::table('torrents')
+                    ->selectRaw('id, file_name, LOWER(HEX(info_hash)) AS ih')
+                    ->orderBy('id')
+                    ->offset($offset)
+                    ->limit($batchSize)
+                    ->get();
+
+                $fetched = $rows->count();
+                if ($fetched === 0) {
+                    break;
+                }
+
+                // Normalize UNIT3D hashes to canonical 40-char hex
+                $normalizedHashes = [];
+                $rowHashMap       = [];
+
+                foreach ($rows as $row) {
+                    $hash = strtolower((string) ($row->ih ?? ''));
+
+                    // Legacy-bad rows can appear as 80-char HEX because ASCII hex was stored in binary column.
+                    if (strlen($hash) === 80 && ctype_xdigit($hash)) {
+                        $decoded = @hex2bin($hash);
+                        if (is_string($decoded) && strlen($decoded) === 40 && ctype_xdigit($decoded)) {
+                            $hash = strtolower($decoded);
+                        }
+                    }
+
+                    if (strlen($hash) !== 40 || !ctype_xdigit($hash)) {
+                        $sourceNoHashMatch++;
+                        if (count($errors) < $maxStoredErrors) {
+                            $errors[] = "UNIT3D torrent #{$row->id}: invalid stored info_hash";
+                        }
+                        continue;
+                    }
+
+                    $rowHashMap[(int) $row->id] = $hash;
+                    $normalizedHashes[$hash]    = true;
+                }
+
+                // Source lookup: info_hash(binary) -> source torrent id
+                $sourceIdByHash = [];
+                $hashList       = array_keys($normalizedHashes);
+
+                if ($hashList !== []) {
+                    $placeholders = implode(',', array_fill(0, count($hashList), '?'));
+                    $params       = [];
+
+                    foreach ($hashList as $hexHash) {
+                        $params[] = hex2bin($hexHash);
+                    }
+
+                    $sourceRows = $this->sourceQuery(
+                        "SELECT id, LOWER(HEX(info_hash)) AS ih FROM torrents WHERE info_hash IN ({$placeholders})",
+                        $params
+                    );
+
+                    foreach ($sourceRows as $srcRow) {
+                        $sourceHash = strtolower((string) ($srcRow['ih'] ?? ''));
+
+                        if (strlen($sourceHash) === 40 && ctype_xdigit($sourceHash)) {
+                            $sourceIdByHash[$sourceHash] = (int) $srcRow['id'];
+                        }
+                    }
+                }
+
+                foreach ($rows as $row) {
+                    $processed++;
+
+                    $unitHash = $rowHashMap[(int) $row->id] ?? null;
+                    if ($unitHash === null) {
+                        continue;
+                    }
+
+                    $sourceId = $sourceIdByHash[$unitHash] ?? null;
+                    if ($sourceId === null) {
+                        $sourceNoHashMatch++;
+                        continue;
+                    }
+
+                    $sourceFile = rtrim($sourceTorrentPath, '/\\') . \DIRECTORY_SEPARATOR . $sourceId . '.torrent';
+                    if (!is_file($sourceFile)) {
+                        $sourceMissing++;
+                        continue;
+                    }
+
+                    $destPath = $destDir . \DIRECTORY_SEPARATOR . (string) $row->file_name;
+                    if (is_file($destPath)) {
+                        $alreadyOk++;
+                        continue;
+                    }
+
+                    if (@copy($sourceFile, $destPath)) {
+                        $linked++;
+                    } else {
+                        $copyErrors++;
+                        if (count($errors) < $maxStoredErrors) {
+                            $errors[] = "Copy failed for UNIT3D #{$row->id}: {$sourceFile} -> {$destPath}";
+                        }
+                    }
+                }
+
+                $offset += $batchSize;
+                gc_collect_cycles();
+            } while ($fetched === $batchSize);
+
+            $this->log("recoverTorrentFilesBySourceId complete: processed={$processed}, linked={$linked}, alreadyOk={$alreadyOk}, sourceMissing={$sourceMissing}, sourceNoHashMatch={$sourceNoHashMatch}, copyErrors={$copyErrors}");
+
+            return [
+                'success'              => true,
+                'processed'            => $processed,
+                'linked'               => $linked,
+                'already_ok'           => $alreadyOk,
+                'source_missing'       => $sourceMissing,
+                'source_no_hash_match' => $sourceNoHashMatch,
+                'copy_errors'          => $copyErrors,
+                'errors'               => $errors,
+                'done'                 => true,
+                'logs'                 => $this->migrationLog,
+            ];
+        } catch (\Throwable $e) {
+            $msg = $this->formatError($e);
+            $this->log('recoverTorrentFilesBySourceId failed: ' . $msg);
+
+            return ['success' => false, 'error' => $msg, 'done' => true, 'logs' => $this->migrationLog];
+        } finally {
+            if ($previousMemoryLimit !== false) {
+                @ini_set('memory_limit', (string) $previousMemoryLimit);
+            }
+        }
+    }
+
     private function formatError(\Throwable $e): string
     {
         return sprintf(

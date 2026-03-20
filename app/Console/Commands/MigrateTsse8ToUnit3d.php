@@ -70,6 +70,7 @@ class MigrateTsse8ToUnit3d extends Command
             'cleanup_torrent_descriptions',
             'verify_torrent_files',
             'relink_torrent_files',
+            'recover_torrent_files_by_source_id',
         ];
 
         $sourceConfig = [
@@ -129,6 +130,12 @@ class MigrateTsse8ToUnit3d extends Command
 
         if ($copyImages && $sourceImagesPath === '') {
             $this->error('--copy-images requires --source-images-path to be specified.');
+
+            return self::FAILURE;
+        }
+
+        if (in_array('recover_torrent_files_by_source_id', $tables, true) && $sourceTorrentPath === '') {
+            $this->error('recover_torrent_files_by_source_id requires --source-torrent-path to be specified.');
 
             return self::FAILURE;
         }
@@ -387,6 +394,51 @@ class MigrateTsse8ToUnit3d extends Command
                     if ($linked > 0) {
                         $this->info('Re-run --tables=verify_torrent_files to confirm all files are now valid.');
                     }
+
+                    continue;
+                }
+
+                // ── recover_torrent_files_by_source_id ───────────────────────────────
+                if ($table === 'recover_torrent_files_by_source_id') {
+                    $this->info('Recovering UNIT3D torrent files using TSSE source id.torrent naming...');
+
+                    if (!is_dir($sourceTorrentPath)) {
+                        $this->error("Source torrent path not found: {$sourceTorrentPath}");
+
+                        return self::FAILURE;
+                    }
+
+                    $result = $this->migrationService->recoverTorrentFilesBySourceId($sourceConfig, $sourceTorrentPath, $pageSize);
+
+                    if (($result['success'] ?? false) !== true) {
+                        $this->error($result['error'] ?? 'Recovery failed without message.');
+
+                        return self::FAILURE;
+                    }
+
+                    $processed          = $result['processed'] ?? 0;
+                    $linked             = $result['linked'] ?? 0;
+                    $alreadyOk          = $result['already_ok'] ?? 0;
+                    $sourceMissing      = $result['source_missing'] ?? 0;
+                    $sourceNoHashMatch  = $result['source_no_hash_match'] ?? 0;
+                    $copyErrors         = $result['copy_errors'] ?? 0;
+
+                    $this->newLine();
+                    $this->info('=== Source-ID Recovery Summary ===');
+                    $this->info("UNIT3D torrents scanned: {$processed}");
+                    $this->info("✓ Newly recovered:     {$linked}");
+                    $this->info("✓ Already present:     {$alreadyOk}");
+                    $this->line("  Missing on source:   {$sourceMissing}");
+                    $this->line("  No hash match in TSSE DB: {$sourceNoHashMatch}");
+                    $this->line("  Copy errors:         {$copyErrors}");
+
+                    if (!empty($result['errors'] ?? [])) {
+                        foreach (array_slice($result['errors'], 0, 10) as $err) {
+                            $this->warn("  ⚠ {$err}");
+                        }
+                    }
+
+                    $this->info('Re-run --tables=verify_torrent_files to confirm final file integrity.');
 
                     continue;
                 }
