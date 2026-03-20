@@ -3004,6 +3004,11 @@ class DatabaseMigrationService
     {
         $this->log("Starting torrent file integrity verification (offset={$offset}, limit={$limit})");
 
+        $previousMemoryLimit = ini_get('memory_limit');
+        if ($previousMemoryLimit !== false) {
+            @ini_set('memory_limit', '768M');
+        }
+
         try {
             $torrents = DB::table('torrents')
                 ->selectRaw('id, LOWER(HEX(info_hash)) AS info_hash, file_name')
@@ -3017,6 +3022,7 @@ class DatabaseMigrationService
             $missing = 0;
             $hashMismatch = 0;
             $errors = [];
+            $maxStoredErrors = 200;
 
             $filesDir = storage_path('app/files/torrents/files');
 
@@ -3026,7 +3032,9 @@ class DatabaseMigrationService
                 // Check if file exists
                 if (!file_exists($filePath)) {
                     $missing++;
-                    $errors[] = "Torrent #{$torrent->id} ({$torrent->file_name}): FILE NOT FOUND";
+                    if (count($errors) < $maxStoredErrors) {
+                        $errors[] = "Torrent #{$torrent->id} ({$torrent->file_name}): FILE NOT FOUND";
+                    }
                     continue;
                 }
 
@@ -3044,17 +3052,23 @@ class DatabaseMigrationService
 
                         if ($calculatedHash !== $storedHash) {
                             $hashMismatch++;
-                            $errors[] = "Torrent #{$torrent->id}: INFO_HASH MISMATCH (db={$storedHash}, file={$calculatedHash})";
+                            if (count($errors) < $maxStoredErrors) {
+                                $errors[] = "Torrent #{$torrent->id}: INFO_HASH MISMATCH (db={$storedHash}, file={$calculatedHash})";
+                            }
                         } else {
                             $valid++;
                         }
                     } else {
                         $hashMismatch++;
-                        $errors[] = "Torrent #{$torrent->id}: INVALID TORRENT FILE (missing 'info' dict)";
+                        if (count($errors) < $maxStoredErrors) {
+                            $errors[] = "Torrent #{$torrent->id}: INVALID TORRENT FILE (missing 'info' dict)";
+                        }
                     }
                 } catch (\Throwable $e) {
                     $hashMismatch++;
-                    $errors[] = "Torrent #{$torrent->id}: ERROR PARSING FILE - {$e->getMessage()}";
+                    if (count($errors) < $maxStoredErrors) {
+                        $errors[] = "Torrent #{$torrent->id}: ERROR PARSING FILE - {$e->getMessage()}";
+                    }
                 }
             }
 
@@ -3084,6 +3098,10 @@ class DatabaseMigrationService
             $this->log('Integrity verification failed: ' . $msg);
 
             return ['success' => false, 'error' => $msg, 'done' => true, 'logs' => $this->migrationLog];
+        } finally {
+            if ($previousMemoryLimit !== false) {
+                @ini_set('memory_limit', (string) $previousMemoryLimit);
+            }
         }
     }
 
@@ -3097,6 +3115,11 @@ class DatabaseMigrationService
     public function relinkTorrentFiles(int $batchSize = 1000): array
     {
         $destDir = storage_path('app/files/torrents/files');
+
+        $previousMemoryLimit = ini_get('memory_limit');
+        if ($previousMemoryLimit !== false) {
+            @ini_set('memory_limit', '768M');
+        }
 
         if (!is_dir($destDir)) {
             return ['success' => false, 'error' => "Torrent files directory not found: {$destDir}", 'done' => true, 'logs' => $this->migrationLog];
@@ -3114,6 +3137,7 @@ class DatabaseMigrationService
             $alreadyOk = 0;
             $noMatch   = 0;
             $errors    = [];
+            $maxStoredErrors = 200;
             $processed = 0;
 
             // Use DirectoryIterator to avoid loading all paths into memory at once
@@ -3142,7 +3166,9 @@ class DatabaseMigrationService
 
                     if (!$decoded || !isset($decoded['info'])) {
                         $noMatch++;
-                        $errors[] = "Invalid bencode in: " . $fileInfo->getFilename();
+                        if (count($errors) < $maxStoredErrors) {
+                            $errors[] = "Invalid bencode in: " . $fileInfo->getFilename();
+                        }
                         continue;
                     }
 
@@ -3165,10 +3191,14 @@ class DatabaseMigrationService
                     if (copy($filePath, $destPath)) {
                         $linked++;
                     } else {
-                        $errors[] = "Copy failed: {$filePath} → {$destPath}";
+                        if (count($errors) < $maxStoredErrors) {
+                            $errors[] = "Copy failed: {$filePath} → {$destPath}";
+                        }
                     }
                 } catch (\Throwable $e) {
-                    $errors[] = "Error on " . $fileInfo->getFilename() . ": " . $e->getMessage();
+                    if (count($errors) < $maxStoredErrors) {
+                        $errors[] = "Error on " . $fileInfo->getFilename() . ": " . $e->getMessage();
+                    }
                 }
 
                 $processed++;
@@ -3196,6 +3226,10 @@ class DatabaseMigrationService
             $this->log('relinkTorrentFiles failed: ' . $msg);
 
             return ['success' => false, 'error' => $msg, 'done' => true, 'logs' => $this->migrationLog];
+        } finally {
+            if ($previousMemoryLimit !== false) {
+                @ini_set('memory_limit', (string) $previousMemoryLimit);
+            }
         }
     }
 
