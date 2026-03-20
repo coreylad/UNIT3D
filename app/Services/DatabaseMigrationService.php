@@ -1038,7 +1038,7 @@ class DatabaseMigrationService
                     $batch[$infoHash] = [
                         'name'            => $name,
                         'slug'            => $slug,
-                        'description'     => (string) ($torrent['descr'] ?? ''),
+                        'description'     => $this->normalizeImportedTorrentDescription($torrent['descr'] ?? ''),
                         'info_hash'       => $infoHash,
                         'file_name'       => (string) ($torrent['filename'] ?? ($slug . '.torrent')),
                         'num_file'        => max(1, (int) ($torrent['numfiles'] ?? 1)),
@@ -1099,6 +1099,67 @@ class DatabaseMigrationService
         } catch (\Throwable $e) {
             $msg = $this->formatError($e);
             $this->log('Torrent migration failed: ' . $msg);
+
+            return ['success' => false, 'error' => $msg, 'done' => true, 'logs' => $this->migrationLog];
+        }
+    }
+
+    public function cleanupImportedTorrentDescriptions(int $offset = 0, int $limit = 500, bool $dryRun = false): array
+    {
+        $this->log("Starting torrent description cleanup (offset={$offset}, limit={$limit})" . ($dryRun ? ' [DRY RUN]' : ''));
+
+        try {
+            $rows = DB::table('torrents')
+                ->select(['id', 'description'])
+                ->whereNotNull('description')
+                ->where('description', '<>', '')
+                ->orderBy('id')
+                ->offset($offset)
+                ->limit($limit)
+                ->get();
+
+            $fetched = $rows->count();
+            $updated = 0;
+            $skipped = 0;
+
+            foreach ($rows as $row) {
+                $description = (string) ($row->description ?? '');
+
+                if (!$this->looksLikeImportedTorrentDescriptionMarkup($description)) {
+                    $skipped++;
+
+                    continue;
+                }
+
+                $normalized = $this->normalizeImportedTorrentDescription($description);
+
+                if ($normalized === '' || $normalized === $this->normalizeImportedDescriptionWhitespace($description)) {
+                    $skipped++;
+
+                    continue;
+                }
+
+                if (!$dryRun) {
+                    DB::table('torrents')
+                        ->where('id', '=', $row->id)
+                        ->update(['description' => $normalized]);
+                }
+
+                $updated++;
+            }
+
+            $this->log("Torrent description cleanup: {$updated} updated, {$skipped} skipped (offset={$offset})");
+
+            return [
+                'success' => true,
+                'count'   => $updated,
+                'skipped' => $skipped,
+                'done'    => $fetched < $limit,
+                'logs'    => $this->migrationLog,
+            ];
+        } catch (\Throwable $e) {
+            $msg = $this->formatError($e);
+            $this->log('Torrent description cleanup failed: ' . $msg);
 
             return ['success' => false, 'error' => $msg, 'done' => true, 'logs' => $this->migrationLog];
         }
@@ -2542,6 +2603,187 @@ class DatabaseMigrationService
         }
 
         return $this->targetTableColumns[$table] = $columns;
+    }
+
+    private function normalizeImportedTorrentDescription(?string $description): string
+    {
+        $description = str_replace(["\r\n", "\r"], "\n", trim((string) $description));
+
+        if ($description === '') {
+            return '';
+        }
+
+        if (!preg_match('/<[^>]+>/', $description)) {
+            return $this->normalizeImportedDescriptionWhitespace(
+                html_entity_decode($description, ENT_QUOTES | ENT_HTML5, 'UTF-8')
+            );
+        }
+
+        try {
+            $dom = new \DOMDocument('1.0', 'UTF-8');
+
+            libxml_use_internal_errors(true);
+            $loaded = $dom->loadHTML(
+                '<?xml encoding="utf-8" ?><div>'.$description.'</div>',
+                LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD
+            );
+            libxml_clear_errors();
+
+            if (!$loaded || $dom->documentElement === null) {
+                return $this->stripImportedDescriptionHtml($description);
+            }
+
+            $normalized = '';
+
+            foreach ($dom->documentElement->childNodes as $node) {
+                $normalized .= $this->convertImportedDescriptionNodeToBbcode($node);
+            }
+
+            $normalized = $this->normalizeImportedDescriptionWhitespace($normalized);
+
+            return $normalized !== '' ? $normalized : $this->stripImportedDescriptionHtml($description);
+        } catch (\Throwable $e) {
+            $this->log('Description normalization fallback triggered: '.$this->formatError($e));
+
+            return $this->stripImportedDescriptionHtml($description);
+        }
+    }
+
+    private function convertImportedDescriptionNodeToBbcode(\DOMNode $node): string
+    {
+        if ($node->nodeType === XML_TEXT_NODE || $node->nodeType === XML_CDATA_SECTION_NODE) {
+            return html_entity_decode($node->nodeValue ?? '', ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        }
+
+        if ($node->nodeType !== XML_ELEMENT_NODE) {
+            return '';
+        }
+
+        $tag = strtolower($node->nodeName);
+        $content = '';
+
+        foreach ($node->childNodes as $childNode) {
+            $content .= $this->convertImportedDescriptionNodeToBbcode($childNode);
+        }
+
+        $trimmedContent = trim($content);
+
+        return match ($tag) {
+            'br' => "\n",
+            'p', 'div', 'section', 'article', 'header', 'footer' => $trimmedContent !== '' ? $trimmedContent."\n\n" : '',
+            'span' => $this->wrapImportedSpanStyles($node, $content),
+            'strong', 'b' => $trimmedContent !== '' ? '[b]'.$trimmedContent.'[/b]' : '',
+            'em', 'i' => $trimmedContent !== '' ? '[i]'.$trimmedContent.'[/i]' : '',
+            'u' => $trimmedContent !== '' ? '[u]'.$trimmedContent.'[/u]' : '',
+            's', 'strike', 'del' => $trimmedContent !== '' ? '[s]'.$trimmedContent.'[/s]' : '',
+            'blockquote' => $trimmedContent !== '' ? '[quote]'.$trimmedContent.'[/quote]'."\n\n" : '',
+            'pre', 'code' => $trimmedContent !== '' ? '[code]'.trim($node->textContent).'[/code]'."\n\n" : '',
+            'h1', 'h2', 'h3', 'h4', 'h5', 'h6' => $trimmedContent !== '' ? '['.$tag.']'.$trimmedContent.'[/'.$tag.']' . "\n\n" : '',
+            'a' => $this->convertImportedLinkNodeToBbcode($node, $trimmedContent),
+            'img' => $this->convertImportedImageNodeToBbcode($node),
+            'ul' => $trimmedContent !== '' ? '[list]' . "\n" . trim($content) . '[/list]' . "\n\n" : '',
+            'ol' => $trimmedContent !== '' ? '['.$this->resolveImportedOrderedListTag($node).']' . "\n" . trim($content) . '[/list]' . "\n\n" : '',
+            'li' => $trimmedContent !== '' ? '[*] '.$trimmedContent."\n" : '',
+            'table' => $trimmedContent !== '' ? '[table]' . "\n" . trim($content) . '[/table]' . "\n\n" : '',
+            'tr' => $trimmedContent !== '' ? '[tr]'.trim($content).'[/tr]' . "\n" : '',
+            'th' => $trimmedContent !== '' ? '[th]'.$trimmedContent.'[/th]' : '',
+            'td' => $trimmedContent !== '' ? '[td]'.$trimmedContent.'[/td]' : '',
+            default => $content,
+        };
+    }
+
+    private function wrapImportedSpanStyles(\DOMNode $node, string $content): string
+    {
+        if (!$node instanceof \DOMElement) {
+            return $content;
+        }
+
+        $style = strtolower((string) $node->getAttribute('style'));
+
+        if ($style === '') {
+            return $content;
+        }
+
+        $wrapped = $content;
+
+        if (preg_match('/color\s*:\s*([^;]+)/', $style, $matches) === 1) {
+            $color = trim($matches[1], " \t\n\r\0\x0B\"'");
+            if ($color !== '') {
+                $wrapped = '[color='.$color.']'.$wrapped.'[/color]';
+            }
+        }
+
+        if (preg_match('/font-size\s*:\s*(\d+)px/', $style, $matches) === 1) {
+            $size = (int) $matches[1];
+            if ($size > 0) {
+                $wrapped = '[size='.$size.']'.$wrapped.'[/size]';
+            }
+        }
+
+        return $wrapped;
+    }
+
+    private function convertImportedLinkNodeToBbcode(\DOMNode $node, string $content): string
+    {
+        if (!$node instanceof \DOMElement) {
+            return $content;
+        }
+
+        $href = trim((string) $node->getAttribute('href'));
+
+        if ($href === '') {
+            return $content;
+        }
+
+        return $content !== '' ? '[url='.$href.']'.$content.'[/url]' : '[url]'.$href.'[/url]';
+    }
+
+    private function convertImportedImageNodeToBbcode(\DOMNode $node): string
+    {
+        if (!$node instanceof \DOMElement) {
+            return '';
+        }
+
+        $src = trim((string) $node->getAttribute('src'));
+
+        return $src !== '' ? '[img]'.$src.'[/img]' : '';
+    }
+
+    private function resolveImportedOrderedListTag(\DOMNode $node): string
+    {
+        if (!$node instanceof \DOMElement) {
+            return 'list=1';
+        }
+
+        return strtolower((string) $node->getAttribute('type')) === 'a' ? 'list=a' : 'list=1';
+    }
+
+    private function stripImportedDescriptionHtml(string $description): string
+    {
+        $description = preg_replace('/<(?:br|hr)\b[^>]*\/?>/i', "\n", $description) ?? $description;
+        $description = preg_replace('/<\/(?:p|div|section|article|header|footer|span|li|ul|ol|blockquote|pre|code|h[1-6]|tr)\s*>/i', "\n", $description) ?? $description;
+        $description = strip_tags($description);
+        $description = html_entity_decode($description, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        return $this->normalizeImportedDescriptionWhitespace($description);
+    }
+
+    private function looksLikeImportedTorrentDescriptionMarkup(string $description): bool
+    {
+        return preg_match('/<\/?(?:span|div|p|br|strong|b|i|em|u|s|strike|del|blockquote|ul|ol|li|table|tr|td|th|a|img|h[1-6]|pre|code|section|article|header|footer)\b/i', $description) === 1;
+    }
+
+    private function normalizeImportedDescriptionWhitespace(string $description): string
+    {
+        $description = str_replace(["\r\n", "\r", "\xc2\xa0"], ["\n", "\n", ' '], $description);
+        $description = preg_replace("/\n{3,}/", "\n\n", $description) ?? $description;
+        $description = preg_replace('/[ \t]+\n/', "\n", $description) ?? $description;
+        $description = preg_replace('/\n[ \t]+/', "\n", $description) ?? $description;
+        $description = preg_replace('/[ \t]{2,}/', ' ', $description) ?? $description;
+
+        $lines = array_map(static fn (string $line): string => rtrim($line), explode("\n", $description));
+
+        return trim(implode("\n", $lines));
     }
 
     private function formatError(\Throwable $e): string

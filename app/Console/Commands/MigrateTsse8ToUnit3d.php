@@ -54,7 +54,7 @@ class MigrateTsse8ToUnit3d extends Command
 
     final public function handle(): int
     {
-        $allowedTables = ['users', 'torrents', 'peers', 'snatched', 'comments', 'forums', 'forum_threads', 'forum_posts'];
+        $allowedTables = ['users', 'torrents', 'peers', 'snatched', 'comments', 'forums', 'forum_threads', 'forum_posts', 'cleanup_torrent_descriptions'];
 
         $sourceConfig = [
             'host'     => (string) $this->option('host'),
@@ -63,14 +63,6 @@ class MigrateTsse8ToUnit3d extends Command
             'username' => (string) $this->option('username'),
             'password' => (string) $this->option('password'),
         ];
-
-        foreach (['host', 'database', 'username', 'password'] as $required) {
-            if (($sourceConfig[$required] ?? '') === '') {
-                $this->error("Missing required option --{$required}");
-
-                return self::FAILURE;
-            }
-        }
 
         $tables = array_values(array_filter(array_map('trim', explode(',', (string) $this->option('tables')))));
         if ($tables === []) {
@@ -84,6 +76,18 @@ class MigrateTsse8ToUnit3d extends Command
             $this->error('Unsupported tables/stages: ' . implode(', ', $invalid));
 
             return self::FAILURE;
+        }
+
+        $requiresSourceConnection = array_values(array_diff($tables, ['cleanup_torrent_descriptions'])) !== [];
+
+        if ($requiresSourceConnection) {
+            foreach (['host', 'database', 'username', 'password'] as $required) {
+                if (($sourceConfig[$required] ?? '') === '') {
+                    $this->error("Missing required option --{$required}");
+
+                    return self::FAILURE;
+                }
+            }
         }
 
         $pageSize = max(10, min(5000, (int) $this->option('page-size')));
@@ -106,18 +110,20 @@ class MigrateTsse8ToUnit3d extends Command
             }
         }
 
-        $this->line('Testing source DB connection ...');
+        if ($requiresSourceConnection) {
+            $this->line('Testing source DB connection ...');
 
-        try {
-            $this->migrationService->testConnection($sourceConfig);
-        } catch (Throwable $e) {
-            $this->error('Connection failed: ' . $e->getMessage());
+            try {
+                $this->migrationService->testConnection($sourceConfig);
+            } catch (Throwable $e) {
+                $this->error('Connection failed: ' . $e->getMessage());
 
-            return self::FAILURE;
+                return self::FAILURE;
+            }
+
+            $driver = $this->migrationService->getActiveDriver() ?? 'unknown';
+            $this->info("Connected to source using {$driver} driver.");
         }
-
-        $driver = $this->migrationService->getActiveDriver() ?? 'unknown';
-        $this->info("Connected to source using {$driver} driver.");
 
         try {
             foreach ($tables as $table) {
@@ -155,6 +161,24 @@ class MigrateTsse8ToUnit3d extends Command
                         }
 
                         $this->info("torrents: migrated {$result['count']}, skipped {$result['skipped']} (offset {$offset})");
+                        gc_collect_cycles();
+                        $offset += $pageSize;
+                    } while (($result['done'] ?? true) !== true);
+
+                    continue;
+                }
+
+                if ($table === 'cleanup_torrent_descriptions') {
+                    $offset = $initialOffset;
+                    do {
+                        $result = $this->migrationService->cleanupImportedTorrentDescriptions($offset, $pageSize, $dryRun);
+                        if (($result['success'] ?? false) !== true) {
+                            $this->error(($result['error'] ?? 'Torrent description cleanup failed without message.'));
+
+                            return self::FAILURE;
+                        }
+
+                        $this->info("cleanup_torrent_descriptions: updated {$result['count']}, skipped {$result['skipped']} (offset {$offset})");
                         gc_collect_cycles();
                         $offset += $pageSize;
                     } while (($result['done'] ?? true) !== true);
