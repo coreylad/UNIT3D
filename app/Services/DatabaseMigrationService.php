@@ -1102,9 +1102,9 @@ class DatabaseMigrationService
                                 if ($srcId === null) {
                                     continue;
                                 }
-                                // Look up the UNIT3D torrent ID using info_hash
+                                // Look up the UNIT3D torrent ID using info_hash (binary column)
                                 $unit3dId = DB::table('torrents')
-                                    ->where('info_hash', $infoHash)
+                                    ->where('info_hash', hex2bin($infoHash))
                                     ->value('id');
                                 if ($unit3dId !== null) {
                                     $copied = $this->copyTorrentImages($srcId, (int) $unit3dId, $sourceImagesPath);
@@ -1145,9 +1145,9 @@ class DatabaseMigrationService
                         if ($srcId === null) {
                             continue;
                         }
-                        // Look up the UNIT3D torrent ID using info_hash
+                        // Look up the UNIT3D torrent ID using info_hash (binary column)
                         $unit3dId = DB::table('torrents')
-                            ->where('info_hash', $infoHash)
+                            ->where('info_hash', hex2bin($infoHash))
                             ->value('id');
                         if ($unit3dId !== null) {
                             $copied = $this->copyTorrentImages($srcId, (int) $unit3dId, $sourceImagesPath);
@@ -1610,16 +1610,23 @@ class DatabaseMigrationService
             $batch
         );
 
-        // Find which info_hashes already exist in UNIT3D
-        $existing = DB::table('torrents')
-            ->whereIn('info_hash', array_keys($batch))
-            ->pluck('info_hash')
+        // info_hash column is binary(20) — use hex2bin() for correct binary comparison and storage
+        $existingHex = DB::table('torrents')
+            ->whereIn('info_hash', array_map('hex2bin', array_keys($batch)))
+            ->selectRaw('LOWER(HEX(info_hash)) AS ih')
+            ->pluck('ih')
             ->flip()
             ->all();
 
-        $toInsert = array_values(
-            array_filter($batch, fn ($row) => !isset($existing[$row['info_hash']]))
-        );
+        // Build insert array: skip existing, convert info_hash to binary bytes
+        $toInsert = [];
+
+        foreach ($batch as $hexHash => $row) {
+            if (!isset($existingHex[$hexHash])) {
+                $row['info_hash'] = hex2bin($hexHash);
+                $toInsert[]       = $row;
+            }
+        }
 
         if (empty($toInsert)) {
             return 0;
@@ -1640,8 +1647,8 @@ class DatabaseMigrationService
                 DB::table('torrents')->insert($row);
                 $inserted++;
             } catch (\Throwable $e) {
-                $name = (string) ($row['name'] ?? 'unknown');
-                $infoHash = (string) ($row['info_hash'] ?? 'unknown');
+                $name     = (string) ($row['name'] ?? 'unknown');
+                $infoHash = bin2hex($row['info_hash'] ?? '');
 
                 $this->log(sprintf(
                     'Skipping torrent "%s" [%s]: %s',
@@ -2999,7 +3006,7 @@ class DatabaseMigrationService
 
         try {
             $torrents = DB::table('torrents')
-                ->select(['id', 'info_hash', 'file_name'])
+                ->selectRaw('id, LOWER(HEX(info_hash)) AS info_hash, file_name')
                 ->orderBy('id')
                 ->offset($offset)
                 ->limit($limit)
@@ -3075,6 +3082,118 @@ class DatabaseMigrationService
         } catch (\Throwable $e) {
             $msg = $this->formatError($e);
             $this->log('Integrity verification failed: ' . $msg);
+
+            return ['success' => false, 'error' => $msg, 'done' => true, 'logs' => $this->migrationLog];
+        }
+    }
+
+    /**
+     * Scan all .torrent files in the UNIT3D storage directory, compute their info_hash,
+     * and create correctly-named copies for any DB records whose file_name doesn't yet exist.
+     *
+     * This resolves the filename mismatch when files were rsync'd with source names
+     * (TSSE8 uniqid filenames) instead of the filenames stored in the UNIT3D database.
+     */
+    public function relinkTorrentFiles(int $batchSize = 1000): array
+    {
+        $destDir = storage_path('app/files/torrents/files');
+
+        if (!is_dir($destDir)) {
+            return ['success' => false, 'error' => "Torrent files directory not found: {$destDir}", 'done' => true, 'logs' => $this->migrationLog];
+        }
+
+        try {
+            // Build a lookup map: info_hash (40-char lowercase hex) → expected file_name
+            // Uses HEX() so this works whether info_hash is stored as binary SHA1 or legacy hex-ASCII
+            $dbMap = DB::table('torrents')
+                ->selectRaw('LOWER(HEX(info_hash)) AS ih, file_name')
+                ->pluck('file_name', 'ih')
+                ->all();
+
+            $linked    = 0;
+            $alreadyOk = 0;
+            $noMatch   = 0;
+            $errors    = [];
+            $processed = 0;
+
+            // Use DirectoryIterator to avoid loading all paths into memory at once
+            $iter = new \DirectoryIterator($destDir);
+
+            foreach ($iter as $fileInfo) {
+                if ($fileInfo->isDot() || !$fileInfo->isFile()) {
+                    continue;
+                }
+
+                if (strtolower($fileInfo->getExtension()) !== 'torrent') {
+                    continue;
+                }
+
+                $filePath = $fileInfo->getPathname();
+
+                try {
+                    $content = file_get_contents($filePath);
+
+                    if ($content === false || $content === '') {
+                        $noMatch++;
+                        continue;
+                    }
+
+                    $decoded = Bencode::decode($content);
+
+                    if (!$decoded || !isset($decoded['info'])) {
+                        $noMatch++;
+                        $errors[] = "Invalid bencode in: " . $fileInfo->getFilename();
+                        continue;
+                    }
+
+                    $hashHex = strtolower(bin2hex(Bencode::get_infohash($decoded)));
+
+                    if (!isset($dbMap[$hashHex])) {
+                        $noMatch++;
+                        continue;
+                    }
+
+                    $expectedName = $dbMap[$hashHex];
+                    $destPath     = $destDir . \DIRECTORY_SEPARATOR . $expectedName;
+
+                    if (file_exists($destPath)) {
+                        $alreadyOk++;
+                        continue;
+                    }
+
+                    // Copy the file to its expected destination name
+                    if (copy($filePath, $destPath)) {
+                        $linked++;
+                    } else {
+                        $errors[] = "Copy failed: {$filePath} → {$destPath}";
+                    }
+                } catch (\Throwable $e) {
+                    $errors[] = "Error on " . $fileInfo->getFilename() . ": " . $e->getMessage();
+                }
+
+                $processed++;
+
+                if ($processed % $batchSize === 0) {
+                    $this->log("relinkTorrentFiles: processed {$processed} files (linked={$linked}, alreadyOk={$alreadyOk}, noMatch={$noMatch})");
+                    gc_collect_cycles();
+                }
+            }
+
+            $this->log("relinkTorrentFiles complete: processed={$processed}, linked={$linked}, alreadyOk={$alreadyOk}, noMatch={$noMatch}");
+
+            return [
+                'success'    => true,
+                'linked'     => $linked,
+                'already_ok' => $alreadyOk,
+                'no_match'   => $noMatch,
+                'processed'  => $processed,
+                'done'       => true,
+                'errors'     => $errors,
+                'logs'       => $this->migrationLog,
+            ];
+        } catch (\Throwable $e) {
+            $msg = $this->formatError($e);
+            $this->log('relinkTorrentFiles failed: ' . $msg);
 
             return ['success' => false, 'error' => $msg, 'done' => true, 'logs' => $this->migrationLog];
         }
