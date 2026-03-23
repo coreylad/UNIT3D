@@ -18,7 +18,7 @@
                 <span class="torrent-search__category-box-icon">
                     @if ($category->image && $category->show_image)
                         <img
-                            src="{{ route('authenticated_images.category_image', ['category' => $category]) }}"
+                            src="{{ route('authenticated_images.category_image', ['category' => $category]) }}?v={{ rawurlencode((string) $category->image) }}"
                             alt="{{ $category->name }}"
                             loading="lazy"
                         />

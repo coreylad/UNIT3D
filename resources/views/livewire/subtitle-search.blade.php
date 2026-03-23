@@ -42,16 +42,17 @@
                         @foreach ($subtitles as $subtitle)
                             <tr>
                                 <td>
-                                    @if ($subtitle->torrent->category->image === null)
+                                    @if ($subtitle->torrent->category->image === null || ! $subtitle->torrent->category->show_image)
                                         <i
-                                            class="{{ $subtitle->torrent->category->icon }} category__icon"
+                                            class="{{ config('other.font-awesome') }} {{ $subtitle->torrent->category->icon }} category__icon"
                                             title="{{ $subtitle->torrent->category->name }} {{ strtolower(__('torrent.torrent')) }}"
                                         ></i>
                                     @else
                                         <img
-                                            src="{{ route('authenticated_images.category_image', ['category' => $subtitle->torrent->category]) }}"
+                                            src="{{ route('authenticated_images.category_image', ['category' => $subtitle->torrent->category]) }}?v={{ rawurlencode((string) $subtitle->torrent->category->image) }}"
                                             title="{{ $subtitle->torrent->category->name }} {{ strtolower(__('torrent.torrent')) }}"
                                             alt="{{ $subtitle->torrent->category->name }}"
+                                            style="height: 32px; width: auto; object-fit: contain;"
                                         />
                                     @endif
                                 </td>

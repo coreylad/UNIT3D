@@ -61,7 +61,7 @@
                                 @if ($category->image != null)
                                     <img
                                         alt=""
-                                        src="{{ route('authenticated_images.category_image', ['category' => $category]) }}"
+                                        src="{{ route('authenticated_images.category_image', ['category' => $category]) }}?v={{ rawurlencode((string) $category->image) }}"
                                     />
                                 @else
                                     <span>N/A</span>

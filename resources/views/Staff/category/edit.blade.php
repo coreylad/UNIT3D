@@ -74,7 +74,7 @@
                 @if ($category->image !== null)
                     <p class="form__group">
                         <img
-                            src="{{ route('authenticated_images.category_image', ['category' => $category]) }}"
+                            src="{{ route('authenticated_images.category_image', ['category' => $category]) }}?v={{ rawurlencode((string) $category->image) }}"
                             alt="{{ $category->name }}"
                             width="220"
                             height="70"

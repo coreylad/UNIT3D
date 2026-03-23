@@ -100,21 +100,23 @@
     <td class="torrent-search--list__format">
         <div>
             <div class="torrent-search--list__category">
-                @if ($torrent->category->image !== null)
+                @if ($torrent->category->image !== null && $torrent->category->show_image)
                     <img
-                        src="{{ route('authenticated_images.category_image', ['category' => $torrent->category]) }}"
+                        src="{{ route('authenticated_images.category_image', ['category' => $torrent->category]) }}?v={{ rawurlencode((string) $torrent->category->image) }}"
                         title="{{ $torrent->category->name }} {{ strtolower(__('torrent.torrent')) }}"
                         alt="{{ $torrent->category->name }}"
                         loading="lazy"
                         @style([
                             'height: 32px',
+                            'width: auto',
+                            'object-fit: contain',
                             'padding-top: 1px' => $torrent->category->movie_meta || $torrent->category->tv_meta,
                             'padding-top: 12px' => ! ($torrent->category->movie_meta || $torrent->category->tv_meta),
                         ])
                     />
                 @else
                     <i
-                        class="{{ $torrent->category->icon }} category__icon"
+                        class="{{ config('other.font-awesome') }} {{ $torrent->category->icon }} category__icon"
                         @style([
                             'font-size: 24px',
                             'padding-top: 1px' => $torrent->category->movie_meta || $torrent->category->tv_meta,
