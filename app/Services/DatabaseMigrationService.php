@@ -3116,6 +3116,145 @@ class DatabaseMigrationService
     }
 
     /**
+     * Recalculate info_hash from stored .torrent files and repair mismatched DB rows.
+     *
+     * This is intended for migrations where torrent files are present but info_hash values
+     * in the UNIT3D DB were stored incorrectly (e.g. hex ASCII in binary column).
+     */
+    public function repairTorrentInfoHashesFromFiles(int $offset = 0, int $limit = 500, bool $dryRun = false): array
+    {
+        $this->log("Starting torrent info_hash repair from files (offset={$offset}, limit={$limit}, dryRun=" . ($dryRun ? 'yes' : 'no') . ')');
+
+        $previousMemoryLimit = ini_get('memory_limit');
+        if ($previousMemoryLimit !== false) {
+            @ini_set('memory_limit', '768M');
+        }
+
+        try {
+            $torrents = DB::table('torrents')
+                ->selectRaw('id, LOWER(HEX(info_hash)) AS info_hash, file_name')
+                ->orderBy('id')
+                ->offset($offset)
+                ->limit($limit)
+                ->get();
+
+            $fetched = $torrents->count();
+            $checked = 0;
+            $repaired = 0;
+            $missing = 0;
+            $invalid = 0;
+            $unchanged = 0;
+            $conflicts = 0;
+            $errors = [];
+            $maxStoredErrors = 200;
+
+            $filesDir = storage_path('app/files/torrents/files');
+            $maxTorrentBytes = 5 * 1024 * 1024;
+
+            foreach ($torrents as $torrent) {
+                $checked++;
+                $filePath = $filesDir . \DIRECTORY_SEPARATOR . $torrent->file_name;
+
+                if (!is_file($filePath)) {
+                    $missing++;
+                    if (count($errors) < $maxStoredErrors) {
+                        $errors[] = "Torrent #{$torrent->id} ({$torrent->file_name}): FILE NOT FOUND";
+                    }
+                    continue;
+                }
+
+                $fileSize = @filesize($filePath);
+                if ($fileSize !== false && $fileSize > $maxTorrentBytes) {
+                    $invalid++;
+                    if (count($errors) < $maxStoredErrors) {
+                        $errors[] = "Torrent #{$torrent->id}: SKIPPED LARGE FILE ({$fileSize} bytes)";
+                    }
+                    continue;
+                }
+
+                try {
+                    $content = file_get_contents($filePath);
+                    $decoded = Bencode::bdecode($content);
+
+                    if (!is_array($decoded) || !isset($decoded['info'])) {
+                        $invalid++;
+                        if (count($errors) < $maxStoredErrors) {
+                            $errors[] = "Torrent #{$torrent->id}: INVALID TORRENT FILE (missing 'info' dict)";
+                        }
+                        continue;
+                    }
+
+                    $calculatedHashHex = strtolower(bin2hex(Bencode::get_infohash($decoded)));
+
+                    $storedHash = strtolower((string) ($torrent->info_hash ?? ''));
+                    if (strlen($storedHash) === 80 && ctype_xdigit($storedHash)) {
+                        $decodedStored = @hex2bin($storedHash);
+                        if (is_string($decodedStored) && strlen($decodedStored) === 40 && ctype_xdigit($decodedStored)) {
+                            $storedHash = strtolower($decodedStored);
+                        }
+                    }
+
+                    if ($storedHash === $calculatedHashHex) {
+                        $unchanged++;
+                        continue;
+                    }
+
+                    $existingId = DB::table('torrents')
+                        ->where('id', '!=', (int) $torrent->id)
+                        ->where('info_hash', '=', hex2bin($calculatedHashHex))
+                        ->value('id');
+
+                    if ($existingId !== null) {
+                        $conflicts++;
+                        if (count($errors) < $maxStoredErrors) {
+                            $errors[] = "Torrent #{$torrent->id}: HASH CONFLICT with torrent #{$existingId} ({$calculatedHashHex})";
+                        }
+                        continue;
+                    }
+
+                    if (!$dryRun) {
+                        DB::table('torrents')
+                            ->where('id', '=', (int) $torrent->id)
+                            ->update(['info_hash' => hex2bin($calculatedHashHex)]);
+                    }
+
+                    $repaired++;
+                } catch (\Throwable $e) {
+                    $invalid++;
+                    if (count($errors) < $maxStoredErrors) {
+                        $errors[] = "Torrent #{$torrent->id}: ERROR PARSING FILE - {$e->getMessage()}";
+                    }
+                }
+            }
+
+            $this->log("Hash repair: checked={$checked}, repaired={$repaired}, unchanged={$unchanged}, missing={$missing}, invalid={$invalid}, conflicts={$conflicts}, dryRun=" . ($dryRun ? 'yes' : 'no'));
+
+            return [
+                'success'   => true,
+                'checked'   => $checked,
+                'repaired'  => $repaired,
+                'unchanged' => $unchanged,
+                'missing'   => $missing,
+                'invalid'   => $invalid,
+                'conflicts' => $conflicts,
+                'total'     => $fetched,
+                'done'      => $fetched < $limit,
+                'errors'    => $errors,
+                'logs'      => $this->migrationLog,
+            ];
+        } catch (\Throwable $e) {
+            $msg = $this->formatError($e);
+            $this->log('Torrent hash repair failed: ' . $msg);
+
+            return ['success' => false, 'error' => $msg, 'done' => true, 'logs' => $this->migrationLog];
+        } finally {
+            if ($previousMemoryLimit !== false) {
+                @ini_set('memory_limit', (string) $previousMemoryLimit);
+            }
+        }
+    }
+
+    /**
      * Scan all .torrent files in the UNIT3D storage directory, compute their info_hash,
      * and create correctly-named copies for any DB records whose file_name doesn't yet exist.
      *

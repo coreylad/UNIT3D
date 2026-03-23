@@ -69,6 +69,7 @@ class MigrateTsse8ToUnit3d extends Command
             'forum_posts',
             'cleanup_torrent_descriptions',
             'verify_torrent_files',
+            'repair_torrent_hashes_from_files',
             'relink_torrent_files',
             'recover_torrent_files_by_source_id',
         ];
@@ -98,7 +99,7 @@ class MigrateTsse8ToUnit3d extends Command
         }
 
         // These stages operate on the local UNIT3D DB only — no source connection needed
-        $standaloneStages = ['cleanup_torrent_descriptions', 'verify_torrent_files', 'relink_torrent_files'];
+        $standaloneStages = ['cleanup_torrent_descriptions', 'verify_torrent_files', 'repair_torrent_hashes_from_files', 'relink_torrent_files'];
 
         $requiresSourceConnection = array_values(array_diff($tables, $standaloneStages)) !== [];
 
@@ -356,6 +357,66 @@ class MigrateTsse8ToUnit3d extends Command
                         $this->warn('⚠️  Some torrent files have issues. Migration is incomplete.');
                         $this->line('See MIGRATION_TORRENT_FILES.md for recovery instructions.');
                     }
+
+                    continue;
+                }
+
+                // ── repair_torrent_hashes_from_files ────────────────────────────────
+                if ($table === 'repair_torrent_hashes_from_files') {
+                    $this->info('Repairing torrent info_hash values from on-disk .torrent files...');
+
+                    $offset         = $initialOffset;
+                    $totalChecked   = 0;
+                    $totalRepaired  = 0;
+                    $totalUnchanged = 0;
+                    $totalMissing   = 0;
+                    $totalInvalid   = 0;
+                    $totalConflicts = 0;
+
+                    do {
+                        $result = $this->migrationService->repairTorrentInfoHashesFromFiles($offset, $pageSize, $dryRun);
+
+                        if (($result['success'] ?? false) !== true) {
+                            $this->error(($result['error'] ?? 'Torrent hash repair failed without message.'));
+
+                            return self::FAILURE;
+                        }
+
+                        $checked   = $result['checked'] ?? 0;
+                        $repaired  = $result['repaired'] ?? 0;
+                        $unchanged = $result['unchanged'] ?? 0;
+                        $missing   = $result['missing'] ?? 0;
+                        $invalid   = $result['invalid'] ?? 0;
+                        $conflicts = $result['conflicts'] ?? 0;
+
+                        $totalChecked   += $checked;
+                        $totalRepaired  += $repaired;
+                        $totalUnchanged += $unchanged;
+                        $totalMissing   += $missing;
+                        $totalInvalid   += $invalid;
+                        $totalConflicts += $conflicts;
+
+                        $prefix = $dryRun ? 'repair_torrent_hashes_from_files (dry-run)' : 'repair_torrent_hashes_from_files';
+                        $this->info("{$prefix}: checked {$checked}, repaired {$repaired}, unchanged {$unchanged}, missing {$missing}, invalid {$invalid}, conflicts {$conflicts} (offset {$offset})");
+
+                        gc_collect_cycles();
+                        $offset += $pageSize;
+                    } while (($result['done'] ?? true) !== true);
+
+                    $this->newLine();
+                    $this->info('=== Hash Repair Summary ===');
+                    $this->info("Checked:           {$totalChecked}");
+                    $this->info("Repaired:          {$totalRepaired}" . ($dryRun ? ' (dry-run only, no writes)' : ''));
+                    $this->info("Already correct:   {$totalUnchanged}");
+                    $this->line("Missing files:     {$totalMissing}");
+                    $this->line("Invalid files:     {$totalInvalid}");
+                    $this->line("Hash conflicts:    {$totalConflicts}");
+
+                    if ($totalConflicts > 0) {
+                        $this->warn('Some rows were skipped due to hash conflicts. Resolve duplicates before retrying.');
+                    }
+
+                    $this->info('Re-run --tables=verify_torrent_files to confirm consistency.');
 
                     continue;
                 }

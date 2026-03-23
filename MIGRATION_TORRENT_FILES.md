@@ -271,6 +271,25 @@ After migration, verify that all torrent files are consistent:
 
 **If you see "✗ Hash mismatches":** The .torrent files were modified or new ones were created. This is a data integrity problem - restore originals from TSSE8 backup.
 
+If files are present but DB hashes were imported incorrectly (common with binary/hex conversion issues), run a targeted hash repair from file content:
+
+```bash
+/opt/plesk/php/8.4/bin/php artisan migrate:tsse8 \
+  --tables=repair_torrent_hashes_from_files \
+  --page-size=500 \
+  --dry-run
+
+# If dry-run results look correct, run without --dry-run
+/opt/plesk/php/8.4/bin/php artisan migrate:tsse8 \
+  --tables=repair_torrent_hashes_from_files \
+  --page-size=500
+
+# Final validation
+/opt/plesk/php/8.4/bin/php artisan migrate:tsse8 \
+  --tables=verify_torrent_files \
+  --page-size=500
+```
+
 ---
 
 ### How Files Are Matched
@@ -447,8 +466,11 @@ mysql -u unit3d_user -p unit3d_db -e \
 # Count actual files
 ls storage/app/files/torrents/files/ | wc -l
 
-# If counts don't match, use recovery command
-/opt/plesk/php/8.4/bin/php artisan migrate:verify-torrent-files --fix
+# If counts don't match or hash validation fails, use migration recovery stages
+/opt/plesk/php/8.4/bin/php artisan migrate:tsse8 --tables=verify_torrent_files --page-size=500
+/opt/plesk/php/8.4/bin/php artisan migrate:tsse8 --tables=repair_torrent_hashes_from_files --page-size=500 --dry-run
+/opt/plesk/php/8.4/bin/php artisan migrate:tsse8 --tables=repair_torrent_hashes_from_files --page-size=500
+/opt/plesk/php/8.4/bin/php artisan migrate:tsse8 --tables=verify_torrent_files --page-size=500
 ```
 
 ---
@@ -474,12 +496,12 @@ file storage/app/files/torrents/files/$(ls storage/app/files/torrents/files/ | h
 # - Should succeed without errors
 ```
 
-### Full Validation Command (When Available)
+### Full Validation Command
 
 ```bash
-/opt/plesk/php/8.4/bin/php artisan migrate:verify-torrent-files \
-  --verbose \
-  --fix-missing            # Auto-generate placeholder files if needed
+/opt/plesk/php/8.4/bin/php artisan migrate:tsse8 \
+  --tables=verify_torrent_files \
+  --page-size=500
 ```
 
 ---
@@ -509,7 +531,7 @@ chown -R nobody:nobody /var/www/vhosts/betaups.site/httpdocs/storage
 chmod -R 755 /var/www/vhosts/betaups.site/httpdocs/storage
 
 # Step 4: Verify
-/opt/plesk/php/8.4/bin/php artisan migrate:verify-torrent-files --verbose
+/opt/plesk/php/8.4/bin/php artisan migrate:tsse8 --tables=verify_torrent_files --page-size=500
 ```
 
 ### For Incremental Migration (Preserving Existing)
