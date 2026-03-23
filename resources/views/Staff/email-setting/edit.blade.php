@@ -245,6 +245,127 @@
         .es-test-button {
             margin-top: 2rem;
         }
+
+        /* ── Enhanced form field spacing ── */
+        .es-card__body .form__group {
+            margin-bottom: 1.75rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .es-card__body .form__text,
+        .es-card__body .form__select {
+            padding: 0.875rem 1rem !important;
+            font-size: 0.95rem;
+            line-height: 1.4;
+            background: rgba(255, 255, 255, 0.03) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            border-radius: 8px !important;
+            transition: all 0.2s ease !important;
+        }
+
+        .es-card__body .form__text:focus,
+        .es-card__body .form__select:focus {
+            background: rgba(0, 188, 212, 0.08) !important;
+            border-color: rgba(0, 188, 212, 0.3) !important;
+            outline: none !important;
+            box-shadow: 0 0 0 3px rgba(0, 188, 212, 0.1) !important;
+        }
+
+        .es-card__body .form__label {
+            font-size: 0.9rem;
+            font-weight: 600;
+            opacity: 0.8;
+            text-transform: none;
+        }
+
+        .es-card__body .form__label--floating {
+            opacity: 0.6;
+            font-size: 0.85rem;
+        }
+
+        .es-card__body .form__hint {
+            font-size: 0.8rem;
+            opacity: 0.5;
+            margin-top: 0.25rem;
+            line-height: 1.4;
+            font-style: italic;
+        }
+
+        /* ── Grid item spacing ── */
+        .es-grid .form__group {
+            width: 100%;
+        }
+
+        /* ── Callout improvements ── */
+        .es-callout {
+            background: linear-gradient(135deg, rgba(0, 188, 212, 0.08) 0%, rgba(74, 158, 255, 0.06) 100%);
+            border: 1px solid rgba(0, 188, 212, 0.2);
+        }
+
+        /* ── Button area improvements ── */
+        .es-submit {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+        }
+
+        .es-submit .form__button {
+            padding: 0.875rem 1.5rem;
+            font-weight: 600;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .es-submit .form__button--filled {
+            background: linear-gradient(135deg, #00bcd4, #4a9eff);
+            color: white;
+            border: none;
+        }
+
+        .es-submit .form__button--filled:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 188, 212, 0.3);
+        }
+
+        .es-submit .form__button--secondary {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .es-submit .form__button--secondary:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        /* ── Responsive improvements ── */
+        @media (max-width: 768px) {
+            .es-hero {
+                flex-direction: column;
+                text-align: center;
+                padding: 1.5rem;
+            }
+
+            .es-card__body {
+                padding: 1.5rem;
+            }
+
+            .es-submit {
+                justify-content: center;
+                flex-direction: column-reverse;
+            }
+
+            .es-submit .form__button {
+                width: 100%;
+            }
+        }
     </style>
 @endsection
 
@@ -303,7 +424,8 @@
 
                     {{-- SMTP Host & Port --}}
                     <div class="es-grid">
-                        <p class="form__group es-field">
+                        <div class="form__group es-field">
+                            <label class="form__label" for="smtp_host">SMTP Host</label>
                             <input
                                 id="smtp_host"
                                 class="form__text"
@@ -311,13 +433,13 @@
                                 type="text"
                                 maxlength="255"
                                 value="{{ old('smtp_host', $siteSetting->smtp_host) }}"
-                                placeholder=" "
+                                placeholder="e.g. smtp.gmail.com"
                                 autocomplete="off"
                             />
-                            <label class="form__label form__label--floating" for="smtp_host">SMTP Host</label>
                             <span class="form__hint">e.g. smtp.gmail.com, smtp.sendgrid.net, smtp.mailgun.org</span>
-                        </p>
-                        <p class="form__group es-field">
+                        </div>
+                        <div class="form__group es-field">
+                            <label class="form__label" for="smtp_port">SMTP Port</label>
                             <input
                                 id="smtp_port"
                                 class="form__text"
@@ -326,25 +448,25 @@
                                 min="1"
                                 max="65535"
                                 value="{{ old('smtp_port', $siteSetting->smtp_port ?? 587) }}"
-                                placeholder=" "
+                                placeholder="587"
                             />
-                            <label class="form__label form__label--floating" for="smtp_port">SMTP Port</label>
                             <span class="form__hint">Common: 587 (TLS), 465 (SSL), 25 (plain)</span>
-                        </p>
+                        </div>
                     </div>
 
                     {{-- Encryption & Username --}}
                     <div class="es-grid">
-                        <p class="form__group es-field">
+                        <div class="form__group es-field">
+                            <label class="form__label" for="smtp_encryption">Encryption Type</label>
                             <select id="smtp_encryption" name="smtp_encryption" class="form__select">
                                 <option value="" @selected(old('smtp_encryption', $siteSetting->smtp_encryption ?? '') === '')>None</option>
                                 <option value="tls" @selected(old('smtp_encryption', $siteSetting->smtp_encryption ?? '') === 'tls')>TLS (STARTTLS)</option>
                                 <option value="ssl" @selected(old('smtp_encryption', $siteSetting->smtp_encryption ?? '') === 'ssl')>SSL/TLS</option>
                             </select>
-                            <label class="form__label form__label--floating" for="smtp_encryption">Encryption Type</label>
                             <span class="form__hint">Use TLS (587) or SSL (465)</span>
-                        </p>
-                        <p class="form__group es-field">
+                        </div>
+                        <div class="form__group es-field">
+                            <label class="form__label" for="smtp_username">SMTP Username</label>
                             <input
                                 id="smtp_username"
                                 class="form__text"
@@ -352,17 +474,17 @@
                                 type="text"
                                 maxlength="255"
                                 value="{{ old('smtp_username', $siteSetting->smtp_username) }}"
-                                placeholder=" "
+                                placeholder="your@email.com"
                                 autocomplete="off"
                             />
-                            <label class="form__label form__label--floating" for="smtp_username">SMTP Username</label>
                             <span class="form__hint">Usually your email address</span>
-                        </p>
+                        </div>
                     </div>
 
                     {{-- Password --}}
                     <div class="es-grid es-grid--single">
-                        <p class="form__group es-field">
+                        <div class="form__group es-field">
+                            <label class="form__label" for="smtp_password">SMTP Password</label>
                             <input
                                 id="smtp_password"
                                 class="form__text"
@@ -370,12 +492,11 @@
                                 type="password"
                                 maxlength="255"
                                 value="{{ old('smtp_password', $siteSetting->smtp_password) }}"
-                                placeholder=" "
+                                placeholder="••••••••••"
                                 autocomplete="new-password"
                             />
-                            <label class="form__label form__label--floating" for="smtp_password">SMTP Password</label>
                             <span class="form__hint">Leave blank to keep the existing saved password. Use app-specific passwords for Gmail.</span>
-                        </p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -398,7 +519,8 @@
                     </div>
 
                     <div class="es-grid">
-                        <p class="form__group es-field">
+                        <div class="form__group es-field">
+                            <label class="form__label" for="smtp_from_address">From Email Address</label>
                             <input
                                 id="smtp_from_address"
                                 class="form__text"
@@ -406,12 +528,12 @@
                                 type="email"
                                 maxlength="255"
                                 value="{{ old('smtp_from_address', $siteSetting->smtp_from_address) }}"
-                                placeholder=" "
+                                placeholder="noreply@yourtracker.com"
                             />
-                            <label class="form__label form__label--floating" for="smtp_from_address">From Email Address</label>
                             <span class="form__hint">e.g. noreply@yourtracker.com</span>
-                        </p>
-                        <p class="form__group es-field">
+                        </div>
+                        <div class="form__group es-field">
+                            <label class="form__label" for="smtp_from_name">From Display Name</label>
                             <input
                                 id="smtp_from_name"
                                 class="form__text"
@@ -419,11 +541,10 @@
                                 type="text"
                                 maxlength="255"
                                 value="{{ old('smtp_from_name', $siteSetting->smtp_from_name) }}"
-                                placeholder=" "
+                                placeholder="{{ config('other.title') }} Notifications"
                             />
-                            <label class="form__label form__label--floating" for="smtp_from_name">From Display Name</label>
                             <span class="form__hint">e.g. {{ config('other.title') }} Notifications</span>
-                        </p>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -23,6 +23,7 @@ use App\Models\Scopes\ApprovedScope;
 use App\Models\Torrent;
 use App\Models\TorrentDownload;
 use App\Models\User;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -47,8 +48,13 @@ class TorrentDownloadController extends Controller
         $user = $request->user();
 
         if (!$user && $rsskey) {
-            $user = User::where('rsskey', '=', $rsskey)->sole();
+            $user = User::where('rsskey', '=', $rsskey)->first();
         }
+
+        if (!$user) {
+            return to_route('login');
+        }
+
         $torrent = Torrent::withoutGlobalScope(ApprovedScope::class)->findOrFail($id);
         $hasHistory = $user->history()->where([['torrent_id', '=', $torrent->id], ['seeder', '=', 1]])->exists();
 
@@ -76,30 +82,44 @@ class TorrentDownloadController extends Controller
                 ->withErrors('Torrent file not found! Please report this torrent!');
         }
 
-        if (!$request->user() && !($rsskey && $user)) {
-            return to_route('login');
-        }
-
         $torrentDownload = new TorrentDownload();
         $torrentDownload->user_id = $user->id;
         $torrentDownload->torrent_id = $id;
         $torrentDownload->type = $rsskey ? 'RSS/API using '.$request->header('User-Agent') : 'Site using '.$request->header('User-Agent');
         $torrentDownload->save();
 
+        try {
+            $fileContents = Storage::disk('torrent-files')->get($torrent->file_name);
+            $dict = Bencode::bdecode($fileContents);
+
+            if (!is_array($dict) || !isset($dict['info']) || !is_array($dict['info'])) {
+                throw new \RuntimeException('Torrent file content is invalid bencode or missing info dictionary.');
+            }
+        } catch (\Throwable $exception) {
+            Log::error('Failed to prepare torrent download.', [
+                'torrent_id' => $torrent->id,
+                'file_name'  => $torrent->file_name,
+                'user_id'    => $user->id,
+                'rss'        => $rsskey !== null,
+                'error'      => $exception->getMessage(),
+            ]);
+
+            return to_route('torrents.show', ['id' => $torrent->id])
+                ->withErrors('Torrent file is unreadable or invalid on server. Please report this torrent to staff.');
+        }
+
+        // Set the announce key and add the user passkey
+        $dict['announce'] = TrackerUrl::announce($user->passkey);
+
+        // Set link to torrent as the comment
+        if (config('torrent.comment')) {
+            $dict['comment'] = config('torrent.comment').'. '.route('torrents.show', ['id' => $id]);
+        } else {
+            $dict['comment'] = route('torrents.show', ['id' => $id]);
+        }
+
         return response()->streamDownload(
-            function () use ($id, $user, $torrent): void {
-                $dict = Bencode::bdecode(Storage::disk('torrent-files')->get($torrent->file_name));
-
-                // Set the announce key and add the user passkey
-                $dict['announce'] = TrackerUrl::announce($user->passkey);
-
-                // Set link to torrent as the comment
-                if (config('torrent.comment')) {
-                    $dict['comment'] = config('torrent.comment').'. '.route('torrents.show', ['id' => $id]);
-                } else {
-                    $dict['comment'] = route('torrents.show', ['id' => $id]);
-                }
-
+            static function () use ($dict): void {
                 echo Bencode::bencode($dict);
             },
             sanitize_filename('['.config('torrent.source').']'.$torrent->name.'.torrent'),

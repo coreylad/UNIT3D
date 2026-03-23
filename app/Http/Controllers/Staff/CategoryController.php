@@ -57,7 +57,7 @@ class CategoryController extends Controller
 
             abort_if(\is_array($image), 400);
 
-            $filename = 'category-'.uniqid('', true).'.'.$image->getClientOriginalExtension();
+            $filename = 'category-'.uniqid('', true).'.png';
             $path = Storage::disk('category-images')->path($filename);
             Image::make($image->getRealPath())->fit(220, 70)->encode('png', 100)->save($path);
         }
@@ -107,7 +107,7 @@ class CategoryController extends Controller
 
             abort_if(\is_array($image), 400);
 
-            $filename = 'category-'.uniqid('', true).'.'.$image->getClientOriginalExtension();
+            $filename = 'category-'.uniqid('', true).'.png';
             $path = Storage::disk('category-images')->path($filename);
             Image::make($image->getRealPath())->fit(220, 70)->encode('png', 100)->save($path);
 

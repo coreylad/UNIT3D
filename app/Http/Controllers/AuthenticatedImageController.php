@@ -49,7 +49,9 @@ class AuthenticatedImageController extends Controller
 
         abort_unless(file_exists($path), 404);
 
-        return response()->file($path, self::HEADERS);
+        $mimeType = mime_content_type($path) ?: 'application/octet-stream';
+
+        return response()->file($path, self::HEADERS + ['Content-Type' => $mimeType]);
     }
 
     public function playlistImage(Playlist $playlist): \Symfony\Component\HttpFoundation\BinaryFileResponse
