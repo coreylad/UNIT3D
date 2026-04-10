@@ -95,11 +95,12 @@ class HomeController extends Controller
                 'owner_email'       => (string) (config('other.email') ?? ''),
                 'mail_host'         => (string) (config('mail.mailers.smtp.host') ?? ''),
                 'mail_port'         => (string) (config('mail.mailers.smtp.port') ?? ''),
-                'mail_username'     => (string) (config('mail.mailers.smtp.username') ?? ''),
-                'mail_password'     => (string) (config('mail.mailers.smtp.password') ?? ''),
-                'mail_encryption'   => (string) (config('mail.mailers.smtp.encryption') ?? ''),
-                'mail_from_address' => (string) (config('mail.from.address') ?? ''),
-                'mail_from_name'    => (string) (config('mail.from.name') ?? ''),
+                'mail_username'      => (string) (config('mail.mailers.smtp.username') ?? ''),
+                'mail_password_set'  => ! empty(config('mail.mailers.smtp.password')),
+                'mail_encryption'    => (string) (config('mail.mailers.smtp.encryption') ?? ''),
+                'mail_from_address'  => (string) (config('mail.from.address') ?? ''),
+                'mail_from_name'     => (string) (config('mail.from.name') ?? ''),
+                'mail_sendmail_path' => (string) (config('mail.mailers.sendmail.path') ?? '/usr/sbin/sendmail -bs -i'),
             ],
         ]);
     }
@@ -144,21 +145,28 @@ class HomeController extends Controller
             'mail_password'     => ['nullable', 'string', 'max:255'],
             'mail_encryption'   => ['nullable', 'string', Rule::in(['', 'tls', 'ssl'])],
             'mail_from_address' => ['nullable', 'email', 'max:255'],
-            'mail_from_name'    => ['nullable', 'string', 'max:255'],
+            'mail_from_name'     => ['nullable', 'string', 'max:255'],
+            'mail_sendmail_path' => ['nullable', 'string', 'max:500'],
         ]);
 
-        $this->writeEnvValues([
-            'APP_URL'           => $validated['site_url'],
-            'MAIL_MAILER'       => $validated['mail_mailer'],
+        $envValues = [
+            'APP_URL'            => $validated['site_url'],
+            'MAIL_MAILER'        => $validated['mail_mailer'],
             'DEFAULT_OWNER_EMAIL' => (string) ($validated['owner_email'] ?? ''),
-            'MAIL_HOST'         => (string) ($validated['mail_host'] ?? ''),
-            'MAIL_PORT'         => (string) ($validated['mail_port'] ?? ''),
-            'MAIL_USERNAME'     => (string) ($validated['mail_username'] ?? ''),
-            'MAIL_PASSWORD'     => (string) ($validated['mail_password'] ?? ''),
-            'MAIL_ENCRYPTION'   => $validated['mail_encryption'] ?? 'null',
-            'MAIL_FROM_ADDRESS' => (string) ($validated['mail_from_address'] ?? ''),
-            'MAIL_FROM_NAME'    => (string) ($validated['mail_from_name'] ?? ''),
-        ]);
+            'MAIL_HOST'          => (string) ($validated['mail_host'] ?? ''),
+            'MAIL_PORT'          => (string) ($validated['mail_port'] ?? ''),
+            'MAIL_USERNAME'      => (string) ($validated['mail_username'] ?? ''),
+            'MAIL_ENCRYPTION'    => $validated['mail_encryption'] ?? '',
+            'MAIL_FROM_ADDRESS'  => (string) ($validated['mail_from_address'] ?? ''),
+            'MAIL_FROM_NAME'     => (string) ($validated['mail_from_name'] ?? ''),
+            'MAIL_SENDMAIL_PATH' => (string) ($validated['mail_sendmail_path'] ?? '/usr/sbin/sendmail -bs -i'),
+        ];
+
+        if (! empty($validated['mail_password'])) {
+            $envValues['MAIL_PASSWORD'] = $validated['mail_password'];
+        }
+
+        $this->writeEnvValues($envValues);
 
         $this->updateConfigStringValue(config_path('app.php'), 'name', $validated['site_name']);
         $this->updateConfigStringValue(config_path('other.php'), 'title', $validated['site_title']);

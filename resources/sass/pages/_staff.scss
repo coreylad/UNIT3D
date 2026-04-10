@@ -49,7 +49,6 @@
     font-size: clamp(1.15rem, 2.2vw, 1.7rem);
     line-height: 1.2;
 }
-
 .staff-command-center__subtitle {
     margin: 0;
     color: var(--staff-copy);
@@ -220,7 +219,6 @@
     flex-direction: column;
     gap: 10px;
 }
-
 .staff-side-menu__group {
     border: 1px solid rgba(122, 142, 222, 0.26);
     border-radius: 10px;
@@ -325,11 +323,13 @@
     flex-direction: column;
     gap: 8px;
 }
-
-.staff-banner-editor .form__file {
-    border-radius: 8px;
-    border: 1px solid rgba(122, 143, 220, 0.28);
-    background: rgba(10, 13, 32, 0.76);
+     display: flex;
+     flex-direction: column;
+     gap: 8px;
+     padding: 6px 10px 12px;
+     border: 1px solid rgba(126, 148, 236, 0.3);
+     border-radius: 14px;
+     background: linear-gradient(155deg, rgba(9, 12, 31, 0.9), rgba(6, 8, 22, 0.95));
     color: #d3defe;
     padding: 8px;
 }

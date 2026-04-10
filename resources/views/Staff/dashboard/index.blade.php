@@ -1,4 +1,4 @@
-@extends('layout.with-main-and-sidebar')
+﻿@extends('layout.with-main-and-sidebar')
 
 @section('title')
     <title>{{ __('staff.staff-dashboard') }} - {{ config('other.title') }}</title>
@@ -195,7 +195,6 @@
             <div class="panel__body">
                 <p class="form__group form__group--horizontal">
                     <a class="form__button form__button--text" href="{{ route('home.index') }}">
-                        <i class="{{ config('other.font-awesome') }} fa-columns"></i>
                         {{ __('staff.frontend') }}
                     </a>
                 </p>
@@ -953,6 +952,154 @@
         </div>
     </section>
 
+    <section class="panelV2 staff-services" id="site-services">
+        <h2 class="panel__heading">
+            <i class="{{ config('other.font-awesome') }} fa-server"></i> Site Services
+        </h2>
+        <form class="panel__body staff-services__body" method="POST" action="{{ route('staff.dashboard.services.update') }}">
+            @csrf
+
+            {{-- Site Identity --}}
+            <details class="staff-services__group" open>
+                <summary class="staff-services__summary">
+                    <i class="{{ config('other.font-awesome') }} fa-globe"></i> Site Identity
+                </summary>
+                <div class="staff-services__fields">
+                    <label class="form__label" for="ssp_site_name">Site Name</label>
+                    <input id="ssp_site_name" class="form__text" name="site_name" type="text"
+                        value="{{ old('site_name', $siteServices['site_name']) }}" required />
+
+                    <label class="form__label" for="ssp_site_title">Title</label>
+                    <input id="ssp_site_title" class="form__text" name="site_title" type="text"
+                        value="{{ old('site_title', $siteServices['site_title']) }}" required />
+
+                    <label class="form__label" for="ssp_site_subtitle">Subtitle</label>
+                    <input id="ssp_site_subtitle" class="form__text" name="site_subtitle" type="text"
+                        value="{{ old('site_subtitle', $siteServices['site_subtitle']) }}" />
+
+                    <label class="form__label" for="ssp_site_url">Site URL</label>
+                    <input id="ssp_site_url" class="form__text" name="site_url" type="url"
+                        value="{{ old('site_url', $siteServices['site_url']) }}" required />
+
+                    <label class="form__label" for="ssp_owner_email">Owner Email</label>
+                    <input id="ssp_owner_email" class="form__text" name="owner_email" type="email"
+                        value="{{ old('owner_email', $siteServices['owner_email']) }}" />
+                </div>
+            </details>
+
+            {{-- Mail Configuration --}}
+            <details class="staff-services__group"
+                x-data="{
+                    mailer: @js(old('mail_mailer', $siteServices['mail_mailer'])),
+                    host: @js(old('mail_host', $siteServices['mail_host'])),
+                    port: @js(old('mail_port', $siteServices['mail_port'])),
+                    encryption: @js(old('mail_encryption', $siteServices['mail_encryption'])),
+                    username: @js(old('mail_username', $siteServices['mail_username'])),
+                    password: '',
+                    fromAddress: @js(old('mail_from_address', $siteServices['mail_from_address'])),
+                    fromName: @js(old('mail_from_name', $siteServices['mail_from_name'])),
+                    sendmailPath: @js(old('mail_sendmail_path', $siteServices['mail_sendmail_path'])),
+                    get isSmtp() { return this.mailer === 'smtp'; },
+                    get isSendmail() { return this.mailer === 'sendmail'; },
+                    applyPreset(p) {
+                        const map = {
+                            'plesk-25':  { mailer: 'smtp', host: 'localhost', port: '25',  encryption: '' },
+                            'plesk-587': { mailer: 'smtp', host: 'localhost', port: '587', encryption: 'tls' },
+                            'plesk-465': { mailer: 'smtp', host: 'localhost', port: '465', encryption: 'ssl' },
+                            'sendmail':  { mailer: 'sendmail' },
+                            'log':       { mailer: 'log' },
+                        };
+                        const preset = map[p];
+                        if (!preset) return;
+                        if (preset.mailer !== undefined) this.mailer = preset.mailer;
+                        if (preset.host !== undefined) this.host = preset.host;
+                        if (preset.port !== undefined) this.port = preset.port;
+                        if (preset.encryption !== undefined) this.encryption = preset.encryption;
+                    }
+                }">
+                <summary class="staff-services__summary">
+                    <i class="{{ config('other.font-awesome') }} fa-envelope"></i> Mail Configuration
+                    <span class="staff-services__mailer-badge" x-text="mailer.toUpperCase()"></span>
+                </summary>
+                <div class="staff-services__fields">
+
+                    <label class="form__label">Quick Preset</label>
+                    <select class="form__select staff-services__preset-select"
+                        @change="applyPreset($event.target.value)">
+                        <option value="">— Custom —</option>
+                        <optgroup label="Plesk Built-in Mail">
+                            <option value="plesk-25">Plesk Local &middot; Port 25</option>
+                            <option value="plesk-587">Plesk Local &middot; Port 587 (STARTTLS)</option>
+                            <option value="plesk-465">Plesk Local &middot; Port 465 (SSL)</option>
+                        </optgroup>
+                        <optgroup label="Other">
+                            <option value="sendmail">Sendmail / Postfix</option>
+                            <option value="log">Log Only (Testing)</option>
+                        </optgroup>
+                    </select>
+
+                    <label class="form__label" for="ssp_mail_mailer">Driver</label>
+                    <select id="ssp_mail_mailer" class="form__select" name="mail_mailer"
+                        x-model="mailer" required>
+                        <option value="smtp">SMTP</option>
+                        <option value="sendmail">Sendmail</option>
+                        <option value="mailgun">Mailgun</option>
+                        <option value="ses">Amazon SES</option>
+                        <option value="postmark">Postmark</option>
+                        <option value="log">Log</option>
+                        <option value="array">Array (Disabled)</option>
+                    </select>
+
+                    <div x-show="isSendmail" class="staff-services__smtp-group">
+                        <label class="form__label" for="ssp_sendmail_path">Sendmail Path</label>
+                        <input id="ssp_sendmail_path" class="form__text" name="mail_sendmail_path"
+                            type="text" x-model="sendmailPath" />
+                    </div>
+
+                    <div x-show="isSmtp" class="staff-services__smtp-group">
+                        <label class="form__label" for="ssp_mail_host">Host</label>
+                        <input id="ssp_mail_host" class="form__text" name="mail_host"
+                            type="text" x-model="host" />
+
+                        <label class="form__label" for="ssp_mail_port">Port</label>
+                        <input id="ssp_mail_port" class="form__text" name="mail_port"
+                            type="number" min="1" max="65535" x-model="port" />
+
+                        <label class="form__label" for="ssp_mail_encryption">Encryption</label>
+                        <select id="ssp_mail_encryption" class="form__select" name="mail_encryption"
+                            x-model="encryption">
+                            <option value="">None</option>
+                            <option value="tls">TLS (STARTTLS)</option>
+                            <option value="ssl">SSL</option>
+                        </select>
+
+                        <label class="form__label" for="ssp_mail_username">Username</label>
+                        <input id="ssp_mail_username" class="form__text" name="mail_username"
+                            type="text" x-model="username" autocomplete="off" />
+
+                        <label class="form__label" for="ssp_mail_password">Password</label>
+                        <input id="ssp_mail_password" class="form__text" name="mail_password"
+                            type="password" x-model="password" autocomplete="new-password"
+                            placeholder="{{ $siteServices['mail_password_set'] ? '(stored — leave blank to keep)' : 'Enter password' }}" />
+                    </div>
+
+                    <label class="form__label" for="ssp_mail_from_address">From Address</label>
+                    <input id="ssp_mail_from_address" class="form__text" name="mail_from_address"
+                        type="email" x-model="fromAddress" />
+
+                    <label class="form__label" for="ssp_mail_from_name">From Name</label>
+                    <input id="ssp_mail_from_name" class="form__text" name="mail_from_name"
+                        type="text" x-model="fromName" />
+                </div>
+            </details>
+
+            <div class="staff-services__actions">
+                <button class="form__button form__button--filled" type="submit">
+                    <i class="{{ config('other.font-awesome') }} fa-save"></i> Save Services
+                </button>
+            </div>
+        </form>
+    </section>
     <section class="panelV2 staff-banner-editor" id="site-banner-editor">
         <h2 class="panel__heading">Site Banner Editor</h2>
         <div class="panel__body">
@@ -988,13 +1135,13 @@
     </section>
 
     <section class="panelV2">
+                        <a class="staff-side-menu__link" href="{{ route('staff.authentications.index') }}">Authentications</a>
         <h2 class="panel__heading">SSL certificate</h2>
         <dl class="key-value">
             <div class="key-value__group">
                 <dt>URL</dt>
                 <dd>{{ config('app.url') }}</dd>
             </div>
-            @if (request()->secure())
                 <div class="key-value__group">
                     <dt>Connection</dt>
                     <dd>Secure</dd>
@@ -1214,7 +1361,6 @@
             <section class="panelV2">
                 <h2 class="panel__heading">External tracker stats</h2>
                 <div class="panel__body">External tracker not enabled.</div>
-            </section>
         @elseif ($externalTrackerStats === false)
             <section class="panelV2">
                 <h2 class="panel__heading">External tracker stats</h2>
