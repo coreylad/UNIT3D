@@ -219,6 +219,96 @@
     flex-direction: column;
     gap: 10px;
 }
+
+.staff-side-menu__top {
+    width: 100%;
+    text-align: left;
+    border: 1px solid rgba(122, 142, 222, 0.26);
+    border-radius: 10px;
+    background: linear-gradient(180deg, rgba(26, 32, 69, 0.72), rgba(11, 15, 35, 0.92));
+    color: #dfe7ff;
+    font-size: 0.83rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: background-color 180ms ease, border-color 180ms ease;
+}
+
+.staff-side-menu__top:hover,
+.staff-side-menu__top:focus-visible {
+    border-color: rgba(135, 223, 255, 0.5);
+    background-color: rgba(120, 216, 255, 0.14);
+}
+
+.staff-side-menu__quick {
+    border: 1px solid rgba(122, 142, 222, 0.2);
+    border-radius: 10px;
+    overflow: hidden;
+    background: rgba(10, 13, 34, 0.72);
+}
+
+.staff-tools-workspace {
+    border: 1px solid rgba(127, 145, 223, 0.3);
+    border-radius: 14px;
+    overflow: hidden;
+    margin-bottom: 1rem;
+    background: linear-gradient(160deg, rgba(10, 13, 34, 0.88), rgba(5, 7, 21, 0.94));
+}
+
+.staff-tools-workspace__head {
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(124, 141, 221, 0.24);
+}
+
+.staff-tools-workspace__hint {
+    margin: 6px 0 0;
+    color: #9faedb;
+    font-size: 0.82rem;
+}
+
+.staff-tools-group {
+    padding: 12px 14px 14px;
+}
+
+.staff-tools-group + .staff-tools-group {
+    border-top: 1px solid rgba(124, 141, 221, 0.16);
+}
+
+.staff-tools-group__title {
+    margin: 0 0 10px;
+    color: #dce6ff;
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.staff-tools-pills {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 10px;
+}
+
+.staff-tools-pill {
+    display: inline-flex;
+    align-items: center;
+    min-height: 38px;
+    padding: 0 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(122, 143, 220, 0.28);
+    background: rgba(10, 13, 32, 0.76);
+    color: #d3defe;
+    text-decoration: none;
+    font-size: 0.82rem;
+    transition: transform 140ms ease, border-color 140ms ease, background-color 140ms ease;
+}
+
+.staff-tools-pill:hover,
+.staff-tools-pill:focus-visible {
+    transform: translateY(-1px);
+    border-color: rgba(132, 223, 255, 0.65);
+    background-color: rgba(120, 216, 255, 0.14);
+    color: #f0f6ff;
+}
 .staff-side-menu__group {
     border: 1px solid rgba(122, 142, 222, 0.26);
     border-radius: 10px;
@@ -391,6 +481,10 @@
     .staff-command-center__status-strip,
     .staff-services__pill-row,
     .staff-services__fields {
+        grid-template-columns: 1fr;
+    }
+
+    .staff-tools-pills {
         grid-template-columns: 1fr;
     }
 }

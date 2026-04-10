@@ -79,713 +79,97 @@
         </div>
     </section>
 
-    <div class="dashboard__menus">
-        <section class="panelV2 panel--grid-item">
-            <h2 class="panel__heading">
-                <i class="{{ config('other.font-awesome') }} fa-link"></i>
-                {{ __('staff.links') }}
-            </h2>
-            <div class="panel__body">
-                <p class="form__group form__group--horizontal">
-                    <a class="form__button form__button--text" href="{{ route('home.index') }}">
-                        {{ __('staff.frontend') }}
-                    </a>
-                </p>
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.dashboard.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-columns"></i>
-                        {{ __('staff.staff-dashboard') }}
-                    </a>
-                </p>
+    <section class="panelV2 staff-tools-workspace" x-data="{ active: 'links' }" x-on:staff-tools-select.window="active = $event.detail">
+        <div class="staff-tools-workspace__head">
+            <h2 class="panel__heading">Tool Workspace</h2>
+            <p class="staff-tools-workspace__hint">Select a top-level group in Control Navigator to reveal its tool pills.</p>
+        </div>
+
+        <section class="staff-tools-group" x-show="active === 'links'">
+            <h3 class="staff-tools-group__title">Links</h3>
+            <div class="staff-tools-pills">
+                <a class="staff-tools-pill" href="{{ route('home.index') }}">Frontend</a>
+                <a class="staff-tools-pill" href="{{ route('staff.dashboard.index') }}">Staff Dashboard</a>
+                <a class="staff-tools-pill" href="{{ route('staff.dashboard.services.index') }}">Site Services</a>
                 @if (auth()->user()->group->is_owner)
-                    <p class="form__group form__group--horizontal">
-                        <a
-                            class="form__button form__button--text"
-                            href="{{ route('staff.backups.index') }}"
-                        >
-                            <i class="{{ config('other.font-awesome') }} fa-hdd"></i>
-                            {{ __('backup.backup') }}
-                            {{ __('backup.manager') }}
-                        </a>
-                    </p>
-                    <p class="form__group form__group--horizontal">
-                        <a
-                            class="form__button form__button--text"
-                            href="{{ route('staff.commands.index') }}"
-                        >
-                            <i class="fab fa-laravel"></i>
-                            Commands
-                        </a>
-                    </p>
-
-                    @if (config('donation.is_enabled'))
-                        <p class="form__group form__group--horizontal">
-                            <a
-                                class="form__button form__button--text"
-                                href="{{ route('staff.donations.index') }}"
-                            >
-                                <i class="{{ config('other.font-awesome') }} fa-money-bill"></i>
-                                Donations
-                            </a>
-                        </p>
-                        <p class="form__group form__group--horizontal">
-                            <a
-                                class="form__button form__button--text"
-                                href="{{ route('staff.gateways.index') }}"
-                            >
-                                <i class="{{ config('other.font-awesome') }} fa-money-bill"></i>
-                                Gateways
-                            </a>
-                        </p>
-                        <p class="form__group form__group--horizontal">
-                            <a
-                                class="form__button form__button--text"
-                                href="{{ route('staff.packages.index') }}"
-                            >
-                                <i class="{{ config('other.font-awesome') }} fa-money-bill"></i>
-                                Packages
-                            </a>
-                        </p>
-                    @endif
+                    <a class="staff-tools-pill" href="{{ route('staff.backups.index') }}">Backups</a>
+                    <a class="staff-tools-pill" href="{{ route('staff.commands.index') }}">Commands</a>
                 @endif
             </div>
         </section>
-        <section class="panelV2 panel--grid-item">
-            <h2 class="panel__heading">
-                <i class="{{ config('other.font-awesome') }} fa-wrench"></i>
-                Communications Control
-            </h2>
-            <div class="panel__body">
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.statuses.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-comment-dots"></i>
-                        {{ __('staff.statuses') }}
-                    </a>
-                </p>
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.chatrooms.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-comment-dots"></i>
-                        {{ __('staff.rooms') }}
-                    </a>
-                </p>
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.bots.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-robot"></i>
-                        {{ __('staff.bots') }}
-                    </a>
-                </p>
-                <div class="form__group form__group--horizontal">
-                    <form
-                        method="POST"
-                        action="{{ route('staff.flush.chat') }}"
-                        x-data="confirmation"
-                    >
-                        @csrf
-                        <button
-                            x-on:click.prevent="confirmAction"
-                            data-b64-deletion-message="{{ base64_encode('Are you sure you want to delete all chatbox messages in all chatrooms (including private chatbox messages)?') }}"
-                            class="form__button form__button--text"
-                        >
-                            <i class="{{ config('other.font-awesome') }} fa-broom"></i>
-                            {{ __('staff.flush-chat') }}
-                        </button>
-                    </form>
-                </div>
+
+        <section class="staff-tools-group" x-show="active === 'communications'">
+            <h3 class="staff-tools-group__title">Communications Control</h3>
+            <div class="staff-tools-pills">
+                <a class="staff-tools-pill" href="{{ route('staff.statuses.index') }}">Statuses</a>
+                <a class="staff-tools-pill" href="{{ route('staff.chatrooms.index') }}">Chatrooms</a>
+                <a class="staff-tools-pill" href="{{ route('staff.bots.index') }}">Bots</a>
+                <a class="staff-tools-pill" href="{{ route('staff.mass_private_message.create') }}">Mass PM</a>
+                <a class="staff-tools-pill" href="{{ route('staff.mass_email.create') }}">Mass Email</a>
             </div>
         </section>
-        <section class="panelV2 panel--grid-item">
-            <h2 class="panel__heading">
-                <i class="{{ config('other.font-awesome') }} fa-wrench"></i>
-                Platform and Content Control
-            </h2>
-            <div class="panel__body">
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.articles.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-newspaper"></i>
-                        {{ __('staff.articles') }}
-                    </a>
-                </p>
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.events.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-calendar-star"></i>
-                        {{ __('event.events') }}
-                    </a>
-                </p>
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.bon_exchanges.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-coins"></i>
-                        {{ __('staff.bon-exchange') }}
-                    </a>
-                </p>
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.bon_earnings.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-coins"></i>
-                        {{ __('staff.bon-earnings') }}
-                    </a>
-                </p>
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.blacklisted_clients.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-ban"></i>
-                        {{ __('common.blacklist') }}
-                    </a>
-                </p>
+
+        <section class="staff-tools-group" x-show="active === 'platform'">
+            <h3 class="staff-tools-group__title">Platform and Content Control</h3>
+            <div class="staff-tools-pills">
+                <a class="staff-tools-pill" href="{{ route('staff.articles.index') }}">Articles</a>
+                <a class="staff-tools-pill" href="{{ route('staff.events.index') }}">Events</a>
+                <a class="staff-tools-pill" href="{{ route('staff.pages.index') }}">Pages</a>
+                <a class="staff-tools-pill" href="{{ route('staff.polls.index') }}">Polls</a>
+                <a class="staff-tools-pill" href="{{ route('staff.ticket_categories.index') }}">Ticket Categories</a>
+                <a class="staff-tools-pill" href="{{ route('staff.ticket_priorities.index') }}">Ticket Priorities</a>
+                <a class="staff-tools-pill" href="{{ route('staff.wiki_categories.index') }}">Wikis</a>
+                <a class="staff-tools-pill" href="{{ route('staff.playlist_categories.index') }}">Playlist Categories</a>
+            </div>
+        </section>
+
+        <section class="staff-tools-group" x-show="active === 'torrent'">
+            <h3 class="staff-tools-group__title">Torrent Operations</h3>
+            <div class="staff-tools-pills">
+                <a class="staff-tools-pill" href="{{ route('staff.moderation.index') }}">Moderation Queue</a>
+                <a class="staff-tools-pill" href="{{ route('staff.categories.index') }}">Categories</a>
+                <a class="staff-tools-pill" href="{{ route('staff.types.index') }}">Types</a>
+                <a class="staff-tools-pill" href="{{ route('staff.resolutions.index') }}">Resolutions</a>
+                <a class="staff-tools-pill" href="{{ route('staff.regions.index') }}">Regions</a>
+                <a class="staff-tools-pill" href="{{ route('staff.distributors.index') }}">Distributors</a>
+                <a class="staff-tools-pill" href="{{ route('staff.peers.index') }}">Peers</a>
+                <a class="staff-tools-pill" href="{{ route('staff.rss.index') }}">RSS</a>
+            </div>
+        </section>
+
+        <section class="staff-tools-group" x-show="active === 'user'">
+            <h3 class="staff-tools-group__title">User and Security Operations</h3>
+            <div class="staff-tools-pills">
+                <a class="staff-tools-pill" href="{{ route('staff.applications.index') }}">Applications ({{ $pendingApplicationsCount }})</a>
+                <a class="staff-tools-pill" href="{{ route('staff.users.index') }}">User Search</a>
+                <a class="staff-tools-pill" href="{{ route('staff.apikeys.index') }}">API Keys</a>
+                <a class="staff-tools-pill" href="{{ route('staff.passkeys.index') }}">Passkeys</a>
+                <a class="staff-tools-pill" href="{{ route('staff.watchlist.index') }}">Watchlist</a>
+                <a class="staff-tools-pill" href="{{ route('staff.cheaters.index') }}">Cheater Detection</a>
+                <a class="staff-tools-pill" href="{{ route('staff.seedboxes.index') }}">Seedboxes</a>
                 @if (auth()->user()->group->is_admin)
-                    <p class="form__group form__group--horizontal">
-                        <a
-                            class="form__button form__button--text"
-                            href="{{ route('staff.forum_categories.index') }}"
-                        >
-                            <i class="fab fa-wpforms"></i>
-                            {{ __('staff.forums') }}
-                        </a>
-                    </p>
+                    <a class="staff-tools-pill" href="{{ route('staff.groups.index') }}">Groups</a>
                 @endif
+            </div>
+        </section>
 
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.pages.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-file"></i>
-                        {{ __('staff.pages') }}
-                    </a>
-                </p>
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.polls.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-chart-pie"></i>
-                        {{ __('staff.polls') }}
-                    </a>
-                </p>
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.ticket_categories.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-tags"></i>
-                        {{ __('staff.ticket-categories') }}
-                    </a>
-                </p>
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.ticket_priorities.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-exclamation-triangle"></i>
-                        {{ __('staff.ticket-priorities') }}
-                    </a>
-                </p>
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.whitelisted_image_urls.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-globe"></i>
-                        Whitelisted image URLs
-                    </a>
-                </p>
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.wiki_categories.index') }}"
-                    >
-                        <i class="fab fa-wikipedia-w"></i>
-                        Wikis
-                    </a>
-                </p>
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.blocked_ips.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-ban"></i>
-                        {{ __('staff.blocked-ips') }}
-                    </a>
-                </p>
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.playlist_categories.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-list"></i>
-                        Playlist categories
-                    </a>
-                </p>
-            </div>
-        </section>
-        <section class="panelV2 panel--grid-item">
-            <h2 class="panel__heading">
-                <i class="{{ config('other.font-awesome') }} fa-wrench"></i>
-                Torrent Operations
-            </h2>
-            <div class="panel__body">
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.moderation.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-columns"></i>
-                        {{ __('staff.torrent-moderation') }}
-                    </a>
-                </p>
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.categories.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-columns"></i>
-                        {{ __('staff.torrent-categories') }}
-                    </a>
-                </p>
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.types.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-columns"></i>
-                        {{ __('staff.torrent-types') }}
-                    </a>
-                </p>
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.resolutions.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-columns"></i>
-                        {{ __('staff.torrent-resolutions') }}
-                    </a>
-                </p>
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.regions.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-columns"></i>
-                        Torrent regions
-                    </a>
-                </p>
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.distributors.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-columns"></i>
-                        Torrent distributors
-                    </a>
-                </p>
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.automatic_torrent_freeleeches.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-columns"></i>
-                        Automatic torrent freeleeches
-                    </a>
-                </p>
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.peers.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-columns"></i>
-                        Peers
-                    </a>
-                </p>
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.histories.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-columns"></i>
-                        Histories
-                    </a>
-                </p>
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.torrent_downloads.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-columns"></i>
-                        Downloads
-                    </a>
-                </p>
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.torrent_trumps.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-columns"></i>
-                        Trumps
-                    </a>
-                </p>
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.unregistered_info_hashes.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-columns"></i>
-                        Unregistered info hashes
-                    </a>
-                </p>
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.rss.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-rss"></i>
-                        {{ __('staff.rss') }}
-                    </a>
-                </p>
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.media_languages.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-columns"></i>
-                        {{ __('common.media-languages') }}
-                    </a>
-                </p>
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.cheated_torrents.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-question"></i>
-                        Cheated torrents
-                    </a>
-                </p>
-                @if (config('announce.log_announces'))
-                    <p class="form__group form__group--horizontal">
-                        <a
-                            class="form__button form__button--text"
-                            href="{{ route('staff.announces.index') }}"
-                        >
-                            <i class="{{ config('other.font-awesome') }} fa-chart-bar"></i>
-                            Announces
-                        </a>
-                    </p>
-                @endif
-
-                @if (! config('announce.external_tracker.is_enabled'))
-                    <div class="form__group form__group--horizontal">
-                        <form
-                            method="POST"
-                            action="{{ route('staff.flush.peers') }}"
-                            x-data="confirmation"
-                        >
-                            @csrf
-                            <button
-                                x-on:click.prevent="confirmAction"
-                                data-b64-deletion-message="{{ base64_encode('Are you sure you want to delete all ghost peers?') }}"
-                                class="form__button form__button--text"
-                            >
-                                <i class="{{ config('other.font-awesome') }} fa-ghost"></i>
-                                {{ __('staff.flush-ghost-peers') }}
-                            </button>
-                        </form>
-                    </div>
-                @endif
-            </div>
-        </section>
-        <section class="panelV2 panel--grid-item">
-            <h2 class="panel__heading">
-                <i class="{{ config('other.font-awesome') }} fa-wrench"></i>
-                User and Security Operations
-            </h2>
-            <div class="panel__body">
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.applications.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-list"></i>
-                        {{ __('staff.applications') }} ({{ $pendingApplicationsCount }})
-                        @if ($pendingApplicationsCount > 0)
-                            <x-animation.notification />
-                        @endif
-                    </a>
-                </p>
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.users.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-users"></i>
-                        {{ __('staff.user-search') }}
-                    </a>
-                </p>
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.apikeys.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-key"></i>
-                        {{ __('user.apikeys') }}
-                    </a>
-                </p>
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.passkeys.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-key"></i>
-                        {{ __('staff.passkeys') }}
-                    </a>
-                </p>
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.rsskeys.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-key"></i>
-                        {{ __('user.rsskeys') }}
-                    </a>
-                </p>
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.email_updates.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-key"></i>
-                        {{ __('user.email-updates') }}
-                    </a>
-                </p>
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.password_reset_histories.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-key"></i>
-                        {{ __('user.password-resets') }}
-                    </a>
-                </p>
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.watchlist.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-eye"></i>
-                        Watchlist
-                    </a>
-                </p>
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.mass_private_message.create') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-envelope-square"></i>
-                        {{ __('staff.mass-pm') }}
-                    </a>
-                </p>
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.mass_email.create') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-paper-plane"></i>
-                        {{ __('staff.mass-email') }}
-                    </a>
-                </p>
-                <div class="form__group form__group--horizontal">
-                    <form
-                        method="GET"
-                        action="{{ route('staff.mass-actions.validate') }}"
-                        x-data="confirmation"
-                    >
-                        @csrf
-                        <button
-                            x-on:click.prevent="confirmAction"
-                            data-b64-deletion-message="{{ base64_encode('Are you sure you want to automatically validate all users even if their email address isn\'t confirmed?') }}"
-                            class="form__button form__button--text"
-                        >
-                            <i class="{{ config('other.font-awesome') }} fa-history"></i>
-                            {{ __('staff.mass-validate-users') }}
-                        </button>
-                    </form>
-                </div>
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.cheaters.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-question"></i>
-                        {{ __('staff.possible-leech-cheaters') }}
-                    </a>
-                </p>
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.leakers.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-faucet-drip"></i>
-                        Leakers
-                    </a>
-                </p>
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.seedboxes.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-server"></i>
-                        {{ __('staff.seedboxes') }}
-                    </a>
-                </p>
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.uploaders.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-upload"></i>
-                        {{ __('torrent.uploader') }} {{ __('common.stats') }}
-                    </a>
-                </p>
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.internals.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-magic"></i>
-                        Internals
-                    </a>
-                </p>
-                @if (auth()->user()->group->is_admin)
-                    <p class="form__group form__group--horizontal">
-                        <a
-                            class="form__button form__button--text"
-                            href="{{ route('staff.groups.index') }}"
-                        >
-                            <i class="{{ config('other.font-awesome') }} fa-users"></i>
-                            {{ __('staff.groups') }}
-                        </a>
-                    </p>
-                @endif
-            </div>
-        </section>
-        <section class="panelV2 panel--grid-item">
-            <h2 class="panel__heading">
-                <i class="{{ config('other.font-awesome') }} fa-file"></i>
-                Compliance and Logs
-            </h2>
-            <div class="panel__body">
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.audits.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-file"></i>
-                        {{ __('staff.audit-log') }}
-                    </a>
-                </p>
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.bans.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-file"></i>
-                        {{ __('staff.bans-log') }}
-                    </a>
-                </p>
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.authentications.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-file"></i>
-                        {{ __('staff.failed-login-log') }}
-                    </a>
-                </p>
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.gifts.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-file"></i>
-                        {{ __('staff.gifts-log') }}
-                    </a>
-                </p>
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.invites.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-file"></i>
-                        {{ __('staff.invites-log') }}
-                    </a>
-                </p>
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.notes.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-file"></i>
-                        {{ __('staff.user-notes') }}
-                    </a>
-                </p>
+        <section class="staff-tools-group" x-show="active === 'logs'">
+            <h3 class="staff-tools-group__title">Compliance and Logs</h3>
+            <div class="staff-tools-pills">
+                <a class="staff-tools-pill" href="{{ route('staff.audits.index') }}">Audit Log</a>
+                <a class="staff-tools-pill" href="{{ route('staff.bans.index') }}">Bans Log</a>
+                <a class="staff-tools-pill" href="{{ route('staff.authentications.index') }}">Failed Login Log</a>
+                <a class="staff-tools-pill" href="{{ route('staff.gifts.index') }}">Gifts Log</a>
+                <a class="staff-tools-pill" href="{{ route('staff.invites.index') }}">Invites Log</a>
+                <a class="staff-tools-pill" href="{{ route('staff.notes.index') }}">User Notes</a>
+                <a class="staff-tools-pill" href="{{ route('staff.reports.index') }}">Reports ({{ $unsolvedReportsCount }})</a>
+                <a class="staff-tools-pill" href="{{ route('staff.warnings.index') }}">Warnings</a>
                 @if (auth()->user()->group->is_owner)
-                    <p class="form__group form__group--horizontal">
-                        <a
-                            class="form__button form__button--text"
-                            href="{{ route('staff.laravel-log.index') }}"
-                        >
-                            <i class="fa fa-file"></i>
-                            {{ __('staff.laravel-log') }}
-                        </a>
-                    </p>
+                    <a class="staff-tools-pill" href="{{ route('staff.laravel-log.index') }}">Laravel Log</a>
                 @endif
-
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.reports.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-file"></i>
-                        {{ __('staff.reports-log') }} ({{ $unsolvedReportsCount }})
-                        @if ($unsolvedReportsCount > 0)
-                            <x-animation.notification />
-                        @endif
-                    </a>
-                </p>
-                <p class="form__group form__group--horizontal">
-                    <a
-                        class="form__button form__button--text"
-                        href="{{ route('staff.warnings.index') }}"
-                    >
-                        <i class="{{ config('other.font-awesome') }} fa-file"></i>
-                        {{ __('staff.warnings-log') }}
-                    </a>
-                </p>
             </div>
         </section>
-    </div>
+    </section>
 @endsection
 
 @section('sidebar')
@@ -793,11 +177,26 @@
         <h2 class="panel__heading">Control Navigator</h2>
         <div class="panel__body">
             <nav class="staff-side-menu" aria-label="Staff side navigation">
-                <details class="staff-side-menu__group" open>
-                    <summary class="staff-side-menu__summary">
-                        Priority Queue
-                        <span class="staff-side-menu__badge">{{ $unsolvedReportsCount + $pendingApplicationsCount }}</span>
-                    </summary>
+                <button class="staff-side-menu__top" type="button" x-on:click="$dispatch('staff-tools-select', 'links')">
+                    Links
+                </button>
+                <button class="staff-side-menu__top" type="button" x-on:click="$dispatch('staff-tools-select', 'communications')">
+                    Communications Control
+                </button>
+                <button class="staff-side-menu__top" type="button" x-on:click="$dispatch('staff-tools-select', 'platform')">
+                    Platform and Content Control
+                </button>
+                <button class="staff-side-menu__top" type="button" x-on:click="$dispatch('staff-tools-select', 'torrent')">
+                    Torrent Operations
+                </button>
+                <button class="staff-side-menu__top" type="button" x-on:click="$dispatch('staff-tools-select', 'user')">
+                    User and Security Operations
+                </button>
+                <button class="staff-side-menu__top" type="button" x-on:click="$dispatch('staff-tools-select', 'logs')">
+                    Compliance and Logs
+                </button>
+
+                <div class="staff-side-menu__quick">
                     <a class="staff-side-menu__link" href="{{ route('staff.reports.index') }}">
                         Reports
                         <span class="staff-side-menu__meta">{{ $unsolvedReportsCount }}</span>
@@ -810,189 +209,11 @@
                         Pending Torrents
                         <span class="staff-side-menu__meta">{{ $torrents->pending }}</span>
                     </a>
-                </details>
-
-                <details class="staff-side-menu__group">
-                    <summary class="staff-side-menu__summary">Moderation Tools</summary>
-                    <a class="staff-side-menu__link" href="{{ route('staff.users.index') }}">User Search</a>
-                    <a class="staff-side-menu__link" href="{{ route('staff.watchlist.index') }}">Watchlist</a>
-                    <a class="staff-side-menu__link" href="{{ route('staff.cheaters.index') }}">Cheater Detection</a>
-                    <a class="staff-side-menu__link" href="{{ route('staff.seedboxes.index') }}">Seedboxes</a>
-                    <a class="staff-side-menu__link" href="{{ route('staff.warnings.index') }}">Warnings Log</a>
-                </details>
-
-                <details class="staff-side-menu__group">
-                    <summary class="staff-side-menu__summary">Content and Tracker</summary>
-                    <a class="staff-side-menu__link" href="#site-services">Site Services</a>
-                    <a class="staff-side-menu__link" href="#site-banner-editor">Banner Editor</a>
-                    <a class="staff-side-menu__link" href="{{ route('staff.articles.index') }}">Articles</a>
-                    <a class="staff-side-menu__link" href="{{ route('staff.events.index') }}">Events</a>
-                    <a class="staff-side-menu__link" href="{{ route('staff.categories.index') }}">Categories</a>
-                    <a class="staff-side-menu__link" href="{{ route('staff.types.index') }}">Types</a>
-                    <a class="staff-side-menu__link" href="{{ route('staff.resolutions.index') }}">Resolutions</a>
-                    <a class="staff-side-menu__link" href="{{ route('staff.peers.index') }}">Peers</a>
-                </details>
-
-                <details class="staff-side-menu__group">
-                    <summary class="staff-side-menu__summary">Communications and Logs</summary>
-                    <a class="staff-side-menu__link" href="{{ route('staff.statuses.index') }}">Statuses</a>
-                    <a class="staff-side-menu__link" href="{{ route('staff.chatrooms.index') }}">Chatrooms</a>
-                    <a class="staff-side-menu__link" href="{{ route('staff.bots.index') }}">Bots</a>
-                    <a class="staff-side-menu__link" href="{{ route('staff.audits.index') }}">Audits</a>
-                    <a class="staff-side-menu__link" href="{{ route('staff.authentications.index') }}">Authentications</a>
-                </details>
+                </div>
             </nav>
         </div>
     </section>
 
-    <section class="panelV2 staff-services" id="site-services">
-        <h2 class="panel__heading">
-            <i class="{{ config('other.font-awesome') }} fa-server"></i> Site Services
-        </h2>
-        <form class="panel__body staff-services__body" method="POST" action="{{ route('staff.dashboard.services.update') }}">
-            @csrf
-
-            {{-- Site Identity --}}
-            <details class="staff-services__group" open>
-                <summary class="staff-services__summary">
-                    <i class="{{ config('other.font-awesome') }} fa-globe"></i> Site Identity
-                </summary>
-                <div class="staff-services__fields">
-                    <label class="form__label" for="ssp_site_name">Site Name</label>
-                    <input id="ssp_site_name" class="form__text" name="site_name" type="text"
-                        value="{{ old('site_name', $siteServices['site_name']) }}" required />
-
-                    <label class="form__label" for="ssp_site_title">Title</label>
-                    <input id="ssp_site_title" class="form__text" name="site_title" type="text"
-                        value="{{ old('site_title', $siteServices['site_title']) }}" required />
-
-                    <label class="form__label" for="ssp_site_subtitle">Subtitle</label>
-                    <input id="ssp_site_subtitle" class="form__text" name="site_subtitle" type="text"
-                        value="{{ old('site_subtitle', $siteServices['site_subtitle']) }}" />
-
-                    <label class="form__label" for="ssp_site_url">Site URL</label>
-                    <input id="ssp_site_url" class="form__text" name="site_url" type="url"
-                        value="{{ old('site_url', $siteServices['site_url']) }}" required />
-
-                    <label class="form__label" for="ssp_owner_email">Owner Email</label>
-                    <input id="ssp_owner_email" class="form__text" name="owner_email" type="email"
-                        value="{{ old('owner_email', $siteServices['owner_email']) }}" />
-                </div>
-            </details>
-
-            {{-- Mail Configuration --}}
-            <details class="staff-services__group"
-                x-data="{
-                    mailer: @js(old('mail_mailer', $siteServices['mail_mailer'])),
-                    host: @js(old('mail_host', $siteServices['mail_host'])),
-                    port: @js(old('mail_port', $siteServices['mail_port'])),
-                    encryption: @js(old('mail_encryption', $siteServices['mail_encryption'])),
-                    username: @js(old('mail_username', $siteServices['mail_username'])),
-                    password: '',
-                    fromAddress: @js(old('mail_from_address', $siteServices['mail_from_address'])),
-                    fromName: @js(old('mail_from_name', $siteServices['mail_from_name'])),
-                    sendmailPath: @js(old('mail_sendmail_path', $siteServices['mail_sendmail_path'])),
-                    get isSmtp() { return this.mailer === 'smtp'; },
-                    get isSendmail() { return this.mailer === 'sendmail'; },
-                    applyPreset(p) {
-                        const map = {
-                            'plesk-25':  { mailer: 'smtp', host: 'localhost', port: '25',  encryption: '' },
-                            'plesk-587': { mailer: 'smtp', host: 'localhost', port: '587', encryption: 'tls' },
-                            'plesk-465': { mailer: 'smtp', host: 'localhost', port: '465', encryption: 'ssl' },
-                            'sendmail':  { mailer: 'sendmail' },
-                            'log':       { mailer: 'log' },
-                        };
-                        const preset = map[p];
-                        if (!preset) return;
-                        if (preset.mailer !== undefined) this.mailer = preset.mailer;
-                        if (preset.host !== undefined) this.host = preset.host;
-                        if (preset.port !== undefined) this.port = preset.port;
-                        if (preset.encryption !== undefined) this.encryption = preset.encryption;
-                    }
-                }">
-                <summary class="staff-services__summary">
-                    <i class="{{ config('other.font-awesome') }} fa-envelope"></i> Mail Configuration
-                    <span class="staff-services__mailer-badge" x-text="mailer.toUpperCase()"></span>
-                </summary>
-                <div class="staff-services__fields">
-
-                    <label class="form__label">Quick Preset</label>
-                    <select class="form__select staff-services__preset-select"
-                        @change="applyPreset($event.target.value)">
-                        <option value="">— Custom —</option>
-                        <optgroup label="Plesk Built-in Mail">
-                            <option value="plesk-25">Plesk Local &middot; Port 25</option>
-                            <option value="plesk-587">Plesk Local &middot; Port 587 (STARTTLS)</option>
-                            <option value="plesk-465">Plesk Local &middot; Port 465 (SSL)</option>
-                        </optgroup>
-                        <optgroup label="Other">
-                            <option value="sendmail">Sendmail / Postfix</option>
-                            <option value="log">Log Only (Testing)</option>
-                        </optgroup>
-                    </select>
-
-                    <label class="form__label" for="ssp_mail_mailer">Driver</label>
-                    <select id="ssp_mail_mailer" class="form__select" name="mail_mailer"
-                        x-model="mailer" required>
-                        <option value="smtp">SMTP</option>
-                        <option value="sendmail">Sendmail</option>
-                        <option value="mailgun">Mailgun</option>
-                        <option value="ses">Amazon SES</option>
-                        <option value="postmark">Postmark</option>
-                        <option value="log">Log</option>
-                        <option value="array">Array (Disabled)</option>
-                    </select>
-
-                    <div x-show="isSendmail" class="staff-services__smtp-group">
-                        <label class="form__label" for="ssp_sendmail_path">Sendmail Path</label>
-                        <input id="ssp_sendmail_path" class="form__text" name="mail_sendmail_path"
-                            type="text" x-model="sendmailPath" />
-                    </div>
-
-                    <div x-show="isSmtp" class="staff-services__smtp-group">
-                        <label class="form__label" for="ssp_mail_host">Host</label>
-                        <input id="ssp_mail_host" class="form__text" name="mail_host"
-                            type="text" x-model="host" />
-
-                        <label class="form__label" for="ssp_mail_port">Port</label>
-                        <input id="ssp_mail_port" class="form__text" name="mail_port"
-                            type="number" min="1" max="65535" x-model="port" />
-
-                        <label class="form__label" for="ssp_mail_encryption">Encryption</label>
-                        <select id="ssp_mail_encryption" class="form__select" name="mail_encryption"
-                            x-model="encryption">
-                            <option value="">None</option>
-                            <option value="tls">TLS (STARTTLS)</option>
-                            <option value="ssl">SSL</option>
-                        </select>
-
-                        <label class="form__label" for="ssp_mail_username">Username</label>
-                        <input id="ssp_mail_username" class="form__text" name="mail_username"
-                            type="text" x-model="username" autocomplete="off" />
-
-                        <label class="form__label" for="ssp_mail_password">Password</label>
-                        <input id="ssp_mail_password" class="form__text" name="mail_password"
-                            type="password" x-model="password" autocomplete="new-password"
-                            placeholder="{{ $siteServices['mail_password_set'] ? '(stored — leave blank to keep)' : 'Enter password' }}" />
-                    </div>
-
-                    <label class="form__label" for="ssp_mail_from_address">From Address</label>
-                    <input id="ssp_mail_from_address" class="form__text" name="mail_from_address"
-                        type="email" x-model="fromAddress" />
-
-                    <label class="form__label" for="ssp_mail_from_name">From Name</label>
-                    <input id="ssp_mail_from_name" class="form__text" name="mail_from_name"
-                        type="text" x-model="fromName" />
-                </div>
-            </details>
-
-            <div class="staff-services__actions">
-                <button class="form__button form__button--filled" type="submit">
-                    <i class="{{ config('other.font-awesome') }} fa-save"></i> Save Services
-                </button>
-            </div>
-        </form>
-    </section>
     <section class="panelV2 staff-banner-editor" id="site-banner-editor">
         <h2 class="panel__heading">Site Banner Editor</h2>
         <div class="panel__body">

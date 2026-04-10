@@ -86,22 +86,14 @@ class HomeController extends Controller
             'basic'                    => $systemInformation->basic(),
             'file_permissions'         => $systemInformation->directoryPermissions(),
             'externalTrackerStats'     => Unit3dAnnounce::getStats(),
-            'siteServices'             => [
-                'site_name'         => (string) config('app.name'),
-                'site_title'        => (string) config('other.title'),
-                'site_subtitle'     => (string) config('other.subTitle'),
-                'site_url'          => (string) config('app.url'),
-                'mail_mailer'       => (string) config('mail.default'),
-                'owner_email'       => (string) (config('other.email') ?? ''),
-                'mail_host'         => (string) (config('mail.mailers.smtp.host') ?? ''),
-                'mail_port'         => (string) (config('mail.mailers.smtp.port') ?? ''),
-                'mail_username'      => (string) (config('mail.mailers.smtp.username') ?? ''),
-                'mail_password_set'  => ! empty(config('mail.mailers.smtp.password')),
-                'mail_encryption'    => (string) (config('mail.mailers.smtp.encryption') ?? ''),
-                'mail_from_address'  => (string) (config('mail.from.address') ?? ''),
-                'mail_from_name'     => (string) (config('mail.from.name') ?? ''),
-                'mail_sendmail_path' => (string) (config('mail.mailers.sendmail.path') ?? '/usr/sbin/sendmail -bs -i'),
-            ],
+            'siteServices'             => $this->siteServicesPayload(),
+        ]);
+    }
+
+    public function services(): \Illuminate\Contracts\View\Factory|\Illuminate\View\View
+    {
+        return view('Staff.dashboard.services', [
+            'siteServices' => $this->siteServicesPayload(),
         ]);
     }
 
@@ -172,7 +164,30 @@ class HomeController extends Controller
         $this->updateConfigStringValue(config_path('other.php'), 'title', $validated['site_title']);
         $this->updateConfigStringValue(config_path('other.php'), 'subTitle', (string) ($validated['site_subtitle'] ?? ''));
 
-        return to_route('staff.dashboard.index')->with('success', 'Site services updated. Run config cache clear/optimize on server to apply immediately.');
+        return to_route('staff.dashboard.services.index')->with('success', 'Site services updated. Run config cache clear/optimize on server to apply immediately.');
+    }
+
+    /**
+     * @return array<string,bool|string>
+     */
+    private function siteServicesPayload(): array
+    {
+        return [
+            'site_name'         => (string) config('app.name'),
+            'site_title'        => (string) config('other.title'),
+            'site_subtitle'     => (string) config('other.subTitle'),
+            'site_url'          => (string) config('app.url'),
+            'mail_mailer'       => (string) config('mail.default'),
+            'owner_email'       => (string) (config('other.email') ?? ''),
+            'mail_host'         => (string) (config('mail.mailers.smtp.host') ?? ''),
+            'mail_port'         => (string) (config('mail.mailers.smtp.port') ?? ''),
+            'mail_username'     => (string) (config('mail.mailers.smtp.username') ?? ''),
+            'mail_password_set' => ! empty(config('mail.mailers.smtp.password')),
+            'mail_encryption'   => (string) (config('mail.mailers.smtp.encryption') ?? ''),
+            'mail_from_address' => (string) (config('mail.from.address') ?? ''),
+            'mail_from_name'    => (string) (config('mail.from.name') ?? ''),
+            'mail_sendmail_path' => (string) (config('mail.mailers.sendmail.path') ?? '/usr/sbin/sendmail -bs -i'),
+        ];
     }
 
     /**
