@@ -22,9 +22,15 @@
         <link rel="icon" href="{{ url('/favicon.ico') }}" type="image/x-icon" />
         @vite('resources/sass/pages/_auth.scss')
     </head>
+    @php
+        $themeBackgroundPath = public_path('img/theme/site-background.webp');
+        $loginBackgroundUrl = file_exists($themeBackgroundPath)
+            ? asset('img/theme/site-background.webp')
+            : asset('img/auth/The_Void_Login_Page.png');
+    @endphp
     <body
         class="page--void-login"
-        style="--void-login-bg-image: url('{{ asset('img/auth/The_Void_Login_Page.png') }}')"
+        style="--void-login-bg-image: url('{{ $loginBackgroundUrl }}')"
     >
         <!-- Do NOT change! For Jackett support -->
         <div class="Jackett" style="display: none">{{ config('unit3d.powered-by') }}</div>

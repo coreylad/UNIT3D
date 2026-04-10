@@ -100,7 +100,6 @@
             <div class="staff-tools-pills">
                 <a class="staff-tools-pill" href="{{ route('home.index') }}">Frontend</a>
                 <a class="staff-tools-pill" href="{{ route('staff.dashboard.index') }}">Staff Dashboard</a>
-                <a class="staff-tools-pill" href="{{ route('staff.dashboard.services.index') }}">Site Services</a>
                 @if (auth()->user()->group->is_owner)
                     <a class="staff-tools-pill" href="{{ route('staff.backups.index') }}">Backups</a>
                     <a class="staff-tools-pill" href="{{ route('staff.commands.index') }}">Commands</a>
@@ -126,6 +125,9 @@
             <section class="staff-tools-group">
             <h3 class="staff-tools-group__title">Platform and Content Control</h3>
             <div class="staff-tools-pills">
+                <a class="staff-tools-pill" href="{{ route('staff.dashboard.services.index') }}">Site Services</a>
+                <a class="staff-tools-pill" href="{{ route('staff.dashboard.theme.index') }}#banner-editor">Site Banner Editor</a>
+                <a class="staff-tools-pill" href="{{ route('staff.dashboard.theme.index') }}">Theme Editor</a>
                 <a class="staff-tools-pill" href="{{ route('staff.articles.index') }}">Articles</a>
                 <a class="staff-tools-pill" href="{{ route('staff.events.index') }}">Events</a>
                 <a class="staff-tools-pill" href="{{ route('staff.pages.index') }}">Pages</a>
@@ -158,6 +160,7 @@
             <section class="staff-tools-group">
             <h3 class="staff-tools-group__title">User and Security Operations</h3>
             <div class="staff-tools-pills">
+                <a class="staff-tools-pill" href="{{ route('staff.dashboard.twofactor.index') }}">2FA Policy</a>
                 <a class="staff-tools-pill" href="{{ route('staff.applications.index') }}">Applications ({{ $pendingApplicationsCount }})</a>
                 <a class="staff-tools-pill" href="{{ route('staff.users.index') }}">User Search</a>
                 <a class="staff-tools-pill" href="{{ route('staff.apikeys.index') }}">API Keys</a>
@@ -232,40 +235,6 @@
                     </a>
                 </div>
             </nav>
-        </div>
-    </section>
-
-    <section class="panelV2 staff-banner-editor" id="site-banner-editor">
-        <h2 class="panel__heading">Site Banner Editor</h2>
-        <div class="panel__body">
-            <p class="staff-banner-editor__text">
-                Upload a PNG banner to replace the header image shown above the site navigation.
-            </p>
-            <img
-                class="staff-banner-editor__preview"
-                src="{{ asset('img/auth/The_Void_Login_Page.png') }}?v={{ file_exists(public_path('img/auth/The_Void_Login_Page.png')) ? filemtime(public_path('img/auth/The_Void_Login_Page.png')) : now()->timestamp }}"
-                alt="Current site banner preview"
-            />
-            <form
-                class="staff-banner-editor__form"
-                method="POST"
-                action="{{ route('staff.dashboard.banner.update') }}"
-                enctype="multipart/form-data"
-            >
-                @csrf
-                <label class="form__label" for="site_banner">Upload PNG (max 12 MB)</label>
-                <input
-                    id="site_banner"
-                    class="form__file"
-                    name="site_banner"
-                    type="file"
-                    accept="image/png"
-                    required
-                />
-                <button class="form__button form__button--filled" type="submit">
-                    Save Banner
-                </button>
-            </form>
         </div>
     </section>
 

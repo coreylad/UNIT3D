@@ -26,6 +26,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Validation\Rule;
+use Intervention\Image\ImageManagerStatic as Image;
 use Spatie\SslCertificate\SslCertificate;
 use Exception;
 
@@ -97,6 +98,31 @@ class HomeController extends Controller
         ]);
     }
 
+    public function theme(): \Illuminate\Contracts\View\Factory|\Illuminate\View\View
+    {
+        $bannerPath = public_path('img/theme/site-banner.webp');
+        $backgroundPath = public_path('img/theme/site-background.webp');
+
+        return view('Staff.dashboard.theme', [
+            'themeAssets' => [
+                'banner_url' => file_exists($bannerPath) ? asset('img/theme/site-banner.webp') : asset('img/auth/The_Void_Login_Page.png'),
+                'background_url' => file_exists($backgroundPath) ? asset('img/theme/site-background.webp') : asset('img/auth/The_Void_Login_Page.png'),
+                'banner_exists' => file_exists($bannerPath),
+                'background_exists' => file_exists($backgroundPath),
+            ],
+        ]);
+    }
+
+    public function twoFactor(): \Illuminate\Contracts\View\Factory|\Illuminate\View\View
+    {
+        return view('Staff.dashboard.two-factor', [
+            'twoFactorSettings' => [
+                'force_2fa' => (bool) config('fortify.force_2fa'),
+                'issuer'    => (string) config('fortify.two_factor_issuer', config('app.name')),
+            ],
+        ]);
+    }
+
     /**
      * Update the site header banner image shown above the top navigation.
      */
@@ -165,6 +191,58 @@ class HomeController extends Controller
         $this->updateConfigStringValue(config_path('other.php'), 'subTitle', (string) ($validated['site_subtitle'] ?? ''));
 
         return to_route('staff.dashboard.services.index')->with('success', 'Site services updated. Run config cache clear/optimize on server to apply immediately.');
+    }
+
+    public function updateTheme(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'theme_banner'     => ['nullable', 'file', 'image', 'mimetypes:image/jpeg,image/png,image/webp,image/gif,image/avif', 'max:20480'],
+            'theme_background' => ['nullable', 'file', 'image', 'mimetypes:image/jpeg,image/png,image/webp,image/gif,image/avif', 'max:20480'],
+        ]);
+
+        if (! isset($validated['theme_banner']) && ! isset($validated['theme_background'])) {
+            return to_route('staff.dashboard.theme.index')->withErrors(['theme_banner' => 'Upload at least one image to update the theme.']);
+        }
+
+        $directory = public_path('img/theme');
+        if (! File::isDirectory($directory)) {
+            File::makeDirectory($directory, 0755, true);
+        }
+
+        if (isset($validated['theme_banner'])) {
+            $this->processThemeImage(
+                $validated['theme_banner'],
+                $directory.DIRECTORY_SEPARATOR.'site-banner.webp',
+                2400,
+                520
+            );
+        }
+
+        if (isset($validated['theme_background'])) {
+            $this->processThemeImage(
+                $validated['theme_background'],
+                $directory.DIRECTORY_SEPARATOR.'site-background.webp',
+                2560,
+                1440
+            );
+        }
+
+        return to_route('staff.dashboard.theme.index')->with('success', 'Theme assets updated successfully.');
+    }
+
+    public function updateTwoFactor(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'force_2fa' => ['nullable', 'boolean'],
+            'issuer'    => ['required', 'string', 'max:120'],
+        ]);
+
+        $this->writeEnvValues([
+            'FORCE_2FA'          => $request->boolean('force_2fa') ? 'true' : 'false',
+            'TWO_FACTOR_ISSUER'  => $validated['issuer'],
+        ]);
+
+        return to_route('staff.dashboard.twofactor.index')->with('success', '2FA policy updated. Run config cache clear/optimize on server to apply immediately.');
     }
 
     /**
@@ -249,5 +327,16 @@ class HomeController extends Controller
         ) {
             File::put($filePath, $updated);
         }
+    }
+
+    private function processThemeImage(\Illuminate\Http\UploadedFile $file, string $outputPath, int $targetWidth, int $targetHeight): void
+    {
+        Image::make($file->getRealPath())
+            ->orientate()
+            ->fit($targetWidth, $targetHeight, function ($constraint): void {
+                $constraint->upsize();
+            })
+            ->encode('webp', 88)
+            ->save($outputPath);
     }
 }

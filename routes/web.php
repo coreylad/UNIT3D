@@ -85,7 +85,7 @@ Route::middleware('language')->group(function (): void {
     | Website (When Authorized) (Alpha Ordered)
     |---------------------------------------------------------------------------------
     */
-    Route::middleware(['auth', 'banned', 'verified'])->group(function (): void {
+    Route::middleware(['auth', 'banned', 'verified', 'force2fa'])->group(function (): void {
         // General
         Route::get('/', [App\Http\Controllers\HomeController::class, 'index'])->name('home.index');
 
@@ -640,8 +640,12 @@ Route::middleware('language')->group(function (): void {
             Route::name('dashboard.')->group(function (): void {
                 Route::get('/', [App\Http\Controllers\Staff\HomeController::class, 'index'])->name('index');
                 Route::get('/services', [App\Http\Controllers\Staff\HomeController::class, 'services'])->name('services.index');
+                Route::get('/theme', [App\Http\Controllers\Staff\HomeController::class, 'theme'])->name('theme.index');
+                Route::get('/two-factor', [App\Http\Controllers\Staff\HomeController::class, 'twoFactor'])->name('twofactor.index');
                 Route::post('/banner', [App\Http\Controllers\Staff\HomeController::class, 'updateBanner'])->name('banner.update');
                 Route::post('/services', [App\Http\Controllers\Staff\HomeController::class, 'updateSiteServices'])->name('services.update');
+                Route::post('/theme', [App\Http\Controllers\Staff\HomeController::class, 'updateTheme'])->name('theme.update');
+                Route::post('/two-factor', [App\Http\Controllers\Staff\HomeController::class, 'updateTwoFactor'])->name('twofactor.update');
             });
 
             // Announces

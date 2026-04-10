@@ -141,6 +141,8 @@ class TwoFactorAuthForm extends Component
      */
     final public function render(): \Illuminate\Contracts\View\View|\Illuminate\Foundation\Application|\Illuminate\Contracts\View\Factory|\Illuminate\Contracts\Foundation\Application
     {
+        config(['app.name' => (string) config('fortify.two_factor_issuer', config('app.name'))]);
+
         return view('livewire.two-factor-auth-form');
     }
 }

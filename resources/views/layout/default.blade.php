@@ -9,11 +9,20 @@
             @include('partials.alerts')
         </div>
         <header>
+            @php
+                $themeBannerPath = public_path('img/theme/site-banner.webp');
+                $legacyBannerPath = public_path('img/auth/The_Void_Login_Page.png');
+                $bannerExists = file_exists($themeBannerPath);
+                $bannerUrl = $bannerExists ? asset('img/theme/site-banner.webp') : asset('img/auth/The_Void_Login_Page.png');
+                $bannerVersion = $bannerExists
+                    ? filemtime($themeBannerPath)
+                    : (file_exists($legacyBannerPath) ? filemtime($legacyBannerPath) : now()->timestamp);
+            @endphp
             <div class="site-header-banner">
                 <a href="{{ route('home.index') }}" aria-label="{{ config('other.title') }}">
                     <img
                         class="site-header-banner__img"
-                        src="{{ asset('img/auth/The_Void_Login_Page.png') }}?v={{ file_exists(public_path('img/auth/The_Void_Login_Page.png')) ? filemtime(public_path('img/auth/The_Void_Login_Page.png')) : now()->timestamp }}"
+                        src="{{ $bannerUrl }}?v={{ $bannerVersion }}"
                         alt="{{ config('other.title') }}"
                     />
                 </a>

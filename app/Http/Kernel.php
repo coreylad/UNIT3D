@@ -102,6 +102,7 @@ class Kernel extends HttpKernel
         'language'         => Middleware\SetLanguage::class,
         'modo'             => Middleware\CheckForModo::class,
         'owner'            => Middleware\CheckForOwner::class,
+        'force2fa'         => Middleware\EnforceTwoFactorEnrollment::class,
         'throttle'         => \Illuminate\Routing\Middleware\ThrottleRequestsWithRedis::class,
         'signed'           => \Illuminate\Routing\Middleware\ValidateSignature::class,
         'verified'         => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,

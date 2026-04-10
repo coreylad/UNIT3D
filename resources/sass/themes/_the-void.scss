@@ -1,7 +1,10 @@
 :root {
     --text-color: #d6d9e8;
     --body-fg: #d6d9e8;
-    --body-bg: #04060f url('/img/auth/The_Void_Login_Page.png') center top / cover fixed no-repeat;
+    --body-bg:
+        #04060f
+        url('/img/theme/site-background.webp') center top / cover fixed no-repeat,
+        url('/img/auth/The_Void_Login_Page.png') center top / cover fixed no-repeat;
 
     --panel-bg: rgba(8, 10, 22, 0.74);
     --panel-head-bg: rgba(11, 13, 28, 0.88);
