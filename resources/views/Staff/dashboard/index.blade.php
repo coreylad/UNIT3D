@@ -17,6 +17,68 @@
 @section('page', 'page__staff-dashboard--index')
 
 @section('main')
+    <section class="staff-command-center panelV2">
+        <div class="staff-command-center__head">
+            <p class="staff-command-center__kicker">Operations Core</p>
+            <h2 class="staff-command-center__title">Staff Command Center</h2>
+            <p class="staff-command-center__subtitle">
+                High-priority queues and moderation shortcuts for fast daily control.
+            </p>
+        </div>
+        <div class="staff-command-center__status-strip">
+            <a class="staff-status-chip" href="{{ route('staff.reports.index') }}">
+                <span class="staff-status-chip__label">Open Reports</span>
+                <span class="staff-status-chip__value">{{ $unsolvedReportsCount }}</span>
+            </a>
+            <a class="staff-status-chip" href="{{ route('staff.applications.index') }}">
+                <span class="staff-status-chip__label">Pending Applications</span>
+                <span class="staff-status-chip__value">{{ $pendingApplicationsCount }}</span>
+            </a>
+            <a class="staff-status-chip" href="{{ route('staff.moderation.index') }}">
+                <span class="staff-status-chip__label">Pending Torrents</span>
+                <span class="staff-status-chip__value">{{ $torrents->pending }}</span>
+            </a>
+            <a class="staff-status-chip" href="{{ route('staff.peers.index') }}">
+                <span class="staff-status-chip__label">Active Peers</span>
+                <span class="staff-status-chip__value">{{ $peers->active }}</span>
+            </a>
+        </div>
+        <div class="staff-command-grid" aria-label="Quick staff actions">
+            <a class="staff-command-grid__tool" href="{{ route('staff.moderation.index') }}">
+                <i class="{{ config('other.font-awesome') }} fa-shield-alt"></i>
+                <span>Moderation Queue</span>
+            </a>
+            <a class="staff-command-grid__tool" href="{{ route('staff.reports.index') }}">
+                <i class="{{ config('other.font-awesome') }} fa-flag"></i>
+                <span>Reports Desk</span>
+            </a>
+            <a class="staff-command-grid__tool" href="{{ route('staff.applications.index') }}">
+                <i class="{{ config('other.font-awesome') }} fa-user-check"></i>
+                <span>Applications</span>
+            </a>
+            <a class="staff-command-grid__tool" href="{{ route('staff.users.index') }}">
+                <i class="{{ config('other.font-awesome') }} fa-users"></i>
+                <span>User Control</span>
+            </a>
+            <a class="staff-command-grid__tool" href="{{ route('staff.watchlist.index') }}">
+                <i class="{{ config('other.font-awesome') }} fa-eye"></i>
+                <span>Watchlist</span>
+            </a>
+            <a class="staff-command-grid__tool" href="{{ route('staff.seedboxes.index') }}">
+                <i class="{{ config('other.font-awesome') }} fa-server"></i>
+                <span>Seedbox Intel</span>
+            </a>
+            <a class="staff-command-grid__tool" href="{{ route('staff.cheaters.index') }}">
+                <i class="{{ config('other.font-awesome') }} fa-user-secret"></i>
+                <span>Cheater Detection</span>
+            </a>
+            <a class="staff-command-grid__tool" href="{{ route('staff.audits.index') }}">
+                <i class="{{ config('other.font-awesome') }} fa-clipboard-list"></i>
+                <span>Audit Timeline</span>
+            </a>
+        </div>
+    </section>
+
     <div class="dashboard__menus">
         <section class="panelV2 panel--grid-item">
             <h2 class="panel__heading">
@@ -95,7 +157,7 @@
         <section class="panelV2 panel--grid-item">
             <h2 class="panel__heading">
                 <i class="{{ config('other.font-awesome') }} fa-wrench"></i>
-                {{ __('staff.chat-tools') }}
+                Communications Control
             </h2>
             <div class="panel__body">
                 <p class="form__group form__group--horizontal">
@@ -147,7 +209,7 @@
         <section class="panelV2 panel--grid-item">
             <h2 class="panel__heading">
                 <i class="{{ config('other.font-awesome') }} fa-wrench"></i>
-                {{ __('staff.general-tools') }}
+                Platform and Content Control
             </h2>
             <div class="panel__body">
                 <p class="form__group form__group--horizontal">
@@ -284,7 +346,7 @@
         <section class="panelV2 panel--grid-item">
             <h2 class="panel__heading">
                 <i class="{{ config('other.font-awesome') }} fa-wrench"></i>
-                {{ __('staff.torrent-tools') }}
+                Torrent Operations
             </h2>
             <div class="panel__body">
                 <p class="form__group form__group--horizontal">
@@ -458,7 +520,7 @@
         <section class="panelV2 panel--grid-item">
             <h2 class="panel__heading">
                 <i class="{{ config('other.font-awesome') }} fa-wrench"></i>
-                {{ __('staff.user-tools') }}
+                User and Security Operations
             </h2>
             <div class="panel__body">
                 <p class="form__group form__group--horizontal">
@@ -632,7 +694,7 @@
         <section class="panelV2 panel--grid-item">
             <h2 class="panel__heading">
                 <i class="{{ config('other.font-awesome') }} fa-file"></i>
-                {{ __('staff.logs') }}
+                Compliance and Logs
             </h2>
             <div class="panel__body">
                 <p class="form__group form__group--horizontal">

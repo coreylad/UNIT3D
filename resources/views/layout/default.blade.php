@@ -9,6 +9,15 @@
             @include('partials.alerts')
         </div>
         <header>
+            <div class="site-header-banner">
+                <a href="{{ route('home.index') }}" aria-label="{{ config('other.title') }}">
+                    <img
+                        class="site-header-banner__img"
+                        src="{{ asset('img/auth/The_Void_Login_Page.png') }}"
+                        alt="{{ config('other.title') }}"
+                    />
+                </a>
+            </div>
             @include('partials.top-nav')
             <nav class="secondary-nav">
                 <ol class="breadcrumbsV2">

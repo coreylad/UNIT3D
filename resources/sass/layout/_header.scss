@@ -6,3 +6,27 @@ body > header {
     z-index: 10;
     margin-bottom: 16px;
 }
+
+    /* Site-wide header banner (above main nav)
+    ******************************************************************************/
+
+    .site-header-banner {
+        width: 100%;
+        height: clamp(100px, 12vw, 180px);
+        overflow: hidden;
+        background-color: var(--top-nav-bg, #05061a);
+
+        a {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+    }
+
+    .site-header-banner__img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center 38%;
+    }

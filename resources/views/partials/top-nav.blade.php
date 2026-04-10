@@ -5,11 +5,7 @@
             href="{{ route('home.index') }}"
             aria-label="{{ \config('other.title') }}"
         >
-            <img
-                class="top-nav__site-banner"
-                src="{{ asset('img/auth/The_Void_Login_Page.png') }}"
-                alt="{{ \config('other.title') }} banner"
-            />
+            <span class="top-nav__site-logo">{{ config('other.title') }}</span>
         </a>
         @include('partials.quick-search-dropdown')
     </div>
