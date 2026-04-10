@@ -474,9 +474,9 @@ class HomeController extends Controller
         $image = Image::make($file->getRealPath())->orientate();
         $canvas = Image::canvas($targetWidth, $targetHeight, [0, 0, 0, 0]);
 
-        // Keep logo/text readable by fitting inside a padded safe zone.
-        $safeWidth = max($targetWidth - 180, 1);
-        $safeHeight = max($targetHeight - 80, 1);
+        // Keep logo/text readable while letting it occupy more of the banner.
+        $safeWidth = max($targetWidth - 60, 1);
+        $safeHeight = max($targetHeight - 24, 1);
 
         $image->resize($safeWidth, $safeHeight, function ($constraint): void {
             $constraint->aspectRatio();

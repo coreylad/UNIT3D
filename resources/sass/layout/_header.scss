@@ -3,8 +3,9 @@ body > header {
     top: 0;
     left: 0;
     width: 100%;
-    z-index: 10;
+    z-index: 40;
     margin-bottom: 16px;
+    backdrop-filter: blur(8px);
 }
 
     /* Site-wide header banner (above main nav)
