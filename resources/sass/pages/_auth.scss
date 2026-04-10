@@ -275,30 +275,16 @@ body {
 body.page--void-login {
     min-height: 100vh;
     background-color: #04060f;
-    background-image:
-        radial-gradient(circle at 20% 12%, rgba(109, 154, 255, 0.24) 0%, rgba(109, 154, 255, 0) 42%),
-        radial-gradient(circle at 78% 22%, rgba(192, 90, 255, 0.2) 0%, rgba(192, 90, 255, 0) 38%),
-        linear-gradient(175deg, rgba(2, 4, 10, 0.76) 0%, rgba(1, 2, 8, 0.92) 58%, rgba(0, 1, 5, 0.97) 100%),
-        var(--void-login-bg-image);
-    background-size:
-        120% 120%,
-        120% 120%,
-        100% 100%,
-        cover;
-    background-position:
-        20% 12%,
-        82% 20%,
-        center,
-        center;
+    background-image: var(--void-login-bg-image);
+    background-size: cover;
+    background-position: center;
     background-repeat: no-repeat;
     background-attachment: fixed;
-    background-blend-mode: screen, screen, multiply, normal;
     font-family:
         'Trebuchet MS',
         'Lucida Sans Unicode',
         'Segoe UI Variable Display',
         sans-serif;
-    animation: voidBackdropDrift 28s ease-in-out infinite alternate;
 }
 
 body.page--void-login .auth-form {
@@ -308,15 +294,13 @@ body.page--void-login .auth-form {
     margin: 9vh auto 40px;
     border-radius: 18px;
     border: 1px solid rgba(116, 147, 255, 0.38);
-    background:
-        linear-gradient(145deg, rgba(10, 13, 29, 0.9), rgba(5, 8, 22, 0.8)),
-        linear-gradient(180deg, rgba(58, 69, 120, 0.18), rgba(180, 82, 255, 0.12));
+    background: #070c22;
     box-shadow:
         0 20px 45px rgba(0, 0, 0, 0.6),
         0 0 0 1px rgba(167, 189, 255, 0.12) inset,
         0 0 34px rgba(108, 74, 255, 0.22);
     opacity: 1;
-    backdrop-filter: blur(6px) saturate(118%);
+    backdrop-filter: none;
     animation: voidPanelReveal 700ms ease-out both;
 }
 
@@ -450,16 +434,8 @@ body.page--void-login .auth-form__footer-item:hover {
 
 @media (max-width: 640px) {
     body.page--void-login {
-        background-size:
-            140% 140%,
-            140% 140%,
-            100% 100%,
-            cover;
-        background-position:
-            28% 12%,
-            70% 20%,
-            center,
-            center;
+        background-size: cover;
+        background-position: center;
     }
 
     body.page--void-login .auth-form {
