@@ -44,12 +44,13 @@
                     }
                 }
             @endphp
-            <div class="site-header-banner">
+            <div class="site-header-banner" style="height: auto; overflow: visible;">
                 <a href="{{ route('home.index') }}" aria-label="{{ config('other.title') }}">
                     <img
                         class="site-header-banner__img"
                         src="{{ $bannerUrl }}?v={{ $bannerVersion }}"
                         alt="{{ config('other.title') }}"
+                        style="width: 100%; height: auto; max-height: none; object-fit: contain; object-position: center center;"
                     />
                 </a>
             </div>
