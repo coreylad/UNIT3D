@@ -16,6 +16,7 @@ declare(strict_types=1);
 
 namespace App\Rules;
 
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
@@ -38,9 +39,15 @@ class EmailBlacklist implements ValidationRule
         $this->domains = cache()->get(config('email-blacklist.cache-key'), []);
         $this->appendCustomDomains();
 
-        // Fail if the domain blacklist cache is empty
+        // If blacklist data is unavailable, default to allow registration unless strict mode is enabled.
         if (empty($this->domains)) {
-            $fail('The email blacklist cache is currently empty. Please try again later or contact staff.');
+            if ((bool) config('email-blacklist.strict', false) === true) {
+                $fail('The email blacklist cache is currently empty. Please try again later or contact staff.');
+            } else {
+                Log::warning('Email blacklist cache is empty, skipping blacklist validation.', [
+                    'cache_key' => config('email-blacklist.cache-key'),
+                ]);
+            }
 
             return;
         }

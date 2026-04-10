@@ -1,10 +1,13 @@
 .top-nav {
     background-color: var(--top-nav-bg);
     box-shadow: var(--top-nav-box-shadow);
+    position: relative;
+    z-index: 30;
     display: grid;
     grid-template: 'left . menus . right toggle' 48px / 1fr 40px auto 40px 1fr auto;
     align-items: center;
     padding: 0 14px;
+    overflow: visible;
 
     @media screen and (min-width: 767px) and (max-width: 1400px) {
         grid-template: 'ratio-bar ratio-bar ratio-bar ratio-bar ratio-bar ratio-bar' 24px 'left . menus . icon-bar toggle' 48px / 1fr 16px auto 24px 1fr auto;
