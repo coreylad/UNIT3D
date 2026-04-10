@@ -639,6 +639,7 @@ Route::middleware('language')->group(function (): void {
             // Staff Dashboard
             Route::name('dashboard.')->group(function (): void {
                 Route::get('/', [App\Http\Controllers\Staff\HomeController::class, 'index'])->name('index');
+                Route::post('/banner', [App\Http\Controllers\Staff\HomeController::class, 'updateBanner'])->name('banner.update');
             });
 
             // Announces

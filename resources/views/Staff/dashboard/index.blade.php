@@ -790,6 +790,95 @@
 @endsection
 
 @section('sidebar')
+    <section class="panelV2 staff-side-menu-panel">
+        <h2 class="panel__heading">Control Navigator</h2>
+        <div class="panel__body">
+            <nav class="staff-side-menu" aria-label="Staff side navigation">
+                <details class="staff-side-menu__group" open>
+                    <summary class="staff-side-menu__summary">
+                        Priority Queue
+                        <span class="staff-side-menu__badge">{{ $unsolvedReportsCount + $pendingApplicationsCount }}</span>
+                    </summary>
+                    <a class="staff-side-menu__link" href="{{ route('staff.reports.index') }}">
+                        Reports
+                        <span class="staff-side-menu__meta">{{ $unsolvedReportsCount }}</span>
+                    </a>
+                    <a class="staff-side-menu__link" href="{{ route('staff.applications.index') }}">
+                        Applications
+                        <span class="staff-side-menu__meta">{{ $pendingApplicationsCount }}</span>
+                    </a>
+                    <a class="staff-side-menu__link" href="{{ route('staff.moderation.index') }}">
+                        Pending Torrents
+                        <span class="staff-side-menu__meta">{{ $torrents->pending }}</span>
+                    </a>
+                </details>
+
+                <details class="staff-side-menu__group">
+                    <summary class="staff-side-menu__summary">Moderation Tools</summary>
+                    <a class="staff-side-menu__link" href="{{ route('staff.users.index') }}">User Search</a>
+                    <a class="staff-side-menu__link" href="{{ route('staff.watchlist.index') }}">Watchlist</a>
+                    <a class="staff-side-menu__link" href="{{ route('staff.cheaters.index') }}">Cheater Detection</a>
+                    <a class="staff-side-menu__link" href="{{ route('staff.seedboxes.index') }}">Seedboxes</a>
+                    <a class="staff-side-menu__link" href="{{ route('staff.warnings.index') }}">Warnings Log</a>
+                </details>
+
+                <details class="staff-side-menu__group">
+                    <summary class="staff-side-menu__summary">Content and Tracker</summary>
+                    <a class="staff-side-menu__link" href="#site-banner-editor">Banner Editor</a>
+                    <a class="staff-side-menu__link" href="{{ route('staff.articles.index') }}">Articles</a>
+                    <a class="staff-side-menu__link" href="{{ route('staff.events.index') }}">Events</a>
+                    <a class="staff-side-menu__link" href="{{ route('staff.categories.index') }}">Categories</a>
+                    <a class="staff-side-menu__link" href="{{ route('staff.types.index') }}">Types</a>
+                    <a class="staff-side-menu__link" href="{{ route('staff.resolutions.index') }}">Resolutions</a>
+                    <a class="staff-side-menu__link" href="{{ route('staff.peers.index') }}">Peers</a>
+                </details>
+
+                <details class="staff-side-menu__group">
+                    <summary class="staff-side-menu__summary">Communications and Logs</summary>
+                    <a class="staff-side-menu__link" href="{{ route('staff.statuses.index') }}">Statuses</a>
+                    <a class="staff-side-menu__link" href="{{ route('staff.chatrooms.index') }}">Chatrooms</a>
+                    <a class="staff-side-menu__link" href="{{ route('staff.bots.index') }}">Bots</a>
+                    <a class="staff-side-menu__link" href="{{ route('staff.audits.index') }}">Audits</a>
+                    <a class="staff-side-menu__link" href="{{ route('staff.authentications.index') }}">Authentications</a>
+                </details>
+            </nav>
+        </div>
+    </section>
+
+    <section class="panelV2 staff-banner-editor" id="site-banner-editor">
+        <h2 class="panel__heading">Site Banner Editor</h2>
+        <div class="panel__body">
+            <p class="staff-banner-editor__text">
+                Upload a PNG banner to replace the header image shown above the site navigation.
+            </p>
+            <img
+                class="staff-banner-editor__preview"
+                src="{{ asset('img/auth/The_Void_Login_Page.png') }}?v={{ file_exists(public_path('img/auth/The_Void_Login_Page.png')) ? filemtime(public_path('img/auth/The_Void_Login_Page.png')) : now()->timestamp }}"
+                alt="Current site banner preview"
+            />
+            <form
+                class="staff-banner-editor__form"
+                method="POST"
+                action="{{ route('staff.dashboard.banner.update') }}"
+                enctype="multipart/form-data"
+            >
+                @csrf
+                <label class="form__label" for="site_banner">Upload PNG (max 12 MB)</label>
+                <input
+                    id="site_banner"
+                    class="form__file"
+                    name="site_banner"
+                    type="file"
+                    accept="image/png"
+                    required
+                />
+                <button class="form__button form__button--filled" type="submit">
+                    Save Banner
+                </button>
+            </form>
+        </div>
+    </section>
+
     <section class="panelV2">
         <h2 class="panel__heading">SSL certificate</h2>
         <dl class="key-value">

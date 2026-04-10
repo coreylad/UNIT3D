@@ -13,7 +13,7 @@
                 <a href="{{ route('home.index') }}" aria-label="{{ config('other.title') }}">
                     <img
                         class="site-header-banner__img"
-                        src="{{ asset('img/auth/The_Void_Login_Page.png') }}"
+                        src="{{ asset('img/auth/The_Void_Login_Page.png') }}?v={{ file_exists(public_path('img/auth/The_Void_Login_Page.png')) ? filemtime(public_path('img/auth/The_Void_Login_Page.png')) : now()->timestamp }}"
                         alt="{{ config('other.title') }}"
                     />
                 </a>

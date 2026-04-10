@@ -21,8 +21,10 @@ use App\Helpers\SystemInformation;
 use App\Http\Controllers\Controller;
 use App\Models\Group;
 use App\Services\Unit3dAnnounce;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use Spatie\SslCertificate\SslCertificate;
 use Exception;
 
@@ -84,5 +86,27 @@ class HomeController extends Controller
             'file_permissions'         => $systemInformation->directoryPermissions(),
             'externalTrackerStats'     => Unit3dAnnounce::getStats(),
         ]);
+    }
+
+    /**
+     * Update the site header banner image shown above the top navigation.
+     */
+    public function updateBanner(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'site_banner' => ['required', 'image', 'mimetypes:image/png', 'max:12288'],
+        ]);
+
+        $directory = public_path('img/auth');
+
+        if (! File::isDirectory($directory)) {
+            File::makeDirectory($directory, 0755, true);
+        }
+
+        /** @var \Illuminate\Http\UploadedFile $banner */
+        $banner = $validated['site_banner'];
+        $banner->move($directory, 'The_Void_Login_Page.png');
+
+        return to_route('staff.dashboard.index')->with('success', 'Site banner updated successfully.');
     }
 }
