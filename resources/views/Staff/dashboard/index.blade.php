@@ -161,6 +161,7 @@
             <h3 class="staff-tools-group__title">User and Security Operations</h3>
             <div class="staff-tools-pills">
                 <a class="staff-tools-pill" href="{{ route('staff.dashboard.twofactor.index') }}">2FA Policy</a>
+                <a class="staff-tools-pill" href="{{ route('staff.dashboard.sitepolicy.index') }}">Registration and Freeleech</a>
                 <a class="staff-tools-pill" href="{{ route('staff.applications.index') }}">Applications ({{ $pendingApplicationsCount }})</a>
                 <a class="staff-tools-pill" href="{{ route('staff.users.index') }}">User Search</a>
                 <a class="staff-tools-pill" href="{{ route('staff.apikeys.index') }}">API Keys</a>

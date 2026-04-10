@@ -123,6 +123,16 @@ class HomeController extends Controller
         ]);
     }
 
+    public function sitePolicy(): \Illuminate\Contracts\View\Factory|\Illuminate\View\View
+    {
+        return view('Staff.dashboard.site-policy', [
+            'sitePolicySettings' => [
+                'open_registration' => ! (bool) config('other.invite-only'),
+                'freeleech'         => (bool) config('other.freeleech'),
+            ],
+        ]);
+    }
+
     /**
      * Update the site header banner image shown above the top navigation.
      */
@@ -345,6 +355,29 @@ class HomeController extends Controller
         ]);
 
         return to_route('staff.dashboard.twofactor.index')->with('success', '2FA policy updated. Run config cache clear/optimize on server to apply immediately.');
+    }
+
+    public function updateSitePolicy(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'open_registration' => ['nullable', 'boolean'],
+            'freeleech'         => ['nullable', 'boolean'],
+        ]);
+
+        $this->writeEnvValues([
+            'INVITE_ONLY' => $request->boolean('open_registration') ? 'false' : 'true',
+            'FREELEECH'   => $request->boolean('freeleech') ? 'true' : 'false',
+        ]);
+
+        try {
+            Artisan::call('optimize:clear');
+        } catch (Throwable $throwable) {
+            Log::warning('Failed clearing caches after site policy update', [
+                'message' => $throwable->getMessage(),
+            ]);
+        }
+
+        return to_route('staff.dashboard.sitepolicy.index')->with('success', 'Site policy updated and persisted to environment configuration.');
     }
 
     /**

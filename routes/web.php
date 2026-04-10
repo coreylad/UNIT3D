@@ -642,10 +642,12 @@ Route::middleware('language')->group(function (): void {
                 Route::get('/services', [App\Http\Controllers\Staff\HomeController::class, 'services'])->name('services.index');
                 Route::get('/theme', [App\Http\Controllers\Staff\HomeController::class, 'theme'])->name('theme.index');
                 Route::get('/two-factor', [App\Http\Controllers\Staff\HomeController::class, 'twoFactor'])->name('twofactor.index');
+                Route::get('/site-policy', [App\Http\Controllers\Staff\HomeController::class, 'sitePolicy'])->name('sitepolicy.index');
                 Route::post('/banner', [App\Http\Controllers\Staff\HomeController::class, 'updateBanner'])->name('banner.update');
                 Route::post('/services', [App\Http\Controllers\Staff\HomeController::class, 'updateSiteServices'])->name('services.update');
                 Route::post('/theme', [App\Http\Controllers\Staff\HomeController::class, 'updateTheme'])->name('theme.update');
                 Route::post('/two-factor', [App\Http\Controllers\Staff\HomeController::class, 'updateTwoFactor'])->name('twofactor.update');
+                Route::post('/site-policy', [App\Http\Controllers\Staff\HomeController::class, 'updateSitePolicy'])->name('sitepolicy.update');
             });
 
             // Announces
