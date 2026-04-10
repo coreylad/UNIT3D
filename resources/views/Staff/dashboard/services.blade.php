@@ -139,7 +139,21 @@
                 <p class="staff-services__field">
                     <label class="form__label" for="mail_password">Mail Password</label>
                     <input id="mail_password" class="form__text" name="mail_password" type="password"
-                        placeholder="{{ $siteServices['mail_password_set'] ? '(stored - leave blank to keep)' : 'Enter password' }}" />
+                        value="{{ old('mail_password', $siteServices['mail_password_mask']) }}"
+                        autocomplete="new-password"
+                        placeholder="{{ $siteServices['mail_password_set'] ? '********' : 'Enter password' }}" />
+                    <small class="staff-theme-editor__guide">Leave as ******** to keep existing password. Replace to update it.</small>
+                </p>
+                <p class="staff-services__field">
+                    <label class="form__label" for="clear_mail_password">Clear Stored Mail Password</label>
+                    <input id="clear_mail_password" name="clear_mail_password" type="checkbox" value="1" @checked(old('clear_mail_password')) />
+                    <small class="staff-theme-editor__guide">Enable this to save MAIL_PASSWORD as blank.</small>
+                </p>
+                <p class="staff-services__field">
+                    <label class="form__label" for="mail_allow_self_signed">Allow Self-Signed SMTP Certificates</label>
+                    <input id="mail_allow_self_signed" name="mail_allow_self_signed" type="checkbox" value="1"
+                        @checked(old('mail_allow_self_signed', $siteServices['mail_allow_self_signed'])) />
+                    <small class="staff-theme-editor__guide">Use only when your SMTP server uses an invalid/self-signed certificate (common on localhost STARTTLS).</small>
                 </p>
                 <p class="staff-services__field">
                     <label class="form__label" for="mail_sendmail_path">Sendmail Path</label>

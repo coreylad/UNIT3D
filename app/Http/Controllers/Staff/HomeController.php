@@ -190,7 +190,9 @@ class HomeController extends Controller
             'mail_port'         => ['nullable', 'integer', 'min:1', 'max:65535'],
             'mail_username'     => ['nullable', 'string', 'max:255'],
             'mail_password'     => ['nullable', 'string', 'max:255'],
+            'clear_mail_password' => ['nullable', 'boolean'],
             'mail_encryption'   => ['nullable', 'string', Rule::in(['', 'tls', 'ssl'])],
+            'mail_allow_self_signed' => ['nullable', 'boolean'],
             'mail_from_address' => ['nullable', 'email', 'max:255'],
             'mail_from_name'     => ['nullable', 'string', 'max:255'],
             'mail_sendmail_path' => ['nullable', 'string', 'max:500'],
@@ -207,12 +209,17 @@ class HomeController extends Controller
             'MAIL_PORT'          => (string) ($validated['mail_port'] ?? ''),
             'MAIL_USERNAME'      => (string) ($validated['mail_username'] ?? ''),
             'MAIL_ENCRYPTION'    => $validated['mail_encryption'] ?? '',
+            'MAIL_ALLOW_SELF_SIGNED' => $request->boolean('mail_allow_self_signed') ? 'true' : 'false',
+            'MAIL_VERIFY_PEER'      => $request->boolean('mail_allow_self_signed') ? 'false' : 'true',
+            'MAIL_VERIFY_PEER_NAME' => $request->boolean('mail_allow_self_signed') ? 'false' : 'true',
             'MAIL_FROM_ADDRESS'  => (string) ($validated['mail_from_address'] ?? ''),
             'MAIL_FROM_NAME'     => (string) ($validated['mail_from_name'] ?? ''),
             'MAIL_SENDMAIL_PATH' => (string) ($validated['mail_sendmail_path'] ?? '/usr/sbin/sendmail -bs -i'),
         ];
 
-        if (! empty($validated['mail_password'])) {
+        if ($request->boolean('clear_mail_password')) {
+            $envValues['MAIL_PASSWORD'] = '';
+        } elseif (! empty($validated['mail_password']) && $validated['mail_password'] !== '********') {
             $envValues['MAIL_PASSWORD'] = $validated['mail_password'];
         }
 
@@ -415,7 +422,9 @@ class HomeController extends Controller
             'mail_port'         => (string) (config('mail.mailers.smtp.port') ?? ''),
             'mail_username'     => (string) (config('mail.mailers.smtp.username') ?? ''),
             'mail_password_set' => ! empty(config('mail.mailers.smtp.password')),
+            'mail_password_mask' => ! empty(config('mail.mailers.smtp.password')) ? '********' : '',
             'mail_encryption'   => (string) (config('mail.mailers.smtp.encryption') ?? ''),
+            'mail_allow_self_signed' => (bool) (config('mail.mailers.smtp.stream.ssl.allow_self_signed') ?? false),
             'mail_from_address' => (string) (config('mail.from.address') ?? ''),
             'mail_from_name'    => (string) (config('mail.from.name') ?? ''),
             'mail_sendmail_path' => (string) (config('mail.mailers.sendmail.path') ?? '/usr/sbin/sendmail -bs -i'),

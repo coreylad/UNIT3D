@@ -22,7 +22,10 @@ use App\Models\User;
 use App\Rules\EmailBlacklist;
 use Exception;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -68,38 +71,63 @@ class CreateNewUser implements CreatesNewUsers
             ]
         ])->validate();
 
-        $user = User::create([
-            'username'   => $input['username'],
-            'email'      => $input['email'],
-            'password'   => Hash::make($input['password']),
-            'passkey'    => md5(random_bytes(60)),
-            'rsskey'     => md5(random_bytes(60)),
-            'uploaded'   => config('other.default_upload'),
-            'downloaded' => config('other.default_download'),
-            'group_id'   => Group::query()->where('slug', '=', 'validating')->soleValue('id'),
-        ]);
+        try {
+            $user = DB::transaction(function () use ($input): User {
+                $user = User::create([
+                    'username'   => $input['username'],
+                    'email'      => $input['email'],
+                    'password'   => Hash::make($input['password']),
+                    'passkey'    => md5(random_bytes(60)),
+                    'rsskey'     => md5(random_bytes(60)),
+                    'uploaded'   => config('other.default_upload'),
+                    'downloaded' => config('other.default_download'),
+                    'group_id'   => Group::query()->where('slug', '=', 'validating')->soleValue('id'),
+                ]);
 
-        $user->passkeys()->create(['content' => $user->passkey]);
+                if (Schema::hasTable('passkeys')) {
+                    $user->passkeys()->create(['content' => $user->passkey]);
+                }
 
-        $user->rsskeys()->create(['content' => $user->rsskey]);
+                if (Schema::hasTable('rsskeys')) {
+                    $user->rsskeys()->create(['content' => $user->rsskey]);
+                }
 
-        $user->emailUpdates()->create();
+                if (Schema::hasTable('email_updates')) {
+                    $user->emailUpdates()->create();
+                }
 
-        if (config('other.invite-only') === true) {
-            $invite = Invite::where('code', '=', $input['code'])->first();
-            $invite->update([
-                'accepted_by' => $user->id,
-                'accepted_at' => now(),
+                if (config('other.invite-only') === true) {
+                    $invite = Invite::where('code', '=', $input['code'])->first();
+
+                    if ($invite !== null) {
+                        $invite->update([
+                            'accepted_by' => $user->id,
+                            'accepted_at' => now(),
+                        ]);
+
+                        if ($invite->internal_note !== null) {
+                            $user->notes()->create([
+                                'message'  => $invite->internal_note,
+                                'staff_id' => $invite->user_id,
+                            ]);
+                        }
+                    }
+                }
+
+                return $user;
+            });
+
+            return $user;
+        } catch (\Throwable $throwable) {
+            Log::error('Registration failed unexpectedly', [
+                'username' => $input['username'] ?? null,
+                'email' => $input['email'] ?? null,
+                'exception' => $throwable->getMessage(),
             ]);
 
-            if ($invite->internal_note !== null) {
-                $user->notes()->create([
-                    'message'  => $invite->internal_note,
-                    'staff_id' => $invite->user_id,
-                ]);
-            }
+            throw ValidationException::withMessages([
+                'email' => 'Registration failed due to a server configuration issue. Please contact staff.',
+            ]);
         }
-
-        return $user;
     }
 }

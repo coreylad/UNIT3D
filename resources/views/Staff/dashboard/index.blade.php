@@ -164,6 +164,7 @@
                 <a class="staff-tools-pill" href="{{ route('staff.dashboard.sitepolicy.index') }}">Registration and Freeleech</a>
                 <a class="staff-tools-pill" href="{{ route('staff.applications.index') }}">Applications ({{ $pendingApplicationsCount }})</a>
                 <a class="staff-tools-pill" href="{{ route('staff.users.index') }}">User Search</a>
+                <a class="staff-tools-pill" href="{{ route('staff.users.index') }}">Delete Users</a>
                 <a class="staff-tools-pill" href="{{ route('staff.apikeys.index') }}">API Keys</a>
                 <a class="staff-tools-pill" href="{{ route('staff.passkeys.index') }}">Passkeys</a>
                 <a class="staff-tools-pill" href="{{ route('staff.watchlist.index') }}">Watchlist</a>

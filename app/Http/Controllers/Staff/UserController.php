@@ -38,6 +38,8 @@ use App\Models\Torrent;
 use App\Models\User;
 use App\Services\Unit3dAnnounce;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * @see \Tests\Todo\Feature\Http\Controllers\UserControllerTest
@@ -154,6 +156,14 @@ class UserController extends Controller
         Peer::where('user_id', '=', $user->id)->delete();
         History::where('user_id', '=', $user->id)->delete();
         FailedLoginAttempt::where('user_id', '=', $user->id)->delete();
+
+        // Remove direct FK-bound records that can block user deletion on installs
+        // where constraints are cascadeOnUpdate only.
+        foreach (['email_updates', 'passkeys', 'rsskeys', 'apikeys', 'password_reset_history', 'playlist_suggestions'] as $table) {
+            if (Schema::hasTable($table) && Schema::hasColumn($table, 'user_id')) {
+                DB::table($table)->where('user_id', '=', $user->id)->delete();
+            }
+        }
 
         // Removes all follows for user
         $user->followers()->detach();
