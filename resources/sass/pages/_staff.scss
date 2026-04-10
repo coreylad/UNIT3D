@@ -221,24 +221,52 @@
 }
 
 .staff-side-menu__top {
+    display: block;
     width: 100%;
     text-align: left;
-    border: 1px solid rgba(122, 142, 222, 0.26);
+    text-decoration: none;
+    border: 1px solid rgba(122, 142, 222, 0.32);
     border-radius: 10px;
-    background: linear-gradient(180deg, rgba(26, 32, 69, 0.72), rgba(11, 15, 35, 0.92));
+    background:
+        linear-gradient(180deg, rgba(31, 38, 79, 0.82), rgba(13, 17, 41, 0.92)),
+        repeating-linear-gradient(
+            -18deg,
+            rgba(255, 255, 255, 0.045) 0,
+            rgba(255, 255, 255, 0.045) 2px,
+            rgba(0, 0, 0, 0.04) 2px,
+            rgba(0, 0, 0, 0.04) 6px
+        );
     color: #dfe7ff;
-    font-size: 0.83rem;
+    font-size: 0.82rem;
     font-weight: 700;
-    letter-spacing: 0.02em;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
     padding: 10px 12px;
     cursor: pointer;
-    transition: background-color 180ms ease, border-color 180ms ease;
+    transition: transform 180ms ease, background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.26);
 }
 
 .staff-side-menu__top:hover,
 .staff-side-menu__top:focus-visible {
     border-color: rgba(135, 223, 255, 0.5);
     background-color: rgba(120, 216, 255, 0.14);
+    transform: translateY(-1px);
+}
+
+.staff-side-menu__top.is-active {
+    border-color: rgba(142, 231, 255, 0.75);
+    color: #f5fbff;
+    background:
+        linear-gradient(180deg, rgba(33, 52, 92, 0.94), rgba(16, 24, 54, 0.94)),
+        repeating-linear-gradient(
+            -18deg,
+            rgba(173, 231, 255, 0.09) 0,
+            rgba(173, 231, 255, 0.09) 2px,
+            rgba(0, 0, 0, 0.06) 2px,
+            rgba(0, 0, 0, 0.06) 6px
+        );
+    box-shadow: 0 0 0 1px rgba(132, 223, 255, 0.35), 0 8px 20px rgba(6, 11, 28, 0.45);
 }
 
 .staff-side-menu__quick {
@@ -249,11 +277,21 @@
 }
 
 .staff-tools-workspace {
-    border: 1px solid rgba(127, 145, 223, 0.3);
+    border: 1px solid rgba(134, 160, 232, 0.35);
     border-radius: 14px;
     overflow: hidden;
     margin-bottom: 1rem;
-    background: linear-gradient(160deg, rgba(10, 13, 34, 0.88), rgba(5, 7, 21, 0.94));
+    background:
+        radial-gradient(circle at 8% 14%, rgba(89, 136, 255, 0.19), transparent 52%),
+        linear-gradient(158deg, rgba(9, 13, 35, 0.92), rgba(6, 8, 22, 0.97)),
+        repeating-linear-gradient(
+            -22deg,
+            rgba(255, 255, 255, 0.026) 0,
+            rgba(255, 255, 255, 0.026) 2px,
+            rgba(0, 0, 0, 0.035) 2px,
+            rgba(0, 0, 0, 0.035) 7px
+        );
+    box-shadow: 0 16px 28px rgba(4, 7, 20, 0.4), inset 0 0 0 1px rgba(0, 0, 0, 0.22);
 }
 
 .staff-tools-workspace__head {
@@ -263,7 +301,7 @@
 
 .staff-tools-workspace__hint {
     margin: 6px 0 0;
-    color: #9faedb;
+    color: #8ea3d8;
     font-size: 0.82rem;
 }
 
@@ -277,9 +315,11 @@
 
 .staff-tools-group__title {
     margin: 0 0 10px;
-    color: #dce6ff;
+    color: #dbe8ff;
     font-size: 0.9rem;
     font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
 }
 
 .staff-tools-pills {
@@ -294,20 +334,29 @@
     min-height: 38px;
     padding: 0 12px;
     border-radius: 999px;
-    border: 1px solid rgba(122, 143, 220, 0.28);
-    background: rgba(10, 13, 32, 0.76);
-    color: #d3defe;
+    border: 1px solid rgba(126, 153, 227, 0.34);
+    background:
+        linear-gradient(180deg, rgba(17, 24, 53, 0.9), rgba(11, 16, 39, 0.92)),
+        repeating-linear-gradient(
+            -30deg,
+            rgba(255, 255, 255, 0.03) 0,
+            rgba(255, 255, 255, 0.03) 2px,
+            rgba(0, 0, 0, 0.028) 2px,
+            rgba(0, 0, 0, 0.028) 6px
+        );
+    color: #d7e5ff;
     text-decoration: none;
     font-size: 0.82rem;
-    transition: transform 140ms ease, border-color 140ms ease, background-color 140ms ease;
+    transition: transform 140ms ease, border-color 140ms ease, background-color 140ms ease, box-shadow 140ms ease;
 }
 
 .staff-tools-pill:hover,
 .staff-tools-pill:focus-visible {
     transform: translateY(-1px);
-    border-color: rgba(132, 223, 255, 0.65);
-    background-color: rgba(120, 216, 255, 0.14);
+    border-color: rgba(132, 223, 255, 0.72);
+    background-color: rgba(120, 216, 255, 0.16);
     color: #f0f6ff;
+    box-shadow: 0 0 0 1px rgba(132, 223, 255, 0.28), 0 8px 18px rgba(5, 9, 22, 0.42);
 }
 .staff-side-menu__group {
     border: 1px solid rgba(122, 142, 222, 0.26);

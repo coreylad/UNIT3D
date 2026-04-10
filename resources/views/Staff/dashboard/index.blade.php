@@ -79,13 +79,23 @@
         </div>
     </section>
 
-    <section class="panelV2 staff-tools-workspace" x-data="{ active: 'links' }" x-on:staff-tools-select.window="active = $event.detail">
+    @php
+        $activeTools = request()->query('tools', 'links');
+        $toolGroups = ['links', 'communications', 'platform', 'torrent', 'user', 'logs'];
+
+        if (! in_array($activeTools, $toolGroups, true)) {
+            $activeTools = 'links';
+        }
+    @endphp
+
+    <section class="panelV2 staff-tools-workspace">
         <div class="staff-tools-workspace__head">
             <h2 class="panel__heading">Tool Workspace</h2>
             <p class="staff-tools-workspace__hint">Select a top-level group in Control Navigator to reveal its tool pills.</p>
         </div>
 
-        <section class="staff-tools-group" x-show="active === 'links'">
+        @if ($activeTools === 'links')
+            <section class="staff-tools-group">
             <h3 class="staff-tools-group__title">Links</h3>
             <div class="staff-tools-pills">
                 <a class="staff-tools-pill" href="{{ route('home.index') }}">Frontend</a>
@@ -96,9 +106,11 @@
                     <a class="staff-tools-pill" href="{{ route('staff.commands.index') }}">Commands</a>
                 @endif
             </div>
-        </section>
+            </section>
+        @endif
 
-        <section class="staff-tools-group" x-show="active === 'communications'">
+        @if ($activeTools === 'communications')
+            <section class="staff-tools-group">
             <h3 class="staff-tools-group__title">Communications Control</h3>
             <div class="staff-tools-pills">
                 <a class="staff-tools-pill" href="{{ route('staff.statuses.index') }}">Statuses</a>
@@ -107,9 +119,11 @@
                 <a class="staff-tools-pill" href="{{ route('staff.mass_private_message.create') }}">Mass PM</a>
                 <a class="staff-tools-pill" href="{{ route('staff.mass_email.create') }}">Mass Email</a>
             </div>
-        </section>
+            </section>
+        @endif
 
-        <section class="staff-tools-group" x-show="active === 'platform'">
+        @if ($activeTools === 'platform')
+            <section class="staff-tools-group">
             <h3 class="staff-tools-group__title">Platform and Content Control</h3>
             <div class="staff-tools-pills">
                 <a class="staff-tools-pill" href="{{ route('staff.articles.index') }}">Articles</a>
@@ -121,9 +135,11 @@
                 <a class="staff-tools-pill" href="{{ route('staff.wiki_categories.index') }}">Wikis</a>
                 <a class="staff-tools-pill" href="{{ route('staff.playlist_categories.index') }}">Playlist Categories</a>
             </div>
-        </section>
+            </section>
+        @endif
 
-        <section class="staff-tools-group" x-show="active === 'torrent'">
+        @if ($activeTools === 'torrent')
+            <section class="staff-tools-group">
             <h3 class="staff-tools-group__title">Torrent Operations</h3>
             <div class="staff-tools-pills">
                 <a class="staff-tools-pill" href="{{ route('staff.moderation.index') }}">Moderation Queue</a>
@@ -135,9 +151,11 @@
                 <a class="staff-tools-pill" href="{{ route('staff.peers.index') }}">Peers</a>
                 <a class="staff-tools-pill" href="{{ route('staff.rss.index') }}">RSS</a>
             </div>
-        </section>
+            </section>
+        @endif
 
-        <section class="staff-tools-group" x-show="active === 'user'">
+        @if ($activeTools === 'user')
+            <section class="staff-tools-group">
             <h3 class="staff-tools-group__title">User and Security Operations</h3>
             <div class="staff-tools-pills">
                 <a class="staff-tools-pill" href="{{ route('staff.applications.index') }}">Applications ({{ $pendingApplicationsCount }})</a>
@@ -151,9 +169,11 @@
                     <a class="staff-tools-pill" href="{{ route('staff.groups.index') }}">Groups</a>
                 @endif
             </div>
-        </section>
+            </section>
+        @endif
 
-        <section class="staff-tools-group" x-show="active === 'logs'">
+        @if ($activeTools === 'logs')
+            <section class="staff-tools-group">
             <h3 class="staff-tools-group__title">Compliance and Logs</h3>
             <div class="staff-tools-pills">
                 <a class="staff-tools-pill" href="{{ route('staff.audits.index') }}">Audit Log</a>
@@ -168,7 +188,8 @@
                     <a class="staff-tools-pill" href="{{ route('staff.laravel-log.index') }}">Laravel Log</a>
                 @endif
             </div>
-        </section>
+            </section>
+        @endif
     </section>
 @endsection
 
@@ -177,24 +198,24 @@
         <h2 class="panel__heading">Control Navigator</h2>
         <div class="panel__body">
             <nav class="staff-side-menu" aria-label="Staff side navigation">
-                <button class="staff-side-menu__top" type="button" x-on:click="$dispatch('staff-tools-select', 'links')">
+                <a class="staff-side-menu__top @if ($activeTools === 'links') is-active @endif" href="{{ route('staff.dashboard.index', ['tools' => 'links']) }}">
                     Links
-                </button>
-                <button class="staff-side-menu__top" type="button" x-on:click="$dispatch('staff-tools-select', 'communications')">
+                </a>
+                <a class="staff-side-menu__top @if ($activeTools === 'communications') is-active @endif" href="{{ route('staff.dashboard.index', ['tools' => 'communications']) }}">
                     Communications Control
-                </button>
-                <button class="staff-side-menu__top" type="button" x-on:click="$dispatch('staff-tools-select', 'platform')">
+                </a>
+                <a class="staff-side-menu__top @if ($activeTools === 'platform') is-active @endif" href="{{ route('staff.dashboard.index', ['tools' => 'platform']) }}">
                     Platform and Content Control
-                </button>
-                <button class="staff-side-menu__top" type="button" x-on:click="$dispatch('staff-tools-select', 'torrent')">
+                </a>
+                <a class="staff-side-menu__top @if ($activeTools === 'torrent') is-active @endif" href="{{ route('staff.dashboard.index', ['tools' => 'torrent']) }}">
                     Torrent Operations
-                </button>
-                <button class="staff-side-menu__top" type="button" x-on:click="$dispatch('staff-tools-select', 'user')">
+                </a>
+                <a class="staff-side-menu__top @if ($activeTools === 'user') is-active @endif" href="{{ route('staff.dashboard.index', ['tools' => 'user']) }}">
                     User and Security Operations
-                </button>
-                <button class="staff-side-menu__top" type="button" x-on:click="$dispatch('staff-tools-select', 'logs')">
+                </a>
+                <a class="staff-side-menu__top @if ($activeTools === 'logs') is-active @endif" href="{{ route('staff.dashboard.index', ['tools' => 'logs']) }}">
                     Compliance and Logs
-                </button>
+                </a>
 
                 <div class="staff-side-menu__quick">
                     <a class="staff-side-menu__link" href="{{ route('staff.reports.index') }}">
