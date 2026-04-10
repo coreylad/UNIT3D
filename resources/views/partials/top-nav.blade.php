@@ -1,8 +1,15 @@
 <nav class="top-nav" x-data="{ expanded: false }" x-bind:class="expanded && 'mobile'">
     <div class="top-nav__left">
-        <a class="top-nav__branding" href="{{ route('home.index') }}">
-            <img src="{{ url('/favicon.ico') }}" style="height: 35px" />
-            <span class="top-nav__site-logo">{{ \config('other.title') }}</span>
+        <a
+            class="top-nav__branding"
+            href="{{ route('home.index') }}"
+            aria-label="{{ \config('other.title') }}"
+        >
+            <img
+                class="top-nav__site-banner"
+                src="{{ asset('img/auth/The_Void_Login_Page.png') }}"
+                alt="{{ \config('other.title') }} banner"
+            />
         </a>
         @include('partials.quick-search-dropdown')
     </div>

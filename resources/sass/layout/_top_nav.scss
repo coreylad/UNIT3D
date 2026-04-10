@@ -27,10 +27,9 @@
     }
 
     @media screen and (max-width: 767px) {
-        & .top-nav__site-logo,
-        & .top-nav__branding i {
-            font-size: 22px;
-            line-height: 22px;
+        & .top-nav__site-banner {
+            width: 140px;
+            height: 30px;
         }
     }
 }
@@ -57,11 +56,21 @@
 .top-nav__branding {
     grid-area: branding;
     text-decoration: none;
-    color: #9682de;
     display: flex;
-    column-gap: 5px;
     align-items: center;
-    font-size: 3rem;
+}
+
+.top-nav__site-banner {
+    display: block;
+    width: clamp(170px, 18vw, 250px);
+    height: 35px;
+    object-fit: cover;
+    object-position: center 18%;
+    border-radius: 9px;
+    border: 1px solid rgba(129, 149, 214, 0.35);
+    box-shadow:
+        0 0 0 1px rgba(80, 95, 148, 0.25) inset,
+        0 3px 10px rgba(0, 0, 0, 0.34);
 }
 
 .top-nav__site-logo {
