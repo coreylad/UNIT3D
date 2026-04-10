@@ -293,32 +293,19 @@ body.page--void-login .auth-form {
     width: min(92vw, 470px);
     margin: 9vh auto 40px;
     border-radius: 18px;
-    border: 1px solid rgba(116, 147, 255, 0.38);
-    background: #070c22;
+    border: 1px solid rgba(160, 137, 199, 0.38);
+    background: linear-gradient(160deg, rgba(16, 13, 31, 0.84), rgba(8, 10, 22, 0.88));
     box-shadow:
-        0 20px 45px rgba(0, 0, 0, 0.6),
-        0 0 0 1px rgba(167, 189, 255, 0.12) inset,
-        0 0 34px rgba(108, 74, 255, 0.22);
+        0 20px 42px rgba(0, 0, 0, 0.7),
+        0 0 0 1px rgba(186, 165, 219, 0.16) inset,
+        0 0 20px rgba(121, 96, 166, 0.14);
     opacity: 1;
-    backdrop-filter: none;
+    backdrop-filter: blur(6px) saturate(92%);
     animation: voidPanelReveal 700ms ease-out both;
 }
 
 body.page--void-login .auth-form::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    opacity: 0.2;
-    background-image:
-        repeating-linear-gradient(
-            8deg,
-            rgba(255, 255, 255, 0.08) 0,
-            rgba(255, 255, 255, 0.08) 1px,
-            transparent 1px,
-            transparent 3px
-        );
-    mix-blend-mode: soft-light;
+    content: none;
 }
 
 body.page--void-login .auth-form__form {
@@ -329,67 +316,65 @@ body.page--void-login .auth-form__form {
 }
 
 body.page--void-login .auth-form__branding {
-    color: #9eb4ff;
-    text-shadow:
-        0 0 10px rgba(129, 178, 255, 0.45),
-        0 0 18px rgba(153, 104, 255, 0.28);
+    color: #c7cae0;
+    text-shadow: 0 0 9px rgba(132, 113, 169, 0.24);
 }
 
 body.page--void-login .auth-form__site-logo {
-    color: #d3deff;
+    color: #ecefff;
     font-size: clamp(2.2rem, 5.8vw, 3.1rem);
     letter-spacing: 0.14ch;
-    text-shadow: 0 0 14px rgba(116, 188, 255, 0.2);
+    text-shadow: 0 0 10px rgba(149, 124, 190, 0.18);
 }
 
 body.page--void-login .auth-form__label,
 body.page--void-login .auth-form__error,
 body.page--void-login .auth-form__important-info {
-    color: #d7e1ff;
+    color: #dde0ee;
 }
 
 body.page--void-login .auth-form__text-input,
 body.page--void-login .auth-form__select,
 body.page--void-login .auth-form__textarea {
-    border: 1px solid rgba(142, 174, 255, 0.38);
-    background: rgba(11, 16, 36, 0.8);
-    color: #f4f8ff;
+    border: 1px solid rgba(156, 137, 194, 0.4);
+    background: rgba(14, 13, 30, 0.74);
+    color: #eef0fa;
 }
 
 body.page--void-login .auth-form__text-input::placeholder,
 body.page--void-login .auth-form__textarea::placeholder {
-    color: rgba(211, 223, 255, 0.72);
+    color: rgba(210, 201, 229, 0.68);
 }
 
 body.page--void-login .auth-form__text-input:focus,
 body.page--void-login .auth-form__select:focus,
 body.page--void-login .auth-form__textarea:focus {
-    border-color: rgba(172, 209, 255, 0.92);
+    border-color: rgba(183, 153, 236, 0.9);
     box-shadow:
-        0 0 0 1px rgba(172, 209, 255, 0.45),
-        0 0 14px rgba(89, 157, 255, 0.34);
+        0 0 0 1px rgba(183, 153, 236, 0.35),
+        0 0 12px rgba(118, 94, 158, 0.26);
 }
 
 body.page--void-login .auth-form__checkbox-input {
-    accent-color: #7e8dff;
+    accent-color: #8f78bc;
 }
 
 body.page--void-login .auth-form__primary-button {
     border-radius: 12px;
-    border: 1px solid rgba(180, 209, 255, 0.48);
-    background: linear-gradient(110deg, #274094, #5039b4 56%, #892e9f);
+    border: 1px solid rgba(179, 157, 216, 0.52);
+    background: linear-gradient(108deg, #3d3f70, #584d86 56%, #6d4d86);
     letter-spacing: 0.08em;
     box-shadow:
-        0 8px 18px rgba(12, 20, 52, 0.7),
-        0 0 18px rgba(123, 95, 255, 0.28);
+        0 8px 16px rgba(12, 12, 25, 0.62),
+        0 0 10px rgba(120, 101, 160, 0.2);
 }
 
 body.page--void-login .auth-form__primary-button:hover {
-    background: linear-gradient(110deg, #2f4cad, #5a43cc 56%, #a53dc0);
+    background: linear-gradient(108deg, #44457a, #645592 56%, #7a588f);
 }
 
 body.page--void-login .auth-form__footer-item {
-    color: #d7e4ff;
+    color: #d8d3e8;
     transition:
         background-color 0.25s,
         color 0.25s,
@@ -397,8 +382,8 @@ body.page--void-login .auth-form__footer-item {
 }
 
 body.page--void-login .auth-form__footer-item:hover {
-    background-color: rgba(136, 154, 255, 0.2);
-    color: #f4f8ff;
+    background-color: rgba(146, 121, 190, 0.18);
+    color: #ede9f6;
     letter-spacing: 0.14ch;
 }
 
