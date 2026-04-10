@@ -29,9 +29,7 @@
         </div>
         <header
             style="
-                background:
-                    linear-gradient(rgba(4, 6, 15, 0.92), rgba(4, 6, 15, 0.78)),
-                    url('{{ $themeBackgroundUrl }}?v={{ $themeBackgroundVersion }}') center top / cover no-repeat;
+                background: url('{{ $themeBackgroundUrl }}?v={{ $themeBackgroundVersion }}') center top / cover no-repeat;
                 border-bottom: 1px solid rgba(106, 92, 148, 0.35);
                 box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
             "
