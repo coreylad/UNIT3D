@@ -151,13 +151,12 @@ class HomeController extends Controller
         $outputPath = $directory.DIRECTORY_SEPARATOR.'The_Void_Login_Page.png';
         File::delete($outputPath);
 
-        Image::make($banner->getRealPath())
-            ->orientate()
-            ->fit(2400, 520, function ($constraint): void {
-                $constraint->upsize();
-            })
-            ->encode('png', 90)
-            ->save($outputPath);
+        $this->processTransparentBannerCanvas(
+            $banner,
+            $directory.DIRECTORY_SEPARATOR.'The_Void_Login_Page',
+            2400,
+            520
+        );
 
         @touch($outputPath);
 
@@ -276,7 +275,7 @@ class HomeController extends Controller
         $processedTargets = [];
         if (isset($validated['theme_banner'])) {
             try {
-                $bannerResult = $this->processThemeImage(
+                $bannerResult = $this->processTransparentBannerCanvas(
                     $validated['theme_banner'],
                     $directory.DIRECTORY_SEPARATOR.'site-banner',
                     2400,
@@ -453,6 +452,53 @@ class HomeController extends Controller
             $savedPath = $outputPathWithoutExtension.'.jpg';
             $image->encode('jpg', 88)->save($savedPath);
             $this->deleteThemeAssetVariants($outputPathWithoutExtension, ['jpg']);
+            @touch($savedPath);
+
+            return [
+                'mode' => 'processed',
+                'saved_as' => basename($savedPath),
+            ];
+        }
+    }
+
+    /**
+     * Resize into a transparent banner canvas so logos keep alpha and do not get aggressively cropped.
+     *
+     * @return array{mode:string,saved_as:string}
+     */
+    private function processTransparentBannerCanvas(\Illuminate\Http\UploadedFile $file, string $outputPathWithoutExtension, int $targetWidth, int $targetHeight): array
+    {
+        $this->assertImageProcessingAvailable();
+        $this->deleteThemeAssetVariants($outputPathWithoutExtension, []);
+
+        $image = Image::make($file->getRealPath())->orientate();
+        $canvas = Image::canvas($targetWidth, $targetHeight, [0, 0, 0, 0]);
+
+        // Keep logo/text readable by fitting inside a padded safe zone.
+        $safeWidth = max($targetWidth - 180, 1);
+        $safeHeight = max($targetHeight - 80, 1);
+
+        $image->resize($safeWidth, $safeHeight, function ($constraint): void {
+            $constraint->aspectRatio();
+            $constraint->upsize();
+        });
+
+        $canvas->insert($image, 'center');
+
+        try {
+            $savedPath = $outputPathWithoutExtension.'.webp';
+            $canvas->encode('webp', 90)->save($savedPath);
+            $this->deleteThemeAssetVariants($outputPathWithoutExtension, ['webp']);
+            @touch($savedPath);
+
+            return [
+                'mode' => 'processed',
+                'saved_as' => basename($savedPath),
+            ];
+        } catch (Exception) {
+            $savedPath = $outputPathWithoutExtension.'.png';
+            $canvas->encode('png')->save($savedPath);
+            $this->deleteThemeAssetVariants($outputPathWithoutExtension, ['png']);
             @touch($savedPath);
 
             return [
