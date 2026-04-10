@@ -81,7 +81,7 @@
 
     @php
         $activeTools = request()->query('tools', 'links');
-        $toolGroups = ['links', 'communications', 'platform', 'torrent', 'user', 'logs'];
+        $toolGroups = ['links', 'communications', 'platform', 'torrent', 'donations', 'user', 'logs'];
 
         if (! in_array($activeTools, $toolGroups, true)) {
             $activeTools = 'links';
@@ -156,6 +156,19 @@
             </section>
         @endif
 
+        @if ($activeTools === 'donations')
+            <section class="staff-tools-group">
+            <h3 class="staff-tools-group__title">Donations</h3>
+            <div class="staff-tools-pills">
+                <a class="staff-tools-pill" href="{{ route('staff.donations.index') }}">Donation Log</a>
+                <a class="staff-tools-pill" href="{{ route('staff.packages.index') }}">Donation Packages</a>
+                <a class="staff-tools-pill" href="{{ route('staff.packages.create') }}">Create Package</a>
+                <a class="staff-tools-pill" href="{{ route('staff.gateways.index') }}">Donation Gateways</a>
+                <a class="staff-tools-pill" href="{{ route('staff.gateways.create') }}">Create Gateway</a>
+            </div>
+            </section>
+        @endif
+
         @if ($activeTools === 'user')
             <section class="staff-tools-group">
             <h3 class="staff-tools-group__title">User and Security Operations</h3>
@@ -215,6 +228,9 @@
                 </a>
                 <a class="staff-side-menu__top @if ($activeTools === 'torrent') is-active @endif" href="{{ route('staff.dashboard.index', ['tools' => 'torrent']) }}">
                     Torrent Operations
+                </a>
+                <a class="staff-side-menu__top @if ($activeTools === 'donations') is-active @endif" href="{{ route('staff.dashboard.index', ['tools' => 'donations']) }}">
+                    Donations
                 </a>
                 <a class="staff-side-menu__top @if ($activeTools === 'user') is-active @endif" href="{{ route('staff.dashboard.index', ['tools' => 'user']) }}">
                     User and Security Operations
