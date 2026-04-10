@@ -19,6 +19,24 @@
 laravel-echo-server.json
 laravel-echo-server.lock
 
+# Config (ignore by default unless important)
+/config/*.php
+!/config/app.php
+!/config/auth.php
+!/config/cache.php
+!/config/cors.php
+!/config/database.php
+!/config/filesystems.php
+!/config/hashing.php
+!/config/logging.php
+!/config/mail.php
+!/config/other.php
+!/config/queue.php
+!/config/services.php
+!/config/session.php
+!/config/unit3d.php
+!/config/view.php
+
 # Composer
 /vendor
 

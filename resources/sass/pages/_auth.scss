@@ -271,3 +271,199 @@ body {
 [x-cloak] {
     display: none !important;
 }
+
+body.page--void-login {
+    min-height: 100vh;
+    background-color: #04060f;
+    background-image:
+        radial-gradient(circle at 20% 12%, rgba(109, 154, 255, 0.24) 0%, rgba(109, 154, 255, 0) 42%),
+        radial-gradient(circle at 78% 22%, rgba(192, 90, 255, 0.2) 0%, rgba(192, 90, 255, 0) 38%),
+        linear-gradient(175deg, rgba(2, 4, 10, 0.76) 0%, rgba(1, 2, 8, 0.92) 58%, rgba(0, 1, 5, 0.97) 100%),
+        var(--void-login-bg-image);
+    background-size:
+        120% 120%,
+        120% 120%,
+        100% 100%,
+        cover;
+    background-position:
+        20% 12%,
+        82% 20%,
+        center,
+        center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    background-blend-mode: screen, screen, multiply, normal;
+    font-family:
+        'Trebuchet MS',
+        'Lucida Sans Unicode',
+        'Segoe UI Variable Display',
+        sans-serif;
+    animation: voidBackdropDrift 28s ease-in-out infinite alternate;
+}
+
+body.page--void-login .auth-form {
+    position: relative;
+    overflow: hidden;
+    width: min(92vw, 470px);
+    margin: 9vh auto 40px;
+    border-radius: 18px;
+    border: 1px solid rgba(116, 147, 255, 0.38);
+    background:
+        linear-gradient(145deg, rgba(10, 13, 29, 0.9), rgba(5, 8, 22, 0.8)),
+        linear-gradient(180deg, rgba(58, 69, 120, 0.18), rgba(180, 82, 255, 0.12));
+    box-shadow:
+        0 20px 45px rgba(0, 0, 0, 0.6),
+        0 0 0 1px rgba(167, 189, 255, 0.12) inset,
+        0 0 34px rgba(108, 74, 255, 0.22);
+    opacity: 1;
+    backdrop-filter: blur(6px) saturate(118%);
+    animation: voidPanelReveal 700ms ease-out both;
+}
+
+body.page--void-login .auth-form::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.2;
+    background-image:
+        repeating-linear-gradient(
+            8deg,
+            rgba(255, 255, 255, 0.08) 0,
+            rgba(255, 255, 255, 0.08) 1px,
+            transparent 1px,
+            transparent 3px
+        );
+    mix-blend-mode: soft-light;
+}
+
+body.page--void-login .auth-form__form {
+    position: relative;
+    z-index: 1;
+    gap: 14px;
+    padding: 34px 30px 30px;
+}
+
+body.page--void-login .auth-form__branding {
+    color: #9eb4ff;
+    text-shadow:
+        0 0 10px rgba(129, 178, 255, 0.45),
+        0 0 18px rgba(153, 104, 255, 0.28);
+}
+
+body.page--void-login .auth-form__site-logo {
+    color: #d3deff;
+    font-size: clamp(2.2rem, 5.8vw, 3.1rem);
+    letter-spacing: 0.14ch;
+    text-shadow: 0 0 14px rgba(116, 188, 255, 0.2);
+}
+
+body.page--void-login .auth-form__label,
+body.page--void-login .auth-form__error,
+body.page--void-login .auth-form__important-info {
+    color: #d7e1ff;
+}
+
+body.page--void-login .auth-form__text-input,
+body.page--void-login .auth-form__select,
+body.page--void-login .auth-form__textarea {
+    border: 1px solid rgba(142, 174, 255, 0.38);
+    background: rgba(11, 16, 36, 0.8);
+    color: #f4f8ff;
+}
+
+body.page--void-login .auth-form__text-input::placeholder,
+body.page--void-login .auth-form__textarea::placeholder {
+    color: rgba(211, 223, 255, 0.72);
+}
+
+body.page--void-login .auth-form__text-input:focus,
+body.page--void-login .auth-form__select:focus,
+body.page--void-login .auth-form__textarea:focus {
+    border-color: rgba(172, 209, 255, 0.92);
+    box-shadow:
+        0 0 0 1px rgba(172, 209, 255, 0.45),
+        0 0 14px rgba(89, 157, 255, 0.34);
+}
+
+body.page--void-login .auth-form__checkbox-input {
+    accent-color: #7e8dff;
+}
+
+body.page--void-login .auth-form__primary-button {
+    border-radius: 12px;
+    border: 1px solid rgba(180, 209, 255, 0.48);
+    background: linear-gradient(110deg, #274094, #5039b4 56%, #892e9f);
+    letter-spacing: 0.08em;
+    box-shadow:
+        0 8px 18px rgba(12, 20, 52, 0.7),
+        0 0 18px rgba(123, 95, 255, 0.28);
+}
+
+body.page--void-login .auth-form__primary-button:hover {
+    background: linear-gradient(110deg, #2f4cad, #5a43cc 56%, #a53dc0);
+}
+
+body.page--void-login .auth-form__footer-item {
+    color: #d7e4ff;
+    transition:
+        background-color 0.25s,
+        color 0.25s,
+        letter-spacing 0.25s;
+}
+
+body.page--void-login .auth-form__footer-item:hover {
+    background-color: rgba(136, 154, 255, 0.2);
+    color: #f4f8ff;
+    letter-spacing: 0.14ch;
+}
+
+@keyframes voidPanelReveal {
+    from {
+        opacity: 0;
+        transform: translateY(24px) scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes voidBackdropDrift {
+    from {
+        background-position:
+            20% 12%,
+            82% 20%,
+            center,
+            center;
+    }
+
+    to {
+        background-position:
+            24% 16%,
+            76% 16%,
+            center,
+            center;
+    }
+}
+
+@media (max-width: 640px) {
+    body.page--void-login {
+        background-size:
+            140% 140%,
+            140% 140%,
+            100% 100%,
+            cover;
+        background-position:
+            28% 12%,
+            70% 20%,
+            center,
+            center;
+    }
+
+    body.page--void-login .auth-form {
+        width: min(94vw, 470px);
+        margin-top: 5vh;
+    }
+}

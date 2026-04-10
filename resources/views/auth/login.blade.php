@@ -22,12 +22,15 @@
         <link rel="icon" href="{{ url('/favicon.ico') }}" type="image/x-icon" />
         @vite('resources/sass/pages/_auth.scss')
     </head>
-    <body>
+    <body
+        class="page--void-login"
+        style="--void-login-bg-image: url('{{ asset('img/auth/The_Void_Login_Page.png') }}')"
+    >
         <!-- Do NOT change! For Jackett support -->
         <div class="Jackett" style="display: none">{{ config('unit3d.powered-by') }}</div>
         <!-- Do NOT change! For Jackett support -->
         <main>
-            <section class="auth-form">
+            <section class="auth-form auth-form--void">
                 <form class="auth-form__form" method="POST" action="{{ route('login') }}">
                     @csrf
                     <a class="auth-form__branding" href="{{ route('home.index') }}">

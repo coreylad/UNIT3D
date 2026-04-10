@@ -345,12 +345,18 @@ final class User extends Authenticatable implements MustVerifyEmail
     /**
      * Get the user's settings object.
      */
-    public function getSettingsAttribute(): ?UserSetting
+    public function getSettingsAttribute(): UserSetting
     {
-        $settings = cache()->rememberForever('user-settings:by-user-id:'.$this->id, fn () => $this->getRelationValue('settings') ?? 'not found');
+        $cacheKey = 'user-settings:by-user-id:'.$this->id;
+        $settings = cache()->get($cacheKey);
 
         if ($settings === 'not found') {
+            cache()->forget($cacheKey);
             $settings = null;
+        }
+
+        if (! $settings instanceof UserSetting) {
+            $settings = cache()->rememberForever($cacheKey, fn () => $this->settings()->getResults());
         }
 
         $this->setRelation('settings', $settings);
