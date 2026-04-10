@@ -31,6 +31,7 @@ use Illuminate\Validation\Rule;
 use Intervention\Image\ImageManagerStatic as Image;
 use Spatie\SslCertificate\SslCertificate;
 use Exception;
+use RuntimeException;
 use Throwable;
 
 /**
@@ -127,7 +128,7 @@ class HomeController extends Controller
     public function updateBanner(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'site_banner' => ['required', 'image', 'mimetypes:image/png', 'max:12288'],
+            'site_banner' => ['required', 'file', 'image', 'mimetypes:image/jpeg,image/png,image/webp,image/gif,image/bmp', 'max:51200'],
         ]);
 
         $directory = public_path('img/auth');
@@ -136,9 +137,29 @@ class HomeController extends Controller
             File::makeDirectory($directory, 0755, true);
         }
 
+        if (! File::isWritable($directory)) {
+            return to_route('staff.dashboard.index')->withErrors([
+                'site_banner' => 'Banner directory is not writable: '.$directory,
+            ]);
+        }
+
+        $this->assertImageProcessingAvailable();
+
         /** @var \Illuminate\Http\UploadedFile $banner */
         $banner = $validated['site_banner'];
-        $banner->move($directory, 'The_Void_Login_Page.png');
+
+        $outputPath = $directory.DIRECTORY_SEPARATOR.'The_Void_Login_Page.png';
+        File::delete($outputPath);
+
+        Image::make($banner->getRealPath())
+            ->orientate()
+            ->fit(2400, 520, function ($constraint): void {
+                $constraint->upsize();
+            })
+            ->encode('png', 90)
+            ->save($outputPath);
+
+        @touch($outputPath);
 
         return to_route('staff.dashboard.index')->with('success', 'Site banner updated successfully.');
     }
@@ -253,8 +274,6 @@ class HomeController extends Controller
 
         $uploadErrors = [];
         $processedTargets = [];
-        $uploadWarnings = [];
-
         if (isset($validated['theme_banner'])) {
             try {
                 $bannerResult = $this->processThemeImage(
@@ -263,10 +282,7 @@ class HomeController extends Controller
                     2400,
                     520
                 );
-                $processedTargets[] = 'site-banner ('.$bannerResult['mode'].')';
-                if ($bannerResult['mode'] === 'passthrough') {
-                    $uploadWarnings[] = 'Banner uploaded without auto-resize because GD/Imagick is unavailable on this server.';
-                }
+                $processedTargets[] = 'site-banner ('.$bannerResult['saved_as'].')';
             } catch (Throwable $throwable) {
                 $uploadErrors['theme_banner'] = 'Banner upload failed during processing. '.$throwable->getMessage();
             }
@@ -280,10 +296,7 @@ class HomeController extends Controller
                     2560,
                     1440
                 );
-                $processedTargets[] = 'site-background ('.$backgroundResult['mode'].')';
-                if ($backgroundResult['mode'] === 'passthrough') {
-                    $uploadWarnings[] = 'Background uploaded without auto-resize because GD/Imagick is unavailable on this server.';
-                }
+                $processedTargets[] = 'site-background ('.$backgroundResult['saved_as'].')';
             } catch (Throwable $throwable) {
                 $uploadErrors['theme_background'] = 'Background upload failed during processing. '.$throwable->getMessage();
             }
@@ -303,14 +316,11 @@ class HomeController extends Controller
 
         return to_route('staff.dashboard.theme.index')
             ->with('success', 'Theme assets updated successfully.')
-            ->with('theme_upload_message', $uploadWarnings !== []
-                ? implode(' ', $uploadWarnings)
-                : 'Theme upload completed with image optimization enabled.')
+            ->with('theme_upload_message', 'Theme upload completed and images were resized to fixed dimensions.')
             ->with('theme_upload_debug', array_merge($debugContext, [
                 'result' => [
                     'processed_targets' => $processedTargets,
                     'storage_directory' => $directory,
-                    'warnings' => $uploadWarnings,
                 ],
             ]));
     }
@@ -419,18 +429,9 @@ class HomeController extends Controller
      */
     private function processThemeImage(\Illuminate\Http\UploadedFile $file, string $outputPathWithoutExtension, int $targetWidth, int $targetHeight): array
     {
-        if (! extension_loaded('gd') && ! extension_loaded('imagick')) {
-            $extension = $this->inferThemeExtension($file);
-            $destination = $outputPathWithoutExtension.'.'.$extension;
+        $this->assertImageProcessingAvailable();
 
-            File::copy($file->getRealPath(), $destination);
-            $this->deleteThemeAssetVariants($outputPathWithoutExtension, [$extension]);
-
-            return [
-                'mode' => 'passthrough',
-                'saved_as' => basename($destination),
-            ];
-        }
+        $this->deleteThemeAssetVariants($outputPathWithoutExtension, []);
 
         $image = Image::make($file->getRealPath())
             ->orientate()
@@ -439,35 +440,35 @@ class HomeController extends Controller
             });
 
         try {
-            $image->encode('webp', 88)->save($outputPathWithoutExtension.'.webp');
+            $savedPath = $outputPathWithoutExtension.'.webp';
+            $image->encode('webp', 88)->save($savedPath);
             $this->deleteThemeAssetVariants($outputPathWithoutExtension, ['webp']);
+            @touch($savedPath);
 
             return [
                 'mode' => 'processed',
-                'saved_as' => basename($outputPathWithoutExtension.'.webp'),
+                'saved_as' => basename($savedPath),
             ];
         } catch (Exception) {
-            $image->encode('jpg', 88)->save($outputPathWithoutExtension.'.jpg');
+            $savedPath = $outputPathWithoutExtension.'.jpg';
+            $image->encode('jpg', 88)->save($savedPath);
             $this->deleteThemeAssetVariants($outputPathWithoutExtension, ['jpg']);
+            @touch($savedPath);
 
             return [
                 'mode' => 'processed',
-                'saved_as' => basename($outputPathWithoutExtension.'.jpg'),
+                'saved_as' => basename($savedPath),
             ];
         }
     }
 
-    private function inferThemeExtension(\Illuminate\Http\UploadedFile $file): string
+    private function assertImageProcessingAvailable(): void
     {
-        $mimeType = strtolower((string) $file->getMimeType());
-
-        return match ($mimeType) {
-            'image/png' => 'png',
-            'image/webp' => 'webp',
-            'image/gif' => 'gif',
-            'image/bmp', 'image/x-ms-bmp' => 'bmp',
-            default => 'jpg',
-        };
+        if (! extension_loaded('gd') && ! extension_loaded('imagick')) {
+            throw new RuntimeException(
+                'Image resizing requires GD or Imagick. Enable one PHP extension, then retry upload.'
+            );
+        }
     }
 
     private function resolveThemeAssetUrl(string $baseName, string $fallbackUrl): string

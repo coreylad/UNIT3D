@@ -24,19 +24,21 @@
     </head>
     @php
         $loginBackgroundUrl = asset('img/auth/The_Void_Login_Page.png');
+        $loginBackgroundVersion = now()->timestamp;
 
         foreach (['webp', 'jpg', 'jpeg', 'png', 'gif', 'bmp'] as $extension) {
             $candidate = public_path("img/theme/site-background.{$extension}");
 
             if (file_exists($candidate)) {
                 $loginBackgroundUrl = asset("img/theme/site-background.{$extension}");
+                $loginBackgroundVersion = filemtime($candidate);
                 break;
             }
         }
     @endphp
     <body
         class="page--void-login"
-        style="--void-login-bg-image: url('{{ $loginBackgroundUrl }}')"
+        style="--void-login-bg-image: url('{{ $loginBackgroundUrl }}?v={{ $loginBackgroundVersion }}')"
     >
         <!-- Do NOT change! For Jackett support -->
         <div class="Jackett" style="display: none">{{ config('unit3d.powered-by') }}</div>

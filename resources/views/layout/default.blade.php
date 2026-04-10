@@ -3,7 +3,26 @@
     <head>
         @include('partials.head')
     </head>
-    <body>
+    @php
+        $themeBackgroundUrl = asset('img/auth/The_Void_Login_Page.png');
+        $themeBackgroundVersion = now()->timestamp;
+
+        foreach (['webp', 'jpg', 'jpeg', 'png', 'gif', 'bmp'] as $extension) {
+            $candidate = public_path("img/theme/site-background.{$extension}");
+
+            if (file_exists($candidate)) {
+                $themeBackgroundUrl = asset("img/theme/site-background.{$extension}");
+                $themeBackgroundVersion = filemtime($candidate);
+                break;
+            }
+        }
+    @endphp
+    <body
+        style="
+            --void-theme-background-image: url('{{ $themeBackgroundUrl }}?v={{ $themeBackgroundVersion }}');
+            background: #04060f url('{{ $themeBackgroundUrl }}?v={{ $themeBackgroundVersion }}') center top / cover fixed no-repeat;
+        "
+    >
         <div class="alerts">
             @include('cookie-consent::index')
             @include('partials.alerts')
