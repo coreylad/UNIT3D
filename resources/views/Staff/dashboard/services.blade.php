@@ -156,6 +156,12 @@
                     <small class="staff-theme-editor__guide">Use only when your SMTP server uses an invalid/self-signed certificate (common on localhost STARTTLS).</small>
                 </p>
                 <p class="staff-services__field">
+                    <label class="form__label" for="mail_disable_auto_tls">Disable SMTP Auto TLS</label>
+                    <input id="mail_disable_auto_tls" name="mail_disable_auto_tls" type="checkbox" value="1"
+                        @checked(old('mail_disable_auto_tls', ! $siteServices['mail_auto_tls'])) />
+                    <small class="staff-theme-editor__guide">Recommended for localhost port 25 relays where STARTTLS cert validation fails.</small>
+                </p>
+                <p class="staff-services__field">
                     <label class="form__label" for="mail_sendmail_path">Sendmail Path</label>
                     <input id="mail_sendmail_path" class="form__text" name="mail_sendmail_path" type="text"
                         value="{{ old('mail_sendmail_path', $siteServices['mail_sendmail_path']) }}" />
@@ -170,7 +176,8 @@
                 </p>
             </div>
             <div class="staff-services__actions">
-                <button class="form__button form__button--filled" type="submit">Save Site Services</button>
+                <button class="form__button form__button--filled" name="submit_action" value="save" type="submit">Save Site Services</button>
+                <button class="form__button form__button--text" name="submit_action" value="save_test" type="submit">Save and Test Email</button>
             </div>
         </form>
     </section>

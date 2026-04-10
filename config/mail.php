@@ -40,6 +40,7 @@ return [
             'host'         => env('MAIL_HOST', 'smtp.mailgun.org'),
             'port'         => env('MAIL_PORT', 587),
             'encryption'   => env('MAIL_ENCRYPTION', 'tls'),
+            'auto_tls'     => (bool) env('MAIL_AUTO_TLS', true),
             'username'     => env('MAIL_USERNAME'),
             'password'     => env('MAIL_PASSWORD'),
             'timeout'      => null,

@@ -29,6 +29,7 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Intervention\Image\ImageManagerStatic as Image;
 use Spatie\SslCertificate\SslCertificate;
@@ -209,9 +210,11 @@ class HomeController extends Controller
             'clear_mail_password' => ['nullable', 'boolean'],
             'mail_encryption'   => ['nullable', 'string', Rule::in(['', 'tls', 'ssl'])],
             'mail_allow_self_signed' => ['nullable', 'boolean'],
+            'mail_disable_auto_tls' => ['nullable', 'boolean'],
             'mail_from_address' => ['nullable', 'email', 'max:255'],
             'mail_from_name'     => ['nullable', 'string', 'max:255'],
             'mail_sendmail_path' => ['nullable', 'string', 'max:500'],
+            'submit_action'      => ['nullable', 'string', Rule::in(['save', 'save_test'])],
         ]);
 
         $envValues = [
@@ -225,6 +228,7 @@ class HomeController extends Controller
             'MAIL_PORT'          => (string) ($validated['mail_port'] ?? ''),
             'MAIL_USERNAME'      => (string) ($validated['mail_username'] ?? ''),
             'MAIL_ENCRYPTION'    => $validated['mail_encryption'] ?? '',
+            'MAIL_AUTO_TLS'         => $request->boolean('mail_disable_auto_tls') ? 'false' : 'true',
             'MAIL_ALLOW_SELF_SIGNED' => $request->boolean('mail_allow_self_signed') ? 'true' : 'false',
             'MAIL_VERIFY_PEER'      => $request->boolean('mail_allow_self_signed') ? 'false' : 'true',
             'MAIL_VERIFY_PEER_NAME' => $request->boolean('mail_allow_self_signed') ? 'false' : 'true',
@@ -247,6 +251,27 @@ class HomeController extends Controller
             Log::warning('Failed clearing caches after site services update', [
                 'message' => $throwable->getMessage(),
             ]);
+        }
+
+        if (($validated['submit_action'] ?? 'save') === 'save_test') {
+            try {
+                Artisan::call('test:email', ['--force' => true]);
+                $mailTestOutput = trim(str_replace(["\r", "\n"], ' ', Artisan::output()));
+
+                return to_route('staff.dashboard.services.index')
+                    ->with('success', 'Site services saved and test email command executed.')
+                    ->with('info', $mailTestOutput === '' ? 'No output returned from test email command.' : $mailTestOutput);
+            } catch (Throwable $throwable) {
+                $hint = '';
+                $exceptionMessage = $throwable->getMessage();
+
+                if (Str::contains(strtolower($exceptionMessage), ['starttls', 'certificate verify failed', 'ssl operation failed'])) {
+                    $hint = ' Hint: for localhost/Plesk relay use host localhost, port 25, encryption None, and disable SMTP Auto TLS.';
+                }
+
+                return to_route('staff.dashboard.services.index')
+                    ->withErrors(['mail_host' => 'Email test failed: '.$exceptionMessage.$hint]);
+            }
         }
 
         return to_route('staff.dashboard.services.index')->with('success', 'Site services updated and persisted to environment configuration.');
@@ -496,6 +521,7 @@ class HomeController extends Controller
             'mail_password_set' => ! empty(config('mail.mailers.smtp.password')),
             'mail_password_mask' => ! empty(config('mail.mailers.smtp.password')) ? '********' : '',
             'mail_encryption'   => (string) (config('mail.mailers.smtp.encryption') ?? ''),
+            'mail_auto_tls'     => (bool) (config('mail.mailers.smtp.auto_tls') ?? true),
             'mail_allow_self_signed' => (bool) (config('mail.mailers.smtp.stream.ssl.allow_self_signed') ?? false),
             'mail_from_address' => (string) (config('mail.from.address') ?? ''),
             'mail_from_name'    => (string) (config('mail.from.name') ?? ''),
