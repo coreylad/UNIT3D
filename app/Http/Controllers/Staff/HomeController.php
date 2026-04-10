@@ -364,20 +364,39 @@ class HomeController extends Controller
             'freeleech'         => ['nullable', 'boolean'],
         ]);
 
+        $openRegistration = $request->boolean('open_registration');
+        $wasOpenRegistration = ! (bool) config('other.invite-only');
+        $openedRegistrationNow = $openRegistration && ! $wasOpenRegistration;
+
         $this->writeEnvValues([
-            'INVITE_ONLY' => $request->boolean('open_registration') ? 'false' : 'true',
+            'INVITE_ONLY' => $openRegistration ? 'false' : 'true',
             'FREELEECH'   => $request->boolean('freeleech') ? 'true' : 'false',
         ]);
 
         try {
-            Artisan::call('optimize:clear');
+            if ($openedRegistrationNow) {
+                foreach (['optimize:clear', 'config:clear', 'route:clear', 'view:clear', 'event:clear'] as $command) {
+                    Artisan::call($command);
+                }
+
+                if (function_exists('opcache_reset')) {
+                    @opcache_reset();
+                }
+            } else {
+                Artisan::call('optimize:clear');
+            }
         } catch (Throwable $throwable) {
             Log::warning('Failed clearing caches after site policy update', [
                 'message' => $throwable->getMessage(),
             ]);
         }
 
-        return to_route('staff.dashboard.sitepolicy.index')->with('success', 'Site policy updated and persisted to environment configuration.');
+        return to_route('staff.dashboard.sitepolicy.index')->with(
+            'success',
+            $openedRegistrationNow
+                ? 'Site policy updated. Open Registration was enabled and a forced cache reset was executed.'
+                : 'Site policy updated and persisted to environment configuration.'
+        );
     }
 
     /**

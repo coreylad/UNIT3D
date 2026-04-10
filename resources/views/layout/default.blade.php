@@ -170,7 +170,7 @@
 
                     Toast.fire({
                         icon: '{{ $key }}',
-                        title: '{{ Session::get($key) }}',
+                        title: @js((string) Session::get($key)),
                     });
                 </script>
             @endif
@@ -195,6 +195,9 @@
 
         <script nonce="{{ HDVinnie\SecureHeaders\SecureHeaders::nonce('script') }}">
             window.addEventListener('success', (event) => {
+                const detail = event?.detail ?? {};
+                const message = typeof detail.message === 'string' ? detail.message : '';
+
                 const Toast = Swal.mixin({
                     toast: true,
                     position: 'top-end',
@@ -204,17 +207,22 @@
 
                 Toast.fire({
                     icon: 'success',
-                    title: event.detail.message,
+                    title: message,
                 });
             });
         </script>
 
         <script nonce="{{ HDVinnie\SecureHeaders\SecureHeaders::nonce('script') }}">
             window.addEventListener('error', (event) => {
+                const detail = event?.detail ?? {};
+                const message = typeof detail.message === 'string'
+                    ? detail.message
+                    : 'Unexpected error.';
+
                 Swal.fire({
                     title: '<strong style=" color: rgb(17,17,17);">Error</strong>',
                     icon: 'error',
-                    html: event.detail.message,
+                    html: message,
                     showCloseButton: true,
                 });
             });

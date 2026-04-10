@@ -22,9 +22,26 @@
         <link rel="icon" href="{{ url('/favicon.ico') }}" type="image/x-icon" />
         @vite('resources/sass/pages/_auth.scss')
     </head>
-    <body>
+    @php
+        $registerBackgroundUrl = asset('img/auth/The_Void_Login_Page.png');
+        $registerBackgroundVersion = now()->timestamp;
+
+        foreach (['webp', 'jpg', 'jpeg', 'png', 'gif', 'bmp'] as $extension) {
+            $candidate = public_path("img/theme/site-background.{$extension}");
+
+            if (file_exists($candidate)) {
+                $registerBackgroundUrl = asset("img/theme/site-background.{$extension}");
+                $registerBackgroundVersion = filemtime($candidate);
+                break;
+            }
+        }
+    @endphp
+    <body
+        class="page--void-login"
+        style="--void-login-bg-image: url('{{ $registerBackgroundUrl }}?v={{ $registerBackgroundVersion }}')"
+    >
         <main>
-            <section class="auth-form">
+            <section class="auth-form auth-form--void">
                 <form
                     class="auth-form__form"
                     method="POST"
