@@ -44,11 +44,11 @@ use Illuminate\Support\Facades\Redis;
 final class AnnounceController extends Controller
 {
     // Announce Intervals
-    private const int MIN = 1_800;
-    private const int MAX = 3_600;
+    private const MIN = 300;
+    private const MAX = 900;
 
     // Port Blacklist
-    private const array BLACK_PORTS = [
+    private const BLACK_PORTS = [
         // Hyper Text Transfer Protocol (HTTP) - port used for web traffic
         8080,
         8081,
@@ -65,7 +65,7 @@ final class AnnounceController extends Controller
         6699,
     ];
 
-    private const array HEADERS = [
+    private const HEADERS = [
         'Content-Type'  => 'text/plain; charset=utf-8',
         'Cache-Control' => 'private, no-cache, no-store, must-revalidate, max-age=0',
         'Pragma'        => 'no-cache',

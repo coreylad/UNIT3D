@@ -75,13 +75,19 @@ class AutoUpsertPeers extends Command
             $userIds = array_values(array_unique(array_map(static fn (array $peer): int => (int) $peer['user_id'], $peers)));
             $torrentIds = array_values(array_unique(array_map(static fn (array $peer): int => (int) $peer['torrent_id'], $peers)));
 
-            $existingUserIds = User::query()->whereIn('id', $userIds)->pluck('id')->all();
-            $existingTorrentIds = Torrent::query()->whereIn('id', $torrentIds)->pluck('id')->all();
+            $existingUserIds = array_fill_keys(
+                array_map('intval', User::query()->whereIn('id', $userIds)->pluck('id')->all()),
+                true
+            );
+            $existingTorrentIds = array_fill_keys(
+                array_map('intval', Torrent::query()->whereIn('id', $torrentIds)->pluck('id')->all()),
+                true
+            );
 
             $peers = array_values(array_filter(
                 $peers,
-                static fn (array $peer): bool => \in_array((int) $peer['user_id'], $existingUserIds, true)
-                    && \in_array((int) $peer['torrent_id'], $existingTorrentIds, true)
+                static fn (array $peer): bool => isset($existingUserIds[(int) $peer['user_id']])
+                    && isset($existingTorrentIds[(int) $peer['torrent_id']])
             ));
 
             if ($peers === []) {

@@ -71,7 +71,7 @@ class Kernel extends ConsoleKernel
             $schedule->command(AutoUpsertHistories::class)->everyFiveSeconds()->withoutOverlapping(2);
             $schedule->command(AutoUpsertAnnounces::class)->everyFiveSeconds()->withoutOverlapping(2);
             $schedule->command(AutoCacheUserLeechCounts::class)->everyThirtyMinutes();
-            $schedule->command(SyncPeers::class)->everyFiveMinutes();
+            $schedule->command(SyncPeers::class)->everyMinute();
             $schedule->command(AutoTorrentBalance::class)->hourly();
         }
 

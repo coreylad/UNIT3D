@@ -91,13 +91,19 @@ class AutoUpsertHistories extends Command
             $userIds = array_values(array_unique(array_map(static fn (array $history): int => (int) $history['user_id'], $histories)));
             $torrentIds = array_values(array_unique(array_map(static fn (array $history): int => (int) $history['torrent_id'], $histories)));
 
-            $existingUserIds = User::query()->whereIn('id', $userIds)->pluck('id')->all();
-            $existingTorrentIds = Torrent::query()->whereIn('id', $torrentIds)->pluck('id')->all();
+            $existingUserIds = array_fill_keys(
+                array_map('intval', User::query()->whereIn('id', $userIds)->pluck('id')->all()),
+                true
+            );
+            $existingTorrentIds = array_fill_keys(
+                array_map('intval', Torrent::query()->whereIn('id', $torrentIds)->pluck('id')->all()),
+                true
+            );
 
             $histories = array_values(array_filter(
                 $histories,
-                static fn (array $history): bool => \in_array((int) $history['user_id'], $existingUserIds, true)
-                    && \in_array((int) $history['torrent_id'], $existingTorrentIds, true)
+                static fn (array $history): bool => isset($existingUserIds[(int) $history['user_id']])
+                    && isset($existingTorrentIds[(int) $history['torrent_id']])
             ));
 
             if ($histories === []) {
