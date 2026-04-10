@@ -16,14 +16,14 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
-use App\Models\Category;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class CategorySeeder extends Seeder
 {
     public function run(): void
     {
-        Category::upsert([
+        $rows = [
             [
                 'id'         => 1,
                 'name'       => 'Movies',
@@ -48,6 +48,10 @@ class CategorySeeder extends Seeder
                 'music_meta' => 0,
                 'no_meta'    => 0,
             ],
-        ], ['id']);
+        ];
+
+        foreach ($rows as $row) {
+            DB::table('categories')->updateOrInsert(['id' => $row['id']], $row);
+        }
     }
 }
