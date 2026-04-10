@@ -74,6 +74,6 @@ class ResolutionSeeder extends Seeder
                 'name'     => 'Other',
                 'position' => 10,
             ],
-        ], ['id'], []);
+        ], ['id']);
     }
 }

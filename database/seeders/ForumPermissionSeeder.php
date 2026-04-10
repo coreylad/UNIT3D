@@ -200,6 +200,6 @@ class ForumPermissionSeeder extends Seeder
                 'reply_topic' => true,
                 'start_topic' => true,
             ],
-        ], ['id'], []);
+        ], ['id']);
     }
 }

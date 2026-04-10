@@ -48,6 +48,6 @@ class CategorySeeder extends Seeder
                 'music_meta' => 0,
                 'no_meta'    => 0,
             ],
-        ], ['id'], []);
+        ], ['id']);
     }
 }

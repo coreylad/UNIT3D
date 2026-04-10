@@ -35,7 +35,7 @@ class ForumSeeder extends Seeder
                 'created_at'  => '2017-01-03 18:29:21',
                 'updated_at'  => '2017-01-03 18:29:21',
             ],
-        ], ['id'], []);
+        ], ['id']);
 
         Forum::upsert([
             [

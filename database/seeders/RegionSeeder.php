@@ -1244,6 +1244,6 @@ class RegionSeeder extends Seeder
                 'name'     => 'ZIM',
                 'position' => 243,
             ],
-        ], ['id'], []);
+        ], ['id']);
     }
 }
