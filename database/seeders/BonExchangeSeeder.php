@@ -17,14 +17,14 @@ declare(strict_types=1);
 namespace Database\Seeders;
 
 use App\Helpers\ByteUnits;
-use App\Models\BonExchange;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class BonExchangeSeeder extends Seeder
 {
     public function run(ByteUnits $byteUnits): void
     {
-        BonExchange::upsert([
+        $rows = [
             [
                 'id'                 => 1,
                 'description'        => '2 GiB Upload',
@@ -85,6 +85,10 @@ class BonExchangeSeeder extends Seeder
                 'personal_freeleech' => 1,
                 'invite'             => 0,
             ],
-        ], ['id'], []);
+        ];
+
+        foreach ($rows as $row) {
+            DB::table('bon_exchanges')->updateOrInsert(['id' => $row['id']], $row);
+        }
     }
 }
