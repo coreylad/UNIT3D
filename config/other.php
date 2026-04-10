@@ -162,6 +162,10 @@ return [
     | 10 = Nord
     | 11 = Revel
     | 12 = Material Design v3 Light
+    | 13 = Material Design v3 Dark
+    | 14 = Material Design v3 Amoled
+    | 15 = Material Design v3 Navy
+    | 16 = The Void
     */
     'default_style' => 12,
 

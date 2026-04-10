@@ -126,6 +126,13 @@
                             </option>
                             <option
                                 class="form__option"
+                                value="16"
+                                @selected($user->settings->style === 16)
+                            >
+                                The Void
+                            </option>
+                            <option
+                                class="form__option"
                                 value="10"
                                 @selected($user->settings->style === 10)
                             >
