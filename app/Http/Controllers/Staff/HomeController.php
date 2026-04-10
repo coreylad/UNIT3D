@@ -100,15 +100,10 @@ class HomeController extends Controller
 
     public function theme(): \Illuminate\Contracts\View\Factory|\Illuminate\View\View
     {
-        $bannerPath = public_path('img/theme/site-banner.webp');
-        $backgroundPath = public_path('img/theme/site-background.webp');
-
         return view('Staff.dashboard.theme', [
             'themeAssets' => [
-                'banner_url' => file_exists($bannerPath) ? asset('img/theme/site-banner.webp') : asset('img/auth/The_Void_Login_Page.png'),
-                'background_url' => file_exists($backgroundPath) ? asset('img/theme/site-background.webp') : asset('img/auth/The_Void_Login_Page.png'),
-                'banner_exists' => file_exists($bannerPath),
-                'background_exists' => file_exists($backgroundPath),
+                'banner_url' => $this->resolveThemeAssetUrl('site-banner', asset('img/auth/The_Void_Login_Page.png')),
+                'background_url' => $this->resolveThemeAssetUrl('site-background', asset('img/auth/The_Void_Login_Page.png')),
             ],
         ]);
     }
@@ -196,8 +191,8 @@ class HomeController extends Controller
     public function updateTheme(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'theme_banner'     => ['nullable', 'file', 'image', 'mimetypes:image/jpeg,image/png,image/webp,image/gif,image/avif', 'max:20480'],
-            'theme_background' => ['nullable', 'file', 'image', 'mimetypes:image/jpeg,image/png,image/webp,image/gif,image/avif', 'max:20480'],
+            'theme_banner'     => ['nullable', 'file', 'image', 'mimetypes:image/jpeg,image/png,image/webp,image/gif,image/bmp', 'max:51200'],
+            'theme_background' => ['nullable', 'file', 'image', 'mimetypes:image/jpeg,image/png,image/webp,image/gif,image/bmp', 'max:51200'],
         ]);
 
         if (! isset($validated['theme_banner']) && ! isset($validated['theme_background'])) {
@@ -209,22 +204,36 @@ class HomeController extends Controller
             File::makeDirectory($directory, 0755, true);
         }
 
+        $uploadErrors = [];
+
         if (isset($validated['theme_banner'])) {
-            $this->processThemeImage(
-                $validated['theme_banner'],
-                $directory.DIRECTORY_SEPARATOR.'site-banner.webp',
-                2400,
-                520
-            );
+            try {
+                $this->processThemeImage(
+                    $validated['theme_banner'],
+                    $directory.DIRECTORY_SEPARATOR.'site-banner',
+                    2400,
+                    520
+                );
+            } catch (Exception $exception) {
+                $uploadErrors['theme_banner'] = 'Banner upload failed: '.$exception->getMessage();
+            }
         }
 
         if (isset($validated['theme_background'])) {
-            $this->processThemeImage(
-                $validated['theme_background'],
-                $directory.DIRECTORY_SEPARATOR.'site-background.webp',
-                2560,
-                1440
-            );
+            try {
+                $this->processThemeImage(
+                    $validated['theme_background'],
+                    $directory.DIRECTORY_SEPARATOR.'site-background',
+                    2560,
+                    1440
+                );
+            } catch (Exception $exception) {
+                $uploadErrors['theme_background'] = 'Background upload failed: '.$exception->getMessage();
+            }
+        }
+
+        if ($uploadErrors !== []) {
+            return to_route('staff.dashboard.theme.index')->withErrors($uploadErrors);
         }
 
         return to_route('staff.dashboard.theme.index')->with('success', 'Theme assets updated successfully.');
@@ -329,14 +338,50 @@ class HomeController extends Controller
         }
     }
 
-    private function processThemeImage(\Illuminate\Http\UploadedFile $file, string $outputPath, int $targetWidth, int $targetHeight): void
+    private function processThemeImage(\Illuminate\Http\UploadedFile $file, string $outputPathWithoutExtension, int $targetWidth, int $targetHeight): void
     {
-        Image::make($file->getRealPath())
+        $image = Image::make($file->getRealPath())
             ->orientate()
             ->fit($targetWidth, $targetHeight, function ($constraint): void {
                 $constraint->upsize();
-            })
-            ->encode('webp', 88)
-            ->save($outputPath);
+            });
+
+        try {
+            $image->encode('webp', 88)->save($outputPathWithoutExtension.'.webp');
+            $this->deleteThemeAssetVariants($outputPathWithoutExtension, ['webp']);
+        } catch (Exception) {
+            $image->encode('jpg', 88)->save($outputPathWithoutExtension.'.jpg');
+            $this->deleteThemeAssetVariants($outputPathWithoutExtension, ['jpg']);
+        }
+    }
+
+    private function resolveThemeAssetUrl(string $baseName, string $fallbackUrl): string
+    {
+        foreach (['webp', 'jpg', 'jpeg', 'png', 'gif', 'bmp'] as $extension) {
+            $absolutePath = public_path("img/theme/{$baseName}.{$extension}");
+
+            if (file_exists($absolutePath)) {
+                return asset("img/theme/{$baseName}.{$extension}");
+            }
+        }
+
+        return $fallbackUrl;
+    }
+
+    /**
+     * @param array<int,string> $keepExtensions
+     */
+    private function deleteThemeAssetVariants(string $basePathWithoutExtension, array $keepExtensions): void
+    {
+        foreach (['webp', 'jpg', 'jpeg', 'png', 'gif', 'bmp'] as $extension) {
+            if (in_array($extension, $keepExtensions, true)) {
+                continue;
+            }
+
+            $candidate = $basePathWithoutExtension.'.'.$extension;
+            if (file_exists($candidate)) {
+                File::delete($candidate);
+            }
+        }
     }
 }

@@ -31,18 +31,18 @@
             <div class="staff-theme-editor__grid">
                 <article class="staff-theme-editor__card" id="banner-editor">
                     <h3 class="staff-theme-editor__title">Site Banner</h3>
-                    <p class="staff-theme-editor__guide">Best size: 2400 x 520 (wide panoramic). Accepted: JPG, PNG, WEBP, GIF, AVIF.</p>
+                    <p class="staff-theme-editor__guide">Best size: 2400 x 520 (wide panoramic). Accepted: JPG, PNG, WEBP, GIF, BMP.</p>
                     <img class="staff-theme-editor__preview" src="{{ $themeAssets['banner_url'] }}?v={{ now()->timestamp }}" alt="Current banner preview" />
                     <label class="form__label" for="theme_banner">Upload Banner Image</label>
-                    <input id="theme_banner" class="form__file" name="theme_banner" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" />
+                    <input id="theme_banner" class="form__file" name="theme_banner" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/bmp" />
                 </article>
 
                 <article class="staff-theme-editor__card" id="background-editor">
                     <h3 class="staff-theme-editor__title">Site Background</h3>
-                    <p class="staff-theme-editor__guide">Best size: 2560 x 1440 (16:9). Accepted: JPG, PNG, WEBP, GIF, AVIF.</p>
+                    <p class="staff-theme-editor__guide">Best size: 2560 x 1440 (16:9). Accepted: JPG, PNG, WEBP, GIF, BMP.</p>
                     <img class="staff-theme-editor__preview" src="{{ $themeAssets['background_url'] }}?v={{ now()->timestamp }}" alt="Current background preview" />
                     <label class="form__label" for="theme_background">Upload Background Image</label>
-                    <input id="theme_background" class="form__file" name="theme_background" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" />
+                    <input id="theme_background" class="form__file" name="theme_background" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/bmp" />
                 </article>
             </div>
 

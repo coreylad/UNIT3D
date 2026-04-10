@@ -23,10 +23,16 @@
         @vite('resources/sass/pages/_auth.scss')
     </head>
     @php
-        $themeBackgroundPath = public_path('img/theme/site-background.webp');
-        $loginBackgroundUrl = file_exists($themeBackgroundPath)
-            ? asset('img/theme/site-background.webp')
-            : asset('img/auth/The_Void_Login_Page.png');
+        $loginBackgroundUrl = asset('img/auth/The_Void_Login_Page.png');
+
+        foreach (['webp', 'jpg', 'jpeg', 'png', 'gif', 'bmp'] as $extension) {
+            $candidate = public_path("img/theme/site-background.{$extension}");
+
+            if (file_exists($candidate)) {
+                $loginBackgroundUrl = asset("img/theme/site-background.{$extension}");
+                break;
+            }
+        }
     @endphp
     <body
         class="page--void-login"

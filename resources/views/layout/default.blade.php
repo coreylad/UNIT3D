@@ -10,13 +10,20 @@
         </div>
         <header>
             @php
-                $themeBannerPath = public_path('img/theme/site-banner.webp');
                 $legacyBannerPath = public_path('img/auth/The_Void_Login_Page.png');
-                $bannerExists = file_exists($themeBannerPath);
-                $bannerUrl = $bannerExists ? asset('img/theme/site-banner.webp') : asset('img/auth/The_Void_Login_Page.png');
-                $bannerVersion = $bannerExists
-                    ? filemtime($themeBannerPath)
-                    : (file_exists($legacyBannerPath) ? filemtime($legacyBannerPath) : now()->timestamp);
+
+                $bannerUrl = asset('img/auth/The_Void_Login_Page.png');
+                $bannerVersion = file_exists($legacyBannerPath) ? filemtime($legacyBannerPath) : now()->timestamp;
+
+                foreach (['webp', 'jpg', 'jpeg', 'png', 'gif', 'bmp'] as $extension) {
+                    $candidate = public_path("img/theme/site-banner.{$extension}");
+
+                    if (file_exists($candidate)) {
+                        $bannerUrl = asset("img/theme/site-banner.{$extension}");
+                        $bannerVersion = filemtime($candidate);
+                        break;
+                    }
+                }
             @endphp
             <div class="site-header-banner">
                 <a href="{{ route('home.index') }}" aria-label="{{ config('other.title') }}">
