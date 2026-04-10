@@ -291,16 +291,16 @@ body.page--void-login .auth-form {
     position: relative;
     overflow: hidden;
     width: min(92vw, 470px);
-    margin: 9vh auto 40px;
+    margin: 17vh auto 40px;
     border-radius: 18px;
     border: 1px solid rgba(160, 137, 199, 0.38);
-    background: linear-gradient(160deg, rgba(16, 13, 31, 0.84), rgba(8, 10, 22, 0.88));
+    background: linear-gradient(160deg, rgba(16, 13, 31, 0.62), rgba(8, 10, 22, 0.66));
     box-shadow:
         0 20px 42px rgba(0, 0, 0, 0.7),
         0 0 0 1px rgba(186, 165, 219, 0.16) inset,
         0 0 20px rgba(121, 96, 166, 0.14);
     opacity: 1;
-    backdrop-filter: blur(6px) saturate(92%);
+    backdrop-filter: blur(9px) saturate(90%);
     animation: voidPanelReveal 700ms ease-out both;
 }
 
@@ -425,6 +425,6 @@ body.page--void-login .auth-form__footer-item:hover {
 
     body.page--void-login .auth-form {
         width: min(94vw, 470px);
-        margin-top: 5vh;
+        margin-top: 12vh;
     }
 }
