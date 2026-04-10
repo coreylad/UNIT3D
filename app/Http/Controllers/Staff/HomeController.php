@@ -27,6 +27,7 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Intervention\Image\ImageManagerStatic as Image;
@@ -130,6 +131,21 @@ class HomeController extends Controller
                 'open_registration' => ! (bool) config('other.invite-only'),
                 'freeleech'         => (bool) config('other.freeleech'),
             ],
+        ]);
+    }
+
+    public function prunedUsers(): \Illuminate\Contracts\View\Factory|\Illuminate\View\View
+    {
+        $query = DB::table('users')
+            ->join('groups', 'groups.id', '=', 'users.group_id')
+            ->where('groups.slug', '=', 'pruned');
+
+        if (Schema::hasColumn('users', 'deleted_at')) {
+            $query->whereNotNull('users.deleted_at');
+        }
+
+        return view('Staff.dashboard.pruned-users', [
+            'prunedUsersCount' => $query->count(),
         ]);
     }
 
@@ -404,6 +420,62 @@ class HomeController extends Controller
                 ? 'Site policy updated. Open Registration was enabled and a forced cache reset was executed.'
                 : 'Site policy updated and persisted to environment configuration.'
         );
+    }
+
+    public function purgePrunedUsers(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'confirm_purge' => ['accepted'],
+        ]);
+
+        $prunedUsersQuery = DB::table('users')
+            ->join('groups', 'groups.id', '=', 'users.group_id')
+            ->where('groups.slug', '=', 'pruned')
+            ->select('users.id');
+
+        if (Schema::hasColumn('users', 'deleted_at')) {
+            $prunedUsersQuery->whereNotNull('users.deleted_at');
+        }
+
+        $userIds = $prunedUsersQuery->pluck('users.id')->map(fn ($id): int => (int) $id)->values();
+
+        if ($userIds->isEmpty()) {
+            return to_route('staff.dashboard.pruned.index')->with('info', 'No soft-deleted pruned users found.');
+        }
+
+        DB::transaction(function () use ($userIds): void {
+            foreach ([
+                'participants',
+                'messages',
+                'likes',
+                'thanks',
+                'peers',
+                'history',
+                'failed_login_attempts',
+                'freeleech_tokens',
+                'email_updates',
+                'passkeys',
+                'rsskeys',
+                'apikeys',
+                'password_reset_history',
+                'playlist_suggestions',
+            ] as $table) {
+                if (Schema::hasTable($table) && Schema::hasColumn($table, 'user_id')) {
+                    DB::table($table)->whereIn('user_id', $userIds)->delete();
+                }
+            }
+
+            if (Schema::hasTable('follows')) {
+                DB::table('follows')->whereIn('user_id', $userIds)->delete();
+                if (Schema::hasColumn('follows', 'target_id')) {
+                    DB::table('follows')->whereIn('target_id', $userIds)->delete();
+                }
+            }
+
+            DB::table('users')->whereIn('id', $userIds)->delete();
+        });
+
+        return to_route('staff.dashboard.pruned.index')->with('success', 'Pruned users purged permanently: '.$userIds->count());
     }
 
     /**
