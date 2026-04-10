@@ -25,10 +25,13 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Intervention\Image\ImageManagerStatic as Image;
 use Spatie\SslCertificate\SslCertificate;
 use Exception;
+use Throwable;
 
 /**
  * @see \Tests\Todo\Feature\Http\Controllers\Staff\HomeControllerTest
@@ -190,13 +193,50 @@ class HomeController extends Controller
 
     public function updateTheme(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'theme_banner'     => ['nullable', 'file', 'image', 'mimetypes:image/jpeg,image/png,image/webp,image/gif,image/bmp', 'max:51200'],
-            'theme_background' => ['nullable', 'file', 'image', 'mimetypes:image/jpeg,image/png,image/webp,image/gif,image/bmp', 'max:51200'],
-        ]);
+        $validator = Validator::make(
+            $request->all(),
+            [
+                'theme_banner'     => ['nullable', 'file', 'image', 'mimetypes:image/jpeg,image/png,image/webp,image/gif,image/bmp', 'max:51200'],
+                'theme_background' => ['nullable', 'file', 'image', 'mimetypes:image/jpeg,image/png,image/webp,image/gif,image/bmp', 'max:51200'],
+            ],
+            [
+                'theme_banner.image' => 'Banner must be a valid image file.',
+                'theme_banner.mimetypes' => 'Banner must be one of: JPG, PNG, WEBP, GIF, BMP.',
+                'theme_banner.max' => 'Banner must be 50MB or smaller.',
+                'theme_background.image' => 'Background must be a valid image file.',
+                'theme_background.mimetypes' => 'Background must be one of: JPG, PNG, WEBP, GIF, BMP.',
+                'theme_background.max' => 'Background must be 50MB or smaller.',
+            ]
+        );
+
+        $debugContext = $this->buildThemeUploadDebugContext($request);
+
+        if ($validator->fails()) {
+            return to_route('staff.dashboard.theme.index')
+                ->withErrors($validator)
+                ->with('theme_upload_debug', $debugContext)
+                ->with('theme_upload_message', 'Validation failed before image processing started.');
+        }
+
+        /** @var array<string,\Illuminate\Http\UploadedFile> $validated */
+        $validated = $validator->validated();
+
+        $contentLength = (int) ($request->server('CONTENT_LENGTH') ?? 0);
+        $postMaxSizeBytes = $this->parseIniSizeToBytes((string) ini_get('post_max_size'));
+        if ($contentLength > 0 && $postMaxSizeBytes > 0 && $contentLength > $postMaxSizeBytes) {
+            return to_route('staff.dashboard.theme.index')
+                ->withErrors([
+                    'theme_background' => 'Request payload exceeded PHP post_max_size ('.ini_get('post_max_size').').',
+                ])
+                ->with('theme_upload_debug', $debugContext)
+                ->with('theme_upload_message', 'Upload rejected by PHP before Laravel received the files.');
+        }
 
         if (! isset($validated['theme_banner']) && ! isset($validated['theme_background'])) {
-            return to_route('staff.dashboard.theme.index')->withErrors(['theme_banner' => 'Upload at least one image to update the theme.']);
+            return to_route('staff.dashboard.theme.index')
+                ->withErrors(['theme_banner' => 'Upload at least one image to update the theme.'])
+                ->with('theme_upload_debug', $debugContext)
+                ->with('theme_upload_message', 'No files were attached in the request.');
         }
 
         $directory = public_path('img/theme');
@@ -204,39 +244,75 @@ class HomeController extends Controller
             File::makeDirectory($directory, 0755, true);
         }
 
+        if (! File::isWritable($directory)) {
+            return to_route('staff.dashboard.theme.index')
+                ->withErrors(['theme_background' => 'Theme directory is not writable: '.$directory])
+                ->with('theme_upload_debug', $debugContext)
+                ->with('theme_upload_message', 'Filesystem permissions blocked the upload.');
+        }
+
         $uploadErrors = [];
+        $processedTargets = [];
+        $uploadWarnings = [];
 
         if (isset($validated['theme_banner'])) {
             try {
-                $this->processThemeImage(
+                $bannerResult = $this->processThemeImage(
                     $validated['theme_banner'],
                     $directory.DIRECTORY_SEPARATOR.'site-banner',
                     2400,
                     520
                 );
-            } catch (Exception $exception) {
-                $uploadErrors['theme_banner'] = 'Banner upload failed: '.$exception->getMessage();
+                $processedTargets[] = 'site-banner ('.$bannerResult['mode'].')';
+                if ($bannerResult['mode'] === 'passthrough') {
+                    $uploadWarnings[] = 'Banner uploaded without auto-resize because GD/Imagick is unavailable on this server.';
+                }
+            } catch (Throwable $throwable) {
+                $uploadErrors['theme_banner'] = 'Banner upload failed during processing. '.$throwable->getMessage();
             }
         }
 
         if (isset($validated['theme_background'])) {
             try {
-                $this->processThemeImage(
+                $backgroundResult = $this->processThemeImage(
                     $validated['theme_background'],
                     $directory.DIRECTORY_SEPARATOR.'site-background',
                     2560,
                     1440
                 );
-            } catch (Exception $exception) {
-                $uploadErrors['theme_background'] = 'Background upload failed: '.$exception->getMessage();
+                $processedTargets[] = 'site-background ('.$backgroundResult['mode'].')';
+                if ($backgroundResult['mode'] === 'passthrough') {
+                    $uploadWarnings[] = 'Background uploaded without auto-resize because GD/Imagick is unavailable on this server.';
+                }
+            } catch (Throwable $throwable) {
+                $uploadErrors['theme_background'] = 'Background upload failed during processing. '.$throwable->getMessage();
             }
         }
 
         if ($uploadErrors !== []) {
-            return to_route('staff.dashboard.theme.index')->withErrors($uploadErrors);
+            Log::error('Theme upload failed', [
+                'errors' => $uploadErrors,
+                'debug' => $debugContext,
+            ]);
+
+            return to_route('staff.dashboard.theme.index')
+                ->withErrors($uploadErrors)
+                ->with('theme_upload_debug', $debugContext)
+                ->with('theme_upload_message', 'Upload reached image processing but one or more files failed.');
         }
 
-        return to_route('staff.dashboard.theme.index')->with('success', 'Theme assets updated successfully.');
+        return to_route('staff.dashboard.theme.index')
+            ->with('success', 'Theme assets updated successfully.')
+            ->with('theme_upload_message', $uploadWarnings !== []
+                ? implode(' ', $uploadWarnings)
+                : 'Theme upload completed with image optimization enabled.')
+            ->with('theme_upload_debug', array_merge($debugContext, [
+                'result' => [
+                    'processed_targets' => $processedTargets,
+                    'storage_directory' => $directory,
+                    'warnings' => $uploadWarnings,
+                ],
+            ]));
     }
 
     public function updateTwoFactor(Request $request): RedirectResponse
@@ -338,8 +414,24 @@ class HomeController extends Controller
         }
     }
 
-    private function processThemeImage(\Illuminate\Http\UploadedFile $file, string $outputPathWithoutExtension, int $targetWidth, int $targetHeight): void
+    /**
+     * @return array{mode:string,saved_as:string}
+     */
+    private function processThemeImage(\Illuminate\Http\UploadedFile $file, string $outputPathWithoutExtension, int $targetWidth, int $targetHeight): array
     {
+        if (! extension_loaded('gd') && ! extension_loaded('imagick')) {
+            $extension = $this->inferThemeExtension($file);
+            $destination = $outputPathWithoutExtension.'.'.$extension;
+
+            File::copy($file->getRealPath(), $destination);
+            $this->deleteThemeAssetVariants($outputPathWithoutExtension, [$extension]);
+
+            return [
+                'mode' => 'passthrough',
+                'saved_as' => basename($destination),
+            ];
+        }
+
         $image = Image::make($file->getRealPath())
             ->orientate()
             ->fit($targetWidth, $targetHeight, function ($constraint): void {
@@ -349,10 +441,33 @@ class HomeController extends Controller
         try {
             $image->encode('webp', 88)->save($outputPathWithoutExtension.'.webp');
             $this->deleteThemeAssetVariants($outputPathWithoutExtension, ['webp']);
+
+            return [
+                'mode' => 'processed',
+                'saved_as' => basename($outputPathWithoutExtension.'.webp'),
+            ];
         } catch (Exception) {
             $image->encode('jpg', 88)->save($outputPathWithoutExtension.'.jpg');
             $this->deleteThemeAssetVariants($outputPathWithoutExtension, ['jpg']);
+
+            return [
+                'mode' => 'processed',
+                'saved_as' => basename($outputPathWithoutExtension.'.jpg'),
+            ];
         }
+    }
+
+    private function inferThemeExtension(\Illuminate\Http\UploadedFile $file): string
+    {
+        $mimeType = strtolower((string) $file->getMimeType());
+
+        return match ($mimeType) {
+            'image/png' => 'png',
+            'image/webp' => 'webp',
+            'image/gif' => 'gif',
+            'image/bmp', 'image/x-ms-bmp' => 'bmp',
+            default => 'jpg',
+        };
     }
 
     private function resolveThemeAssetUrl(string $baseName, string $fallbackUrl): string
@@ -366,6 +481,72 @@ class HomeController extends Controller
         }
 
         return $fallbackUrl;
+    }
+
+    /**
+     * @return array<string,mixed>
+     */
+    private function buildThemeUploadDebugContext(Request $request): array
+    {
+        $buildFileMeta = static function (?\Illuminate\Http\UploadedFile $file): array {
+            if (! $file instanceof \Illuminate\Http\UploadedFile) {
+                return ['present' => false];
+            }
+
+            return [
+                'present' => true,
+                'name' => $file->getClientOriginalName(),
+                'client_mime' => $file->getClientMimeType(),
+                'detected_mime' => $file->getMimeType(),
+                'size_bytes' => $file->getSize(),
+                'is_valid' => $file->isValid(),
+                'error_code' => $file->getError(),
+            ];
+        };
+
+        $themeDirectory = public_path('img/theme');
+
+        return [
+            'request' => [
+                'content_length' => (int) ($request->server('CONTENT_LENGTH') ?? 0),
+            ],
+            'php' => [
+                'upload_max_filesize' => (string) ini_get('upload_max_filesize'),
+                'post_max_size' => (string) ini_get('post_max_size'),
+                'memory_limit' => (string) ini_get('memory_limit'),
+                'gd_loaded' => extension_loaded('gd'),
+                'imagick_loaded' => extension_loaded('imagick'),
+                'webp_supported' => function_exists('imagewebp'),
+                'avif_supported' => function_exists('imageavif'),
+            ],
+            'filesystem' => [
+                'theme_dir' => $themeDirectory,
+                'theme_dir_exists' => File::isDirectory($themeDirectory),
+                'theme_dir_writable' => File::isDirectory($themeDirectory) ? File::isWritable($themeDirectory) : null,
+            ],
+            'files' => [
+                'theme_banner' => $buildFileMeta($request->file('theme_banner')),
+                'theme_background' => $buildFileMeta($request->file('theme_background')),
+            ],
+        ];
+    }
+
+    private function parseIniSizeToBytes(string $value): int
+    {
+        $trimmed = trim($value);
+        if ($trimmed === '') {
+            return 0;
+        }
+
+        $unit = strtolower(substr($trimmed, -1));
+        $number = (int) $trimmed;
+
+        return match ($unit) {
+            'g' => $number * 1024 * 1024 * 1024,
+            'm' => $number * 1024 * 1024,
+            'k' => $number * 1024,
+            default => (int) $trimmed,
+        };
     }
 
     /**

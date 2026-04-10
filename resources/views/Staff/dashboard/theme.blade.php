@@ -22,9 +22,33 @@
         <div class="staff-theme-editor__head">
             <h2 class="panel__heading">Theme Editor</h2>
             <p class="staff-theme-editor__subtitle">
-                Upload banner and background assets. Images are auto-cropped, resized, and optimized to webp.
+                Upload banner and background assets. Images are auto-cropped, resized, and optimized when image libraries are available.
             </p>
         </div>
+
+        @if (session('theme_upload_message'))
+            <div class="panel__body" style="margin-bottom: 1rem; border: 1px solid rgba(197, 142, 70, 0.5);">
+                <strong>Upload Diagnostics:</strong> {{ session('theme_upload_message') }}
+            </div>
+        @endif
+
+        @if ($errors->any())
+            <div class="panel__body" style="margin-bottom: 1rem; border: 1px solid rgba(192, 92, 92, 0.55);">
+                <strong>Detailed Upload Errors</strong>
+                <ul style="margin: 0.75rem 0 0; padding-left: 1.25rem;">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
+        @if (session('theme_upload_debug'))
+            <details class="panel__body" style="margin-bottom: 1rem; border: 1px solid rgba(86, 115, 174, 0.45);">
+                <summary style="cursor: pointer; font-weight: 600;">Show Upload Debug Payload</summary>
+                <pre style="white-space: pre-wrap; word-break: break-word; margin-top: 0.75rem;">{{ json_encode(session('theme_upload_debug'), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
+            </details>
+        @endif
 
         <form class="staff-theme-editor__form" method="POST" action="{{ route('staff.dashboard.theme.update') }}" enctype="multipart/form-data">
             @csrf
