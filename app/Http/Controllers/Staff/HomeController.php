@@ -23,6 +23,7 @@ use App\Models\Group;
 use App\Services\Unit3dAnnounce;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
@@ -186,7 +187,10 @@ class HomeController extends Controller
         ]);
 
         $envValues = [
+            'APP_NAME'           => $validated['site_name'],
             'APP_URL'            => $validated['site_url'],
+            'SITE_TITLE'         => $validated['site_title'],
+            'SITE_SUBTITLE'      => (string) ($validated['site_subtitle'] ?? ''),
             'MAIL_MAILER'        => $validated['mail_mailer'],
             'DEFAULT_OWNER_EMAIL' => (string) ($validated['owner_email'] ?? ''),
             'MAIL_HOST'          => (string) ($validated['mail_host'] ?? ''),
@@ -204,11 +208,15 @@ class HomeController extends Controller
 
         $this->writeEnvValues($envValues);
 
-        $this->updateConfigStringValue(config_path('app.php'), 'name', $validated['site_name']);
-        $this->updateConfigStringValue(config_path('other.php'), 'title', $validated['site_title']);
-        $this->updateConfigStringValue(config_path('other.php'), 'subTitle', (string) ($validated['site_subtitle'] ?? ''));
+        try {
+            Artisan::call('optimize:clear');
+        } catch (Throwable $throwable) {
+            Log::warning('Failed clearing caches after site services update', [
+                'message' => $throwable->getMessage(),
+            ]);
+        }
 
-        return to_route('staff.dashboard.services.index')->with('success', 'Site services updated. Run config cache clear/optimize on server to apply immediately.');
+        return to_route('staff.dashboard.services.index')->with('success', 'Site services updated and persisted to environment configuration.');
     }
 
     public function updateTheme(Request $request): RedirectResponse
@@ -401,26 +409,6 @@ class HomeController extends Controller
         }
 
         return $value;
-    }
-
-    private function updateConfigStringValue(string $filePath, string $key, string $value): void
-    {
-        if (! File::exists($filePath)) {
-            return;
-        }
-
-        $content = File::get($filePath);
-        $escaped = str_replace("'", "\\'", $value);
-        $pattern = "/('".preg_quote($key, '/')."'\\s*=>\\s*)'[^']*'/";
-        $replacement = "$1'{$escaped}'";
-        $updated = preg_replace($pattern, $replacement, $content, 1);
-
-        if (
-            is_string($updated)
-            && $updated !== $content
-        ) {
-            File::put($filePath, $updated);
-        }
     }
 
     /**

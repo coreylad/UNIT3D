@@ -23,7 +23,7 @@ return [
     |
     */
 
-    'title' => 'UNIT3D',
+    'title' => env('SITE_TITLE', env('APP_NAME', 'UNIT3D')),
 
     /*
     |--------------------------------------------------------------------------
@@ -34,7 +34,7 @@ return [
     |
     */
 
-    'subTitle' => 'Built On Laravel',
+    'subTitle' => env('SITE_SUBTITLE', 'Built On Laravel'),
 
     /*
     |--------------------------------------------------------------------------
