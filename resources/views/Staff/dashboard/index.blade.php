@@ -79,6 +79,113 @@
         </div>
     </section>
 
+    <section class="panelV2 staff-services" id="site-services">
+        <div class="staff-services__head">
+            <h2 class="panel__heading">Site Services</h2>
+            <p class="staff-services__subtitle">
+                Update core site identity and mail transport settings without leaving dashboard.
+            </p>
+        </div>
+
+        <div class="staff-services__pill-row">
+            <span class="staff-services__pill">
+                <span class="staff-services__pill-label">Site Name</span>
+                <span class="staff-services__pill-value">{{ $siteServices['site_name'] }}</span>
+            </span>
+            <span class="staff-services__pill">
+                <span class="staff-services__pill-label">Site Title</span>
+                <span class="staff-services__pill-value">{{ $siteServices['site_title'] }}</span>
+            </span>
+            <span class="staff-services__pill">
+                <span class="staff-services__pill-label">Mailer</span>
+                <span class="staff-services__pill-value">{{ $siteServices['mail_mailer'] }}</span>
+            </span>
+            <span class="staff-services__pill">
+                <span class="staff-services__pill-label">Owner Email</span>
+                <span class="staff-services__pill-value">{{ $siteServices['owner_email'] ?: 'Not set' }}</span>
+            </span>
+            <span class="staff-services__pill">
+                <span class="staff-services__pill-label">Mail Host</span>
+                <span class="staff-services__pill-value">{{ $siteServices['mail_host'] ?: 'Not set' }}</span>
+            </span>
+            <span class="staff-services__pill">
+                <span class="staff-services__pill-label">From Address</span>
+                <span class="staff-services__pill-value">{{ $siteServices['mail_from_address'] ?: 'Not set' }}</span>
+            </span>
+        </div>
+
+        <form class="staff-services__form" method="POST" action="{{ route('staff.dashboard.services.update') }}">
+            @csrf
+            <div class="staff-services__fields">
+                <p class="staff-services__field">
+                    <label class="form__label" for="site_name">Site Name</label>
+                    <input id="site_name" class="form__text" name="site_name" type="text" value="{{ old('site_name', $siteServices['site_name']) }}" required />
+                </p>
+                <p class="staff-services__field">
+                    <label class="form__label" for="site_title">Site Title</label>
+                    <input id="site_title" class="form__text" name="site_title" type="text" value="{{ old('site_title', $siteServices['site_title']) }}" required />
+                </p>
+                <p class="staff-services__field">
+                    <label class="form__label" for="site_subtitle">Site Subtitle</label>
+                    <input id="site_subtitle" class="form__text" name="site_subtitle" type="text" value="{{ old('site_subtitle', $siteServices['site_subtitle']) }}" />
+                </p>
+                <p class="staff-services__field">
+                    <label class="form__label" for="site_url">Site URL</label>
+                    <input id="site_url" class="form__text" name="site_url" type="url" value="{{ old('site_url', $siteServices['site_url']) }}" required />
+                </p>
+                <p class="staff-services__field">
+                    <label class="form__label" for="mail_mailer">Mail Driver</label>
+                    <select id="mail_mailer" class="form__select" name="mail_mailer" required>
+                        @foreach (['smtp', 'sendmail', 'mailgun', 'ses', 'postmark', 'log', 'array', 'failover'] as $mailer)
+                            <option value="{{ $mailer }}" @selected(old('mail_mailer', $siteServices['mail_mailer']) === $mailer)>
+                                {{ strtoupper($mailer) }}
+                            </option>
+                        @endforeach
+                    </select>
+                </p>
+                <p class="staff-services__field">
+                    <label class="form__label" for="owner_email">Owner Email</label>
+                    <input id="owner_email" class="form__text" name="owner_email" type="email" value="{{ old('owner_email', $siteServices['owner_email']) }}" />
+                </p>
+                <p class="staff-services__field">
+                    <label class="form__label" for="mail_host">Mail Host</label>
+                    <input id="mail_host" class="form__text" name="mail_host" type="text" value="{{ old('mail_host', $siteServices['mail_host']) }}" />
+                </p>
+                <p class="staff-services__field">
+                    <label class="form__label" for="mail_port">Mail Port</label>
+                    <input id="mail_port" class="form__text" name="mail_port" type="number" min="1" max="65535" value="{{ old('mail_port', $siteServices['mail_port']) }}" />
+                </p>
+                <p class="staff-services__field">
+                    <label class="form__label" for="mail_encryption">Mail Encryption</label>
+                    <select id="mail_encryption" class="form__select" name="mail_encryption">
+                        <option value="" @selected(old('mail_encryption', $siteServices['mail_encryption']) === '')>None</option>
+                        <option value="tls" @selected(old('mail_encryption', $siteServices['mail_encryption']) === 'tls')>TLS</option>
+                        <option value="ssl" @selected(old('mail_encryption', $siteServices['mail_encryption']) === 'ssl')>SSL</option>
+                    </select>
+                </p>
+                <p class="staff-services__field">
+                    <label class="form__label" for="mail_username">Mail Username</label>
+                    <input id="mail_username" class="form__text" name="mail_username" type="text" value="{{ old('mail_username', $siteServices['mail_username']) }}" />
+                </p>
+                <p class="staff-services__field">
+                    <label class="form__label" for="mail_password">Mail Password</label>
+                    <input id="mail_password" class="form__text" name="mail_password" type="text" value="{{ old('mail_password', $siteServices['mail_password']) }}" />
+                </p>
+                <p class="staff-services__field">
+                    <label class="form__label" for="mail_from_address">From Address</label>
+                    <input id="mail_from_address" class="form__text" name="mail_from_address" type="email" value="{{ old('mail_from_address', $siteServices['mail_from_address']) }}" />
+                </p>
+                <p class="staff-services__field">
+                    <label class="form__label" for="mail_from_name">From Name</label>
+                    <input id="mail_from_name" class="form__text" name="mail_from_name" type="text" value="{{ old('mail_from_name', $siteServices['mail_from_name']) }}" />
+                </p>
+            </div>
+            <div class="staff-services__actions">
+                <button class="form__button form__button--filled" type="submit">Save Site Services</button>
+            </div>
+        </form>
+    </section>
+
     <div class="dashboard__menus">
         <section class="panelV2 panel--grid-item">
             <h2 class="panel__heading">
@@ -824,6 +931,7 @@
 
                 <details class="staff-side-menu__group">
                     <summary class="staff-side-menu__summary">Content and Tracker</summary>
+                    <a class="staff-side-menu__link" href="#site-services">Site Services</a>
                     <a class="staff-side-menu__link" href="#site-banner-editor">Banner Editor</a>
                     <a class="staff-side-menu__link" href="{{ route('staff.articles.index') }}">Articles</a>
                     <a class="staff-side-menu__link" href="{{ route('staff.events.index') }}">Events</a>

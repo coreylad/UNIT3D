@@ -15,6 +15,10 @@
     --staff-copy: #a6b1d6;
 }
 
+.page__staff-dashboard--index .sidebar2 {
+    flex-direction: row-reverse;
+}
+
 .staff-command-center {
     border-radius: 18px;
     border: 1px solid var(--staff-edge);
@@ -121,6 +125,87 @@
 
 .staff-command-grid__tool i {
     color: #8fdbff;
+}
+
+.staff-services {
+    border: 1px solid rgba(127, 145, 223, 0.3);
+    border-radius: 14px;
+    overflow: hidden;
+    margin-bottom: 1rem;
+    background: linear-gradient(160deg, rgba(10, 13, 34, 0.88), rgba(5, 7, 21, 0.94));
+}
+
+.staff-services__head {
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(124, 141, 221, 0.24);
+}
+
+.staff-services__subtitle {
+    margin: 6px 0 0;
+    color: #9faedb;
+    font-size: 0.82rem;
+}
+
+.staff-services__pill-row {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+    padding: 12px 14px;
+}
+
+.staff-services__pill {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(122, 143, 220, 0.26);
+    background: rgba(10, 13, 34, 0.74);
+}
+
+.staff-services__pill-label {
+    color: #93a4d8;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.staff-services__pill-value {
+    color: #e4ebff;
+    font-size: 0.84rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.staff-services__form {
+    padding: 0 14px 14px;
+}
+
+.staff-services__fields {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.staff-services__field {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.staff-services__actions {
+    margin-top: 12px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.staff-services .form__text,
+.staff-services .form__select {
+    border: 1px solid rgba(122, 143, 220, 0.28);
+    background: rgba(10, 13, 32, 0.76);
+    color: #d3defe;
 }
 
 .staff-side-menu-panel {
@@ -293,11 +378,21 @@
     .staff-command-center__status-strip {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+
+    .staff-services__pill-row {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .staff-services__fields {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 
 @media screen and (max-width: 640px) {
     .staff-command-grid,
-    .staff-command-center__status-strip {
+    .staff-command-center__status-strip,
+    .staff-services__pill-row,
+    .staff-services__fields {
         grid-template-columns: 1fr;
     }
 }

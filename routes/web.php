@@ -640,6 +640,7 @@ Route::middleware('language')->group(function (): void {
             Route::name('dashboard.')->group(function (): void {
                 Route::get('/', [App\Http\Controllers\Staff\HomeController::class, 'index'])->name('index');
                 Route::post('/banner', [App\Http\Controllers\Staff\HomeController::class, 'updateBanner'])->name('banner.update');
+                Route::post('/services', [App\Http\Controllers\Staff\HomeController::class, 'updateSiteServices'])->name('services.update');
             });
 
             // Announces
