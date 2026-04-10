@@ -36,6 +36,10 @@
                 <span class="staff-services__pill-value">{{ $siteServices['site_title'] }}</span>
             </span>
             <span class="staff-services__pill">
+                <span class="staff-services__pill-label">Default Theme</span>
+                <span class="staff-services__pill-value">{{ $siteServices['theme_style_options'][$siteServices['default_theme_style']] ?? 'Unknown' }}</span>
+            </span>
+            <span class="staff-services__pill">
                 <span class="staff-services__pill-label">Mailer</span>
                 <span class="staff-services__pill-value">{{ strtoupper($siteServices['mail_mailer']) }}</span>
             </span>
@@ -84,6 +88,22 @@
                 <p class="staff-services__field">
                     <label class="form__label" for="site_subtitle">Site Subtitle</label>
                     <input id="site_subtitle" class="form__text" name="site_subtitle" type="text" value="{{ old('site_subtitle', $siteServices['site_subtitle']) }}" />
+                </p>
+                <p class="staff-services__field">
+                    <label class="form__label" for="default_theme_style">Default User Theme</label>
+                    <select id="default_theme_style" class="form__select" name="default_theme_style" required>
+                        @foreach ($siteServices['theme_style_options'] as $styleValue => $styleLabel)
+                            <option value="{{ $styleValue }}" @selected((int) old('default_theme_style', $siteServices['default_theme_style']) === (int) $styleValue)>
+                                {{ $styleLabel }}
+                            </option>
+                        @endforeach
+                    </select>
+                    <small class="staff-theme-editor__guide">Applied to new users by default.</small>
+                </p>
+                <p class="staff-services__field">
+                    <label class="form__label" for="force_users_theme">Force Selected Theme For All Existing Users</label>
+                    <input id="force_users_theme" name="force_users_theme" type="checkbox" value="1" @checked(old('force_users_theme')) />
+                    <small class="staff-theme-editor__guide">When enabled, this save updates every existing user setting to the selected default theme.</small>
                 </p>
                 <p class="staff-services__field">
                     <label class="form__label" for="site_url">Site URL</label>

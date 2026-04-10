@@ -45,6 +45,7 @@
         class="upload panelV2"
         x-data="{
             cat: {{ old('category_id', (int) $category_id) }},
+            type: {{ old('type_id', (int) ($types->first()->id ?? 0)) }},
             cats: JSON.parse(atob('{{ base64_encode(json_encode($categories)) }}')),
             tmdb_movie_exists: true,
             tmdb_tv_exists: true,
@@ -52,6 +53,15 @@
             tvdb_tv_exists: true,
             mal_anime_exists: true,
             igdb_game_exists: true,
+            categoryType() {
+                return this.cats?.[this.cat]?.type ?? 'no';
+            },
+            isVideoCategory() {
+                return ['movie', 'tv'].includes(this.categoryType());
+            },
+            isGameCategory() {
+                return this.categoryType() === 'game';
+            },
         }"
     >
         <h2 class="upload-title panel__heading">
@@ -139,7 +149,6 @@
                         class="form__select"
                         required
                         x-model="cat"
-                        @change="cats[cat].type = cats[$event.target.value].type;"
                     >
                         <option hidden selected disabled value=""></option>
                         @foreach ($categories as $id => $category)
@@ -152,8 +161,21 @@
                         {{ __('torrent.category') }}
                     </label>
                 </p>
-                <p class="form__group">
-                    <select name="type_id" id="autotype" class="form__select" required>
+                <input
+                    type="hidden"
+                    name="type_id"
+                    x-bind:value="type"
+                    x-bind:disabled="isVideoCategory()"
+                />
+                <p class="form__group" x-show="isVideoCategory()">
+                    <select
+                        name="type_id"
+                        id="autotype"
+                        class="form__select"
+                        x-model="type"
+                        x-bind:required="isVideoCategory()"
+                        x-bind:disabled="!isVideoCategory()"
+                    >
                         <option hidden disabled selected value=""></option>
                         @foreach ($types as $type)
                             <option
@@ -170,13 +192,13 @@
                 </p>
                 <p
                     class="form__group"
-                    x-show="cats[cat].type === 'movie' || cats[cat].type === 'tv'"
+                    x-show="isVideoCategory()"
                 >
                     <select
                         name="resolution_id"
                         id="autores"
                         class="form__select"
-                        x-bind:required="cats[cat].type === 'movie' || cats[cat].type === 'tv'"
+                        x-bind:required="isVideoCategory()"
                     >
                         <option hidden disabled selected value=""></option>
                         @foreach ($resolutions as $resolution)
@@ -194,7 +216,7 @@
                 </p>
                 <div
                     class="form__group--horizontal"
-                    x-show="cats[cat].type === 'movie' || cats[cat].type === 'tv'"
+                    x-show="isVideoCategory()"
                 >
                     <p class="form__group">
                         <select
@@ -285,7 +307,7 @@
                 </div>
                 <div
                     class="form__group--horizontal"
-                    x-show="cats[cat].type === 'movie' || cats[cat].type === 'tv' || cats[cat].type === 'game'"
+                    x-show="isVideoCategory()"
                 >
                     <div class="form__group--vertical" x-show="cats[cat].type === 'movie'">
                         <p class="form__group">
@@ -481,39 +503,37 @@
                             <span class="form__hint">Numeric digits only.</span>
                         </p>
                     </div>
-                    <div class="form__group--vertical" x-show="cats[cat].type === 'game'">
-                        <p class="form__group">
-                            <input
-                                type="checkbox"
-                                class="form__checkbox"
-                                id="game_exists_on_igdb"
-                                name="game_exists_on_igdb"
-                                value="1"
-                                @checked(old('game_exists_on_igdb', true))
-                                x-model="igdb_game_exists"
-                            />
-                            <label class="form__label" for="game_exists_on_igdb">
-                                This game exists on IGDB
-                            </label>
-                        </p>
-                        <p class="form__group" x-show="igdb_game_exists">
-                            <input
-                                type="text"
-                                name="igdb"
-                                id="autoigdb"
-                                inputmode="numeric"
-                                pattern="[0-9]*"
-                                x-bind:value="cats[cat].type === 'game' && igdb_game_exists ? '{{ old('igdb', $igdb) }}' : ''"
-                                class="form__text"
-                                x-bind:required="cats[cat].type === 'game' && igdb_game_exists"
-                            />
-                            <label class="form__label form__label--floating" for="autoigdb">
-                                IGDB ID
-                                <b>({{ __('torrent.required-games') }})</b>
-                            </label>
-                        </p>
-                    </div>
                 </div>
+                <p class="form__group" x-show="isGameCategory()">
+                    <input
+                        type="checkbox"
+                        class="form__checkbox"
+                        id="game_exists_on_igdb"
+                        name="game_exists_on_igdb"
+                        value="1"
+                        @checked(old('game_exists_on_igdb', true))
+                        x-model="igdb_game_exists"
+                    />
+                    <label class="form__label" for="game_exists_on_igdb">
+                        This game exists on IGDB
+                    </label>
+                </p>
+                <p class="form__group" x-show="isGameCategory() && igdb_game_exists">
+                    <input
+                        type="text"
+                        name="igdb"
+                        id="autoigdb"
+                        inputmode="numeric"
+                        pattern="[0-9]*"
+                        x-bind:value="cats[cat].type === 'game' && igdb_game_exists ? '{{ old('igdb', $igdb) }}' : ''"
+                        class="form__text"
+                        x-bind:required="cats[cat].type === 'game' && igdb_game_exists"
+                    />
+                    <label class="form__label form__label--floating" for="autoigdb">
+                        IGDB ID
+                        <b>({{ __('torrent.required-games') }})</b>
+                    </label>
+                </p>
                 <p class="form__group">
                     <input
                         type="text"
@@ -532,7 +552,7 @@
                 @livewire('bbcode-input', ['name' => 'description', 'label' => __('common.description'), 'required' => true])
                 <p
                     class="form__group"
-                    x-show="cats[cat].type === 'movie' || cats[cat].type === 'tv'"
+                    x-show="isVideoCategory()"
                 >
                     <textarea
                         id="upload-form-mediainfo"
@@ -548,7 +568,7 @@
                 </p>
                 <p
                     class="form__group"
-                    x-show="cats[cat].type === 'movie' || cats[cat].type === 'tv'"
+                    x-show="isVideoCategory()"
                 >
                     <textarea
                         id="upload-form-bdinfo"

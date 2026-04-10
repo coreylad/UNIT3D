@@ -167,7 +167,7 @@ return [
     | 15 = Material Design v3 Navy
     | 16 = The Void
     */
-    'default_style' => 12,
+    'default_style' => (int) env('DEFAULT_STYLE', 12),
 
     /*
     |--------------------------------------------------------------------------

@@ -33,6 +33,15 @@
             tvdb_tv_exists: {{ Js::from(old('tv_exists_on_tvdb', $torrent->tvdb) !== null) }},
             mal_anime_exists: {{ Js::from(old('anime_exists_on_mal', $torrent->mal) !== null) }},
             igdb_game_exists: {{ Js::from(old('game_exists_on_igdb', $torrent->igdb) !== null) }},
+            categoryType() {
+                return this.cats?.[this.cat]?.type ?? 'no';
+            },
+            isVideoCategory() {
+                return ['movie', 'tv'].includes(this.categoryType());
+            },
+            isGameCategory() {
+                return this.categoryType() === 'game';
+            },
         }"
     >
         <h2 class="panel__heading">{{ __('common.edit') }}: {{ $torrent->name }}</h2>
@@ -89,7 +98,6 @@
                         name="category_id"
                         x-model="cat"
                         x-ref="catId"
-                        @change="cats[cat].type = cats[$event.target.value].type;"
                     >
                         <option value="{{ old('category_id') ?? $torrent->category_id }}" selected>
                             {{ $torrent->category->name }} ({{ __('torrent.current') }})
@@ -104,14 +112,21 @@
                         {{ __('torrent.category') }}
                     </label>
                 </p>
-                <p class="form__group">
+                <input
+                    type="hidden"
+                    name="type_id"
+                    x-bind:value="type"
+                    x-bind:disabled="isVideoCategory()"
+                />
+                <p class="form__group" x-show="isVideoCategory()">
                     <select
                         id="type_id"
                         class="form__select"
                         name="type_id"
                         x-model="type"
                         x-ref="typeId"
-                        @change="types[type].name = types[$event.target.value].name"
+                        x-bind:required="isVideoCategory()"
+                        x-bind:disabled="!isVideoCategory()"
                     >
                         <option value="{{ old('type_id') ?? $torrent->type->id }}" selected>
                             {{ $torrent->type->name }} ({{ __('torrent.current') }})
@@ -128,9 +143,15 @@
                 </p>
                 <p
                     class="form__group"
-                    x-show="cats[cat].type === 'movie' || cats[cat].type === 'tv'"
+                    x-show="isVideoCategory()"
                 >
-                    <select id="resolution_id" name="resolution_id" class="form__select">
+                    <select
+                        id="resolution_id"
+                        name="resolution_id"
+                        class="form__select"
+                        x-bind:required="isVideoCategory()"
+                        x-bind:disabled="!isVideoCategory()"
+                    >
                         @if (! $torrent->resolution)
                             <option hidden="" disabled="disabled" selected="selected" value="">
                                 --Select resolution--
@@ -159,7 +180,7 @@
                 </p>
                 <div
                     class="form__group--horizontal"
-                    x-show="(cats[cat].type === 'movie' || cats[cat].type === 'tv') && types[type].name === 'Full Disc'"
+                    x-show="isVideoCategory() && types[type].name === 'Full Disc'"
                 >
                     <p class="form__group">
                         <select id="distributor_id" name="distributor_id" class="form__select">
@@ -273,7 +294,7 @@
                 </div>
                 <div
                     class="form__group--horizontal"
-                    x-show="cats[cat].type === 'movie' || cats[cat].type === 'tv' || cats[cat].type === 'game'"
+                    x-show="isVideoCategory()"
                 >
                     <div class="form__group--vertical" x-show="cats[cat].type === 'movie'">
                         <p class="form__group">
@@ -476,41 +497,39 @@
                             <span class="form__hint">Numeric digits only.</span>
                         </p>
                     </div>
-                    <div class="form__group--vertical" x-show="cats[cat].type === 'game'">
-                        <p class="form__group">
-                            <input
-                                type="checkbox"
-                                class="form__checkbox"
-                                id="game_exists_on_igdb"
-                                name="game_exists_on_igdb"
-                                value="1"
-                                @checked(old('game_exists_on_igdb', true))
-                                x-model="igdb_game_exists"
-                            />
-                            <label class="form__label" for="game_exists_on_igdb">
-                                This game exists on IGDB
-                            </label>
-                        </p>
-                        <p class="form__group" x-show="igdb_game_exists">
-                            <input type="hidden" name="igdb" value="0" />
-                            <input
-                                id="igdb"
-                                class="form__text"
-                                name="igdb"
-                                type="text"
-                                value="{{ old('igdb', $torrent->igdb) }}"
-                                inputmode="numeric"
-                                pattern="[0-9]*"
-                                placeholder=" "
-                                x-bind:value="cats[cat].type === 'game' && igdb_game_exists ? '{{ old('igdb', $torrent->igdb) }}' : ''"
-                                x-bind:required="cats[cat].type === 'game' && igdb_game_exists"
-                            />
-                            <label class="form__label form__label--floating" for="igdb">
-                                IGDB ID
-                            </label>
-                        </p>
-                    </div>
                 </div>
+                <p class="form__group" x-show="isGameCategory()">
+                    <input
+                        type="checkbox"
+                        class="form__checkbox"
+                        id="game_exists_on_igdb"
+                        name="game_exists_on_igdb"
+                        value="1"
+                        @checked(old('game_exists_on_igdb', true))
+                        x-model="igdb_game_exists"
+                    />
+                    <label class="form__label" for="game_exists_on_igdb">
+                        This game exists on IGDB
+                    </label>
+                </p>
+                <p class="form__group" x-show="isGameCategory() && igdb_game_exists">
+                    <input type="hidden" name="igdb" value="0" />
+                    <input
+                        id="igdb"
+                        class="form__text"
+                        name="igdb"
+                        type="text"
+                        value="{{ old('igdb', $torrent->igdb) }}"
+                        inputmode="numeric"
+                        pattern="[0-9]*"
+                        placeholder=" "
+                        x-bind:value="cats[cat].type === 'game' && igdb_game_exists ? '{{ old('igdb', $torrent->igdb) }}' : ''"
+                        x-bind:required="cats[cat].type === 'game' && igdb_game_exists"
+                    />
+                    <label class="form__label form__label--floating" for="igdb">
+                        IGDB ID
+                    </label>
+                </p>
                 <p class="form__group">
                     <input
                         id="keywords"
@@ -532,7 +551,7 @@
                     'required' => true,
                     'content'  => $torrent->description
                 ])
-                <p class="form__group">
+                <p class="form__group" x-show="isVideoCategory()">
                     <textarea
                         id="description"
                         class="form__textarea"
@@ -546,7 +565,7 @@
                     </label>
                 </p>
 
-                <p class="form__group">
+                <p class="form__group" x-show="isVideoCategory()">
                     <textarea id="bdinfo" class="form__textarea" name="bdinfo" placeholder=" ">
 {{ old('bdinfo') ?? $torrent->bdinfo }}</textarea
                     >

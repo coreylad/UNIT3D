@@ -200,6 +200,8 @@ class HomeController extends Controller
             'site_name'         => ['required', 'string', 'max:100'],
             'site_title'        => ['required', 'string', 'max:100'],
             'site_subtitle'     => ['nullable', 'string', 'max:120'],
+            'default_theme_style' => ['required', 'integer', Rule::in(array_keys($this->themeStyleOptions()))],
+            'force_users_theme' => ['nullable', 'boolean'],
             'site_url'          => ['required', 'url', 'max:255'],
             'mail_mailer'       => ['required', 'string', Rule::in(['smtp', 'sendmail', 'mailgun', 'ses', 'postmark', 'log', 'array', 'failover'])],
             'owner_email'       => ['nullable', 'email', 'max:255'],
@@ -222,6 +224,7 @@ class HomeController extends Controller
             'APP_URL'            => $validated['site_url'],
             'SITE_TITLE'         => $validated['site_title'],
             'SITE_SUBTITLE'      => (string) ($validated['site_subtitle'] ?? ''),
+            'DEFAULT_STYLE'      => (string) $validated['default_theme_style'],
             'MAIL_MAILER'        => $validated['mail_mailer'],
             'DEFAULT_OWNER_EMAIL' => (string) ($validated['owner_email'] ?? ''),
             'MAIL_HOST'          => (string) ($validated['mail_host'] ?? ''),
@@ -245,6 +248,17 @@ class HomeController extends Controller
 
         $this->writeEnvValues($envValues);
 
+        $forcedUsersThemeCount = null;
+        if ($request->boolean('force_users_theme') && Schema::hasTable('user_settings') && Schema::hasColumn('user_settings', 'style')) {
+            $forcedUsersThemeCount = DB::table('user_settings')
+                ->update(['style' => (int) $validated['default_theme_style']]);
+        }
+
+        $successMessage = 'Site services updated and persisted to environment configuration.';
+        if ($forcedUsersThemeCount !== null) {
+            $successMessage .= ' Forced selected theme on '.$forcedUsersThemeCount.' user setting records.';
+        }
+
         try {
             Artisan::call('optimize:clear');
         } catch (Throwable $throwable) {
@@ -259,7 +273,7 @@ class HomeController extends Controller
                 $mailTestOutput = trim(str_replace(["\r", "\n"], ' ', Artisan::output()));
 
                 return to_route('staff.dashboard.services.index')
-                    ->with('success', 'Site services saved and test email command executed.')
+                    ->with('success', $successMessage.' Test email command executed.')
                     ->with('info', $mailTestOutput === '' ? 'No output returned from test email command.' : $mailTestOutput);
             } catch (Throwable $throwable) {
                 $hint = '';
@@ -274,7 +288,7 @@ class HomeController extends Controller
             }
         }
 
-        return to_route('staff.dashboard.services.index')->with('success', 'Site services updated and persisted to environment configuration.');
+        return to_route('staff.dashboard.services.index')->with('success', $successMessage);
     }
 
     public function updateTheme(Request $request): RedirectResponse
@@ -512,6 +526,8 @@ class HomeController extends Controller
             'site_name'         => (string) config('app.name'),
             'site_title'        => (string) config('other.title'),
             'site_subtitle'     => (string) config('other.subTitle'),
+            'default_theme_style' => (int) config('other.default_style', 12),
+            'theme_style_options' => $this->themeStyleOptions(),
             'site_url'          => (string) config('app.url'),
             'mail_mailer'       => (string) config('mail.default'),
             'owner_email'       => (string) (config('other.email') ?? ''),
@@ -741,6 +757,32 @@ class HomeController extends Controller
             'k' => $number * 1024,
             default => (int) $trimmed,
         };
+    }
+
+    /**
+     * @return array<int,string>
+     */
+    private function themeStyleOptions(): array
+    {
+        return [
+            0 => 'Light',
+            1 => 'Galactic',
+            2 => 'Dark blue',
+            3 => 'Dark green',
+            4 => 'Dark pink',
+            5 => 'Dark purple',
+            6 => 'Dark red',
+            7 => 'Dark teal',
+            8 => 'Dark yellow',
+            9 => 'Cosmic void',
+            10 => 'Nord',
+            11 => 'Revel (Desktop only)',
+            12 => 'Material design 3 light',
+            13 => 'Material design 3 dark',
+            14 => 'Material design 3 amoled',
+            15 => 'Material design 3 navy',
+            16 => 'The Void',
+        ];
     }
 
     /**
