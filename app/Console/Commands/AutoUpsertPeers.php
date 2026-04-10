@@ -17,6 +17,8 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Models\Peer;
+use App\Models\Torrent;
+use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redis;
@@ -63,7 +65,29 @@ class AutoUpsertPeers extends Command
                 break;
             }
 
-            $peers = array_map('unserialize', $peers);
+            $peers = array_values(array_filter(array_map('unserialize', $peers), 'is_array'));
+
+            if ($peers === []) {
+                Redis::connection('announce')->command('LTRIM', [$key, $peerPerCycle, -1]);
+                continue;
+            }
+
+            $userIds = array_values(array_unique(array_map(static fn (array $peer): int => (int) $peer['user_id'], $peers)));
+            $torrentIds = array_values(array_unique(array_map(static fn (array $peer): int => (int) $peer['torrent_id'], $peers)));
+
+            $existingUserIds = User::query()->whereIn('id', $userIds)->pluck('id')->all();
+            $existingTorrentIds = Torrent::query()->whereIn('id', $torrentIds)->pluck('id')->all();
+
+            $peers = array_values(array_filter(
+                $peers,
+                static fn (array $peer): bool => \in_array((int) $peer['user_id'], $existingUserIds, true)
+                    && \in_array((int) $peer['torrent_id'], $existingTorrentIds, true)
+            ));
+
+            if ($peers === []) {
+                Redis::connection('announce')->command('LTRIM', [$key, $peerPerCycle, -1]);
+                continue;
+            }
 
             DB::transaction(function () use ($peers): void {
                 Peer::upsert(

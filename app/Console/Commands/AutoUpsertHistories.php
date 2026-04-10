@@ -17,6 +17,8 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Models\History;
+use App\Models\Torrent;
+use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redis;
@@ -79,7 +81,29 @@ class AutoUpsertHistories extends Command
                 break;
             }
 
-            $histories = array_map('unserialize', $histories);
+            $histories = array_values(array_filter(array_map('unserialize', $histories), 'is_array'));
+
+            if ($histories === []) {
+                Redis::connection('announce')->command('LTRIM', [$key, $historiesPerCycle, -1]);
+                continue;
+            }
+
+            $userIds = array_values(array_unique(array_map(static fn (array $history): int => (int) $history['user_id'], $histories)));
+            $torrentIds = array_values(array_unique(array_map(static fn (array $history): int => (int) $history['torrent_id'], $histories)));
+
+            $existingUserIds = User::query()->whereIn('id', $userIds)->pluck('id')->all();
+            $existingTorrentIds = Torrent::query()->whereIn('id', $torrentIds)->pluck('id')->all();
+
+            $histories = array_values(array_filter(
+                $histories,
+                static fn (array $history): bool => \in_array((int) $history['user_id'], $existingUserIds, true)
+                    && \in_array((int) $history['torrent_id'], $existingTorrentIds, true)
+            ));
+
+            if ($histories === []) {
+                Redis::connection('announce')->command('LTRIM', [$key, $historiesPerCycle, -1]);
+                continue;
+            }
 
             DB::transaction(function () use ($histories): void {
                 History::upsert(
